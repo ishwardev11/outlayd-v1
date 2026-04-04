@@ -16,7 +16,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Failed to read request body' }, { status: 400 });
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string || 'sk_test_dummy', {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
         apiVersion: '2026-02-25.clover',
     });
 

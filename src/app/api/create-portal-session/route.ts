@@ -145,7 +145,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+        const origin = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'http://localhost:3000';
 
         const portalSession = await stripe.billingPortal.sessions.create({
             customer: stripeCustomerId,
