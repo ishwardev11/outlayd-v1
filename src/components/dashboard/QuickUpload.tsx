@@ -7,6 +7,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { processUpload } from "@/app/actions/ledger";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
 
+const UploadingStatus = () => {
+    const [statusIndex, setStatusIndex] = useState(0);
+    const statuses = [
+        "Uploading securely...",
+        "Scanning document...",
+        "Extracting vendor & totals...",
+        "Finalizing ledger..."
+    ];
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setStatusIndex(prev => Math.min(prev + 1, statuses.length - 1));
+        }, 1500);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <p className="text-sm font-medium text-slate-600 dark:text-slate-300 animate-pulse">
+            {statuses[statusIndex]}
+        </p>
+    );
+};
+
 export function QuickUpload() {
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -22,6 +45,13 @@ export function QuickUpload() {
 
         if (upgrade === "success") {
             setShowPaywall(false);
+            
+            // OPTIMISTIC UI UPDATE
+            if (typeof window !== "undefined") {
+                sessionStorage.setItem("optimistic_is_pro", "true");
+                window.dispatchEvent(new Event("pro-upgrade-success"));
+            }
+
             console.log("Upgrade success detected, verifying session...");
             
             if (sessionId) {
@@ -104,7 +134,7 @@ export function QuickUpload() {
             {isUploading && (
                 <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center animate-in fade-in duration-200">
                     <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-2" />
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Extracting data...</p>
+                    <UploadingStatus />
                 </div>
             )}
             <CardHeader className="pb-3 shrink-0">

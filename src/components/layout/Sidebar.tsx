@@ -46,6 +46,16 @@ export function Sidebar() {
     };
 
     useEffect(() => {
+        // Fast optimistic path
+        if (typeof window !== "undefined" && sessionStorage.getItem("optimistic_is_pro") === "true") {
+            setIsPro(true);
+        }
+
+        const handleOptimisticUpdate = () => setIsPro(true);
+        if (typeof window !== "undefined") {
+            window.addEventListener("pro-upgrade-success", handleOptimisticUpdate);
+        }
+
         const fetchSubscriptionStatus = async () => {
             try {
                 const supabase = createClient();
@@ -68,6 +78,10 @@ export function Sidebar() {
 
                 if (error) throw error;
                 setIsPro(org?.subscription_status === "pro");
+                
+                if (org?.subscription_status === "pro" && typeof window !== "undefined") {
+                    sessionStorage.setItem("optimistic_is_pro", "true");
+                }
             } catch (err) {
                 console.error("Failed to fetch subscription status:", err);
                 setIsPro(false);
@@ -75,6 +89,12 @@ export function Sidebar() {
         };
 
         fetchSubscriptionStatus();
+
+        return () => {
+            if (typeof window !== "undefined") {
+                window.removeEventListener("pro-upgrade-success", handleOptimisticUpdate);
+            }
+        };
     }, [pathname]); // Re-fetch on navigation to ensure status is fresh after upgrade
 
     const handleProcurementClick = () => {
@@ -101,19 +121,19 @@ export function Sidebar() {
             </div>
 
             <nav className="flex-1 space-y-2">
-                <Link href="/dashboard" className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/dashboard' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link href="/dashboard" prefetch className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/dashboard' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                     <LayoutDashboard size={20} />
                     <span>Dashboard</span>
                 </Link>
-                <Link href="/ledger" className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/ledger' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link href="/ledger" prefetch className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/ledger' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                     <FileText size={20} />
                     <span>Ledger</span>
                 </Link>
-                <Link href="/vendors" className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/vendors' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link href="/vendors" prefetch className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/vendors' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                     <Users size={20} />
                     <span>Vendors</span>
                 </Link>
-                <Link href="/reports" className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/reports' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link href="/reports" prefetch className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/reports' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                     <BarChart3 size={20} />
                     <span>Reports</span>
                 </Link>
