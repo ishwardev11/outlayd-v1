@@ -298,7 +298,7 @@ function HowItWorksSection() {
         {
             num: "01",
             title: "Upload & Extract",
-            desc: "Simply drag and drop or upload receipts. Our Gemini AI handles data entry and vendor matching instantly."
+            desc: "Simply drag and drop or upload receipts. Our AI handles data entry and vendor matching instantly."
         },
         {
             num: "02",
@@ -535,8 +535,8 @@ function Footer() {
     return (
         <footer className="border-t border-white/10 bg-slate-950 pt-16 pb-8 px-4">
             <div className="container mx-auto max-w-6xl">
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-16">
-                    <div className="col-span-2 lg:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 mb-16">
+                    <div className="md:col-span-1">
                         <div className="flex items-center gap-2 mb-4">
                             <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
                                 <Receipt className="h-5 w-5 text-white" />
@@ -547,51 +547,40 @@ function Footer() {
                             The intelligent ledger and spend management platform that growing businesses actually love to use.
                         </p>
                         <div className="flex gap-4">
-                            <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 cursor-pointer">
+                            <a href="#" /* TODO: add X link */ className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 cursor-pointer transition-colors">
                                 <span className="text-xs mt-0.5">X</span>
-                            </div>
-                            <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 cursor-pointer">
+                            </a>
+                            <a href="#" /* TODO: add LinkedIn link */ className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 cursor-pointer transition-colors">
                                 <span className="text-xs mt-0.5">in</span>
-                            </div>
+                            </a>
                         </div>
                     </div>
 
-                    <div>
-                        <h4 className="font-semibold mb-4 text-slate-200">Product</h4>
-                        <ul className="space-y-3 text-sm text-slate-400">
-                            <li><Link href="#" className="hover:text-white transition-colors">Features</Link></li>
-                            <li><Link href="#pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Corporate Cards</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Integrations</Link></li>
-                        </ul>
-                    </div>
+                    <div className="grid grid-cols-2 gap-8 md:col-span-2 md:ml-auto md:w-3/4 lg:w-2/3">
+                        <div>
+                            <h4 className="font-semibold mb-4 text-slate-200">Quick Links</h4>
+                            <ul className="space-y-3 text-sm text-slate-400">
+                                <li><Link href="#services" className="hover:text-white transition-colors">Features</Link></li>
+                                <li><Link href="#pricing" className="hover:text-white transition-colors">Pricing</Link></li>
+                                <li><a href="mailto:founder@spendsync.com" className="hover:text-white transition-colors">Contact</a></li>
+                            </ul>
+                        </div>
 
-                    <div>
-                        <h4 className="font-semibold mb-4 text-slate-200">Company</h4>
-                        <ul className="space-y-3 text-sm text-slate-400">
-                            <li><Link href="#" className="hover:text-white transition-colors">About Us</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Careers</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Blog</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Contact</Link></li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4 className="font-semibold mb-4 text-slate-200">Legal</h4>
-                        <ul className="space-y-3 text-sm text-slate-400">
-                            <li><Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Terms of Service</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Security</Link></li>
-                        </ul>
+                        <div>
+                            <h4 className="font-semibold mb-4 text-slate-200">Legal</h4>
+                            <ul className="space-y-3 text-sm text-slate-400">
+                                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                                <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
                 <div className="pt-8 border-t border-white/10 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500">
                     <p>© {new Date().getFullYear()} SpendSync AI. All rights reserved.</p>
                     <div className="flex gap-6">
-                        <Link href="#" className="hover:text-white">Privacy</Link>
-                        <Link href="#" className="hover:text-white">Terms</Link>
-                        <Link href="#" className="hover:text-white">Status</Link>
+                        <Link href="/privacy" className="hover:text-white">Privacy</Link>
+                        <Link href="/terms" className="hover:text-white">Terms</Link>
                     </div>
                 </div>
             </div>
