@@ -1,6 +1,6 @@
 "use server"
 
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai"
+import { GoogleGenerativeAI, SchemaType, type GenerationConfig } from "@google/generative-ai"
 import { updateDocument, getOrganizationId } from "./document-utils"
 import { createClient } from "@/utils/supabase/server"
 
@@ -18,52 +18,84 @@ export async function extractDocumentData(
     // Update document status to extracting while Gemini processes
     await updateDocument(documentId, { status: "extracting" })
 
-    const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    vendor_name: { type: SchemaType.STRING, description: "Name of the business or vendor" },
-                    amount: { type: SchemaType.NUMBER, description: "Total amount on the receipt or invoice" },
-                    document_date: { type: SchemaType.STRING, description: "Date of the transaction in YYYY-MM-DD format" },
-                    document_type: {
-                        type: SchemaType.STRING,
-                        description: "Categorize as a receipt (proof of payment) or invoice (request for payment). Must be exactly 'receipt' or 'invoice'."
-                    },
-                    confidence_score: { type: SchemaType.NUMBER, description: "Confidence score from 0 to 100 based on the clarity and legibility of the document." },
-                    line_items: {
-                        type: SchemaType.ARRAY,
-                        description: "List of individual items found in the document",
-                        items: {
-                            type: SchemaType.OBJECT,
-                            properties: {
-                                description: { type: SchemaType.STRING, description: "Description of the item" },
-                                quantity: { type: SchemaType.NUMBER, description: "Quantity of the item" },
-                                unit_price: { type: SchemaType.NUMBER, description: "Unit price of the item" },
-                                total: { type: SchemaType.NUMBER, description: "Total price for this line item" }
-                            },
-                            required: ["description", "quantity", "unit_price", "total"]
-                        }
-                    }
+    const generationConfig: GenerationConfig = {
+        temperature: 0.1,
+        responseMimeType: "application/json",
+        responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: {
+                vendor_name: { type: SchemaType.STRING, description: "Name of the business or vendor" },
+                amount: { type: SchemaType.NUMBER, description: "Total amount on the receipt or invoice" },
+                document_date: { type: SchemaType.STRING, description: "Date of the transaction in YYYY-MM-DD format" },
+                document_type: {
+                    type: SchemaType.STRING,
+                    description: "Categorize as a receipt (proof of payment) or invoice (request for payment). Must be exactly 'receipt' or 'invoice'."
                 },
-                required: ["vendor_name", "amount", "document_date", "document_type", "confidence_score", "line_items"]
-            }
+                confidence_score: { type: SchemaType.NUMBER, description: "Confidence score from 0 to 100 based on the clarity and legibility of the document." },
+                line_items: {
+                    type: SchemaType.ARRAY,
+                    description: "List of individual items found in the document",
+                    items: {
+                        type: SchemaType.OBJECT,
+                        properties: {
+                            description: { type: SchemaType.STRING, description: "Description of the item" },
+                            quantity: { type: SchemaType.NUMBER, description: "Quantity of the item" },
+                            unit_price: { type: SchemaType.NUMBER, description: "Unit price of the item" },
+                            total: { type: SchemaType.NUMBER, description: "Total price for this line item" }
+                        },
+                        required: ["description", "quantity", "unit_price", "total"]
+                    }
+                }
+            },
+            required: ["vendor_name", "amount", "document_date", "document_type", "confidence_score", "line_items"]
         }
-    })
+    }
 
     try {
-        // Pass the document inline for extraction
-        const result = await model.generateContent([
-            "Extract the vendor name, total amount, date, document type, and a detailed list of individual line items from this provided document image.",
-            {
-                inlineData: {
-                    data: base64Data,
-                    mimeType
+        let result;
+        const maxRetries = 3;
+        
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                // Use gemini-1.5-flash on the final fallback attempt
+                const modelName = attempt === maxRetries ? "gemini-1.5-flash" : "gemini-2.5-flash";
+                const model = genAI.getGenerativeModel({
+                    model: modelName,
+                    generationConfig
+                });
+
+                // Pass the document inline for extraction
+                result = await model.generateContent([
+                    "You are a strict financial data extraction parser. Extract the vendor name, date, and total amount from the provided receipt. Do not calculate, guess, or infer numbers that are not clearly visible. If a value is completely unreadable, return null for that specific field rather than hallucinating a value. Ensure all required schema fields including document_type, line_items, and confidence_score are also populated based on these rules.",
+                    {
+                        inlineData: {
+                            data: base64Data,
+                            mimeType
+                        }
+                    }
+                ]);
+                
+                // If successful, break out of the retry loop
+                break;
+            } catch (error: any) {
+                const status = error?.status || error?.response?.status;
+                const isRateLimitOrUnavailable = status === 503 || status === 429 || error.message?.includes("503") || error.message?.includes("429");
+                
+                if (isRateLimitOrUnavailable && attempt < maxRetries) {
+                    const waitTime = Math.pow(2, attempt) * 1000;
+                    console.warn(`Gemini API unavailable or rate limited. Retrying in ${waitTime}ms... (Attempt ${attempt + 1} of ${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    continue;
                 }
+                
+                // If it's not a retryable error or we've exhausted retries, throw
+                throw error;
             }
-        ])
+        }
+
+        if (!result) {
+            throw new Error("Failed to generate content after max retries");
+        }
 
         const text = result.response.text()
         console.log("Parsing Gemini response...");
