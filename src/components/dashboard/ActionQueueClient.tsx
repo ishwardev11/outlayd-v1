@@ -62,8 +62,9 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
                         {/* Default Badges - Hide on Hover */}
                         <div className="flex items-center gap-3 shrink-0 group-hover:opacity-0 transition-opacity duration-200">
                             {item.amount && item.amount >= 1000 && <Badge variant="destructive" className="bg-rose-100 text-rose-800 border-rose-200 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-800 dark:hover:bg-rose-900/60">Urgent</Badge>}
-                            <Badge variant={item.status === "needs_review" ? "outline" : "secondary"} className={item.status === "needs_review" ? "bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-xs font-medium" : ""}>
-                                {item.status === "needs_review" ? "Needs Review" : item.status === "awaiting_payment" ? "Awaiting Payment" : item.status}
+                            {item.status === "DUPLICATE_WARNING" && <Badge variant="destructive" className="bg-rose-100 text-rose-800 border-rose-200 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-800 dark:hover:bg-rose-900/60">Duplicate</Badge>}
+                            <Badge variant={item.status === "needs_review" ? "outline" : item.status === "DUPLICATE_WARNING" ? "destructive" : "secondary"} className={item.status === "needs_review" ? "bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-xs font-medium" : item.status === "DUPLICATE_WARNING" ? "bg-transparent border-rose-500 text-rose-500" : ""}>
+                                {item.status === "needs_review" ? "Needs Review" : item.status === "DUPLICATE_WARNING" ? "Flagged" : item.status === "awaiting_payment" ? "Awaiting Payment" : item.status}
                             </Badge>
                         </div>
 

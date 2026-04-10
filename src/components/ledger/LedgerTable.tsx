@@ -106,19 +106,7 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
 
     const allSelected = documents.length > 0 && selectedDocs.length === documents.length;
 
-    // Helper to identify if a document is a suspected duplicate
-    const isDuplicate = (doc: any) => {
-        if (!doc.vendor_name || !doc.amount || !doc.document_date) return false;
-        
-        // Find how many documents have the exact same vendor, amount, and date
-        const matchingDocs = documents.filter(d => 
-            d.vendor_name === doc.vendor_name &&
-            d.amount === doc.amount &&
-            d.document_date === doc.document_date
-        );
-        
-        return matchingDocs.length > 1;
-    };
+    // Remove old frontend duplicate heuristic, using native DUPLICATE_WARNING status now
 
     return (
         <div className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
@@ -192,19 +180,16 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                 <div className="flex items-center gap-2">
                                     <Badge variant={
                                         doc.status === "needs_review" ? "outline" :
+                                        doc.status === "DUPLICATE_WARNING" ? "outline" :
                                             doc.status === "awaiting_payment" ? "secondary" :
                                                 doc.status === "paid" ? "default" : "secondary"
                                     } className={
-                                        doc.status === "needs_review" ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50" : "dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                                        doc.status === "needs_review" ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50" : 
+                                        doc.status === "DUPLICATE_WARNING" ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800/50" : 
+                                        "bg-slate-100 text-slate-700 border-transparent dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
                                     }>
                                         {doc.status.replace("_", " ")}
                                     </Badge>
-                                    
-                                    {isDuplicate(doc) && (
-                                        <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
-                                            Duplicate
-                                        </span>
-                                    )}
 
                                     {typeof doc.confidence_score === 'number' && doc.status === "needs_review" && (
                                         <span className={`text-[10px] font-mono ${doc.confidence_score >= 90 ? 'text-indigo-500' : 'text-amber-500'}`}>

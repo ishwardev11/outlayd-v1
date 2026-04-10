@@ -16,6 +16,7 @@ export function RecentActivity({ documents }: { documents: any[] }) {
         if (doc.status === 'paid') return `${vendor} was marked as paid.`;
         if (doc.status === 'awaiting_payment') return `${vendor} was approved and is awaiting payment.`;
         if (doc.status === 'needs_review') return `${vendor} was uploaded and needs review.`;
+        if (doc.status === 'DUPLICATE_WARNING') return `Warning: Potential duplicate detected for ${vendor}.`;
         return `${vendor} was updated.`;
     };
 

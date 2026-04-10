@@ -31,6 +31,13 @@ export async function extractDocumentData(
                     type: SchemaType.STRING,
                     description: "Categorize as a receipt (proof of payment) or invoice (request for payment). Must be exactly 'receipt' or 'invoice'."
                 },
+                invoice_number: { type: SchemaType.STRING, description: "The official, explicit invoice number, if present. Null if not explicitly labeled as an invoice number." },
+                alternative_id: { type: SchemaType.STRING, description: "Fallback IDs like Order Number, Transaction ID, Receipt Number, or Bank Auth Code." },
+                transaction_time: { type: SchemaType.STRING, description: "The specific time of purchase (e.g., '14:30'), if visible." },
+                payment_last4: { type: SchemaType.STRING, description: "The last 4 digits of the card used, if visible." },
+                subtotal: { type: SchemaType.NUMBER, description: "The subtotal amount before taxes and fees." },
+                tax_amount: { type: SchemaType.NUMBER, description: "The exact tax amount." },
+                vendor_branch_or_location: { type: SchemaType.STRING, description: "Specific branch name or street if it's a chain." },
                 confidence_score: { type: SchemaType.NUMBER, description: "Confidence score from 0 to 100 based on the clarity and legibility of the document." },
                 line_items: {
                     type: SchemaType.ARRAY,
@@ -57,8 +64,8 @@ export async function extractDocumentData(
         
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-                // Use gemini-1.5-flash on the final fallback attempt
-                const modelName = attempt === maxRetries ? "gemini-1.5-flash" : "gemini-2.5-flash";
+                // Always use gemini-2.5-flash.
+                const modelName = "gemini-2.5-flash";
                 const model = genAI.getGenerativeModel({
                     model: modelName,
                     generationConfig
@@ -142,16 +149,74 @@ export async function extractDocumentData(
             }];
         }
 
+        const organization_id = await getOrganizationId();
+        
+        // Phase 3: The 'Waterfall' Logical Check (Post-AI)
+        let isDuplicate = false;
+        
+        // Strict truthiness check for invoice number (must be a non-empty string, not "null")
+        const normalizedInvoiceNumber = typeof data.invoice_number === 'string' ? data.invoice_number.trim() : null;
+        const hasValidInvoiceNumber = normalizedInvoiceNumber && normalizedInvoiceNumber.toLowerCase() !== "null";
+
+        if (hasValidInvoiceNumber && data.vendor_name) {
+            // Condition A (The Trump Card)
+            const { data: dupA } = await supabase
+                .from("documents")
+                .select("id")
+                .eq("organization_id", organization_id)
+                .ilike("vendor_name", data.vendor_name)
+                .eq("invoice_number", data.invoice_number)
+                .neq("id", documentId)
+                .limit(1);
+                
+            if (dupA && dupA.length > 0) {
+                isDuplicate = true;
+                console.log(`Duplicate detected via Condition A (Exact Invoice Number): ${data.invoice_number}`);
+            }
+        } else if (data.vendor_name && data.document_date && data.amount !== undefined && data.amount !== null) {
+            // Condition B (The Composite Fallback)
+            const { data: potentialDups } = await supabase
+                .from("documents")
+                .select("id, alternative_id, transaction_time, payment_last4, tax_amount")
+                .eq("organization_id", organization_id)
+                .ilike("vendor_name", data.vendor_name)
+                .eq("document_date", data.document_date)
+                .eq("amount", data.amount)
+                .neq("id", documentId);
+                
+            if (potentialDups && potentialDups.length > 0) {
+                for (const dup of potentialDups) {
+                    const matchAlternativeId = data.alternative_id && dup.alternative_id && String(dup.alternative_id).toLowerCase() === String(data.alternative_id).toLowerCase();
+                    const matchTime = data.transaction_time && dup.transaction_time && String(dup.transaction_time) === String(data.transaction_time);
+                    const matchCard = data.payment_last4 && dup.payment_last4 && String(dup.payment_last4) === String(data.payment_last4);
+                    const matchTax = data.tax_amount !== undefined && data.tax_amount !== null && dup.tax_amount !== null && Number(dup.tax_amount) === Number(data.tax_amount);
+                    
+                    if (matchAlternativeId || matchTime || matchCard || matchTax) {
+                        isDuplicate = true;
+                        console.log(`Duplicate detected via Condition B (Composite Match). Matched on: AltId(${matchAlternativeId}), Time(${matchTime}), Card(${matchCard}), Tax(${matchTax})`);
+                        break;
+                    }
+                }
+            }
+        }
+
         await updateDocument(documentId, {
             vendor_name: data.vendor_name,
             vendor_id: vendorId,
             amount: data.amount,
             document_date: data.document_date,
             document_type: data.document_type,
+            invoice_number: data.invoice_number,
+            alternative_id: data.alternative_id,
+            transaction_time: data.transaction_time,
+            payment_last4: data.payment_last4,
+            subtotal: data.subtotal,
+            tax_amount: data.tax_amount,
+            vendor_branch_or_location: data.vendor_branch_or_location,
             confidence_score: data.confidence_score,
             splits: splits.length > 0 ? splits : [],
             line_items: data.line_items || [],
-            status: "needs_review"
+            status: isDuplicate ? "DUPLICATE_WARNING" : "needs_review"
         })
 
         return data

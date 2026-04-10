@@ -1,5 +1,6 @@
 "use server"
 
+import crypto from "crypto"
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 
@@ -282,13 +283,53 @@ export async function processUpload(formData: FormData) {
             throw new Error(`Database record creation failed: ${docError.message}`)
         }
 
-        // 3. Trigger async Gemini extraction
+        // 3. Trigger async Gemini extraction or Phase 1 Duplication skip
         try {
             const buffer = await file.arrayBuffer()
             const base64Data = Buffer.from(buffer).toString("base64")
             const mimeType = file.type
 
-            await extractDocumentData(docData.id, mimeType, base64Data)
+            // Phase 1: Zero-Cost File Hashing (Pre-AI)
+            const fileHash = crypto.createHash('sha256').update(Buffer.from(buffer)).digest('hex');
+
+            const { data: existingHashDocs } = await supabase
+                .from("documents")
+                .select("*")
+                .eq("file_hash", fileHash)
+                .eq("organization_id", organization_id)
+                .limit(1);
+
+            if (existingHashDocs && existingHashDocs.length > 0) {
+                console.log(`Duplicate detected via Phase 1 (File Hash): ${fileHash}. Bypassing AI.`);
+                const exDoc = existingHashDocs[0];
+                
+                // Update the blank document with duplicated data + DUPLICATE_WARNING
+                await supabase.from("documents").update({
+                    file_hash: fileHash,
+                    status: "DUPLICATE_WARNING",
+                    vendor_name: exDoc.vendor_name,
+                    vendor_id: exDoc.vendor_id,
+                    amount: exDoc.amount,
+                    document_date: exDoc.document_date,
+                    document_type: exDoc.document_type,
+                    invoice_number: exDoc.invoice_number,
+                    alternative_id: exDoc.alternative_id,
+                    transaction_time: exDoc.transaction_time,
+                    payment_last4: exDoc.payment_last4,
+                    subtotal: exDoc.subtotal,
+                    tax_amount: exDoc.tax_amount,
+                    vendor_branch_or_location: exDoc.vendor_branch_or_location,
+                    confidence_score: exDoc.confidence_score,
+                    splits: exDoc.splits,
+                    line_items: exDoc.line_items
+                }).eq("id", docData.id);
+            } else {
+                // Update with just the file_hash first
+                await supabase.from("documents").update({ file_hash: fileHash }).eq("id", docData.id);
+                
+                // Proceed to Gemini API Extraction
+                await extractDocumentData(docData.id, mimeType, base64Data)
+            }
         } catch (e: any) {
             console.error("Extraction failed:", e)
             // We don't throw here so the file is still saved, but it requires manual review
