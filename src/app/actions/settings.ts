@@ -14,7 +14,7 @@ export async function getOrganizationSettings() {
     const organization_id = await getOrganizationId()
 
     // Local dev fallback
-    if (organization_id === '00000000-0000-0000-0000-000000000000') {
+    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
         const cookieStore = await cookies();
         const orgName = cookieStore.get('dev_org_name')?.value || "Local Dev Organization";
         const baseCurrency = cookieStore.get('dev_org_currency')?.value || "USD";
@@ -49,7 +49,7 @@ export async function updateOrganizationSettings(updates: any) {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    if (organization_id === '00000000-0000-0000-0000-000000000000') {
+    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
         const cookieStore = await cookies();
         if (updates.name) cookieStore.set('dev_org_name', updates.name, { path: '/' });
         if (updates.base_currency) cookieStore.set('dev_org_currency', updates.base_currency, { path: '/' });
@@ -86,7 +86,7 @@ export async function getSettingsFunds() {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    if (organization_id === '00000000-0000-0000-0000-000000000000') {
+    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
         const cookieStore = await cookies();
         const choice = cookieStore.get('dev_template_choice')?.value || 'digital_agency';
         const template = TEMPLATES[choice] || TEMPLATES.digital_agency;
@@ -111,7 +111,7 @@ export async function addSettingFund(name: string, code?: string) {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    if (organization_id === '00000000-0000-0000-0000-000000000000') {
+    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
         revalidatePath("/", "layout")
         return { success: true }
     }
@@ -136,7 +136,7 @@ export async function deleteSettingFund(id: string) {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    if (organization_id === '00000000-0000-0000-0000-000000000000') {
+    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
         revalidatePath("/", "layout")
         return { success: true }
     }
@@ -161,7 +161,7 @@ export async function getSettingsCategories() {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    if (organization_id === '00000000-0000-0000-0000-000000000000') {
+    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
         const cookieStore = await cookies();
         const choice = cookieStore.get('dev_template_choice')?.value || 'digital_agency';
         const template = TEMPLATES[choice] || TEMPLATES.digital_agency;
@@ -186,7 +186,7 @@ export async function addSettingCategory(name: string) {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    if (organization_id === '00000000-0000-0000-0000-000000000000') {
+    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
         revalidatePath("/", "layout")
         return { success: true }
     }
@@ -210,7 +210,7 @@ export async function deleteSettingCategory(id: string) {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    if (organization_id === '00000000-0000-0000-0000-000000000000') {
+    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
         revalidatePath("/", "layout")
         return { success: true }
     }

@@ -11,16 +11,20 @@ export async function POST(req: Request) {
 
         const body = await req.json();
 
-        // We accept the orgId from the frontend if they passed it
-        let { orgId } = body;
-
-        // As a fallback, try to get it from the server session
-        if (!orgId) {
-            orgId = await getOrganizationId();
+        // Prioritize server-side lookup for security (prevents IDOR)
+        const authenticatedOrgId = await getOrganizationId();
+        
+        // If an orgId was passed in the body, verify it matches the user's secret session
+        const bodyOrgId = body.orgId;
+        
+        if (bodyOrgId && authenticatedOrgId && bodyOrgId !== authenticatedOrgId) {
+             return NextResponse.json({ error: 'Unauthorized organization access' }, { status: 403 });
         }
 
+        const orgId = authenticatedOrgId || bodyOrgId;
+
         if (!orgId) {
-            return NextResponse.json({ error: 'Organization ID is required' }, { status: 400 });
+            return NextResponse.json({ error: 'Organization ID is required. Please log in.' }, { status: 401 });
         }
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'http://localhost:3000';

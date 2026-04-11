@@ -48,18 +48,9 @@ export async function completeOnboardingSetup(data: OnboardingData) {
 
         const organization_id = org.id;
 
-        // 3. Link user to organization via user_metadata IMMEDIATELY
-        // This is strictly required before inserting categories/funds/roles to pass RLS checks
-        if (user) {
-            const { error: updateError } = await supabase.auth.updateUser({
-                data: { organization_id }
-            });
+        // 3. (REMOVED) Link user via user_metadata - Now handled via user_roles table below
+        // This is no longer needed as RLS now joins with user_roles
 
-            if (updateError) {
-                console.error("Error updating user metadata:", updateError);
-                throw new Error("Failed to link user to organization");
-            }
-        }
 
         // 4. Seed template data with robust switch statement
         let categoriesList: string[] = [];

@@ -115,9 +115,35 @@ export async function processQuoteUpload(projectId: string, formData: FormData) 
     const file = formData.get("file") as File
     if (!file) throw new Error("No file uploaded")
 
+    // Security Validation
+    const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!ALLOWED_MIMES.includes(file.type)) {
+        throw new Error(`Invalid file type: ${file.type}. Only images and PDFs are allowed.`);
+    }
+
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_SIZE) {
+        throw new Error("File too large. Maximum size is 10MB.");
+    }
+
+    // Sanitize Filename (Remove path components and special characters)
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_").replace(/^[./\\]+/, "");
+    const fileName = `${Date.now()}-${safeName}`
+
     const supabase = await createClient()
-    const fileName = `${Date.now()}-${file.name}`
     const organization_id = await getOrganizationId()
+
+    // Global Rate Limit (per Organization): Max 5 uploads per minute
+    const ONE_MINUTE_AGO = new Date(Date.now() - 60 * 1000).toISOString();
+    const { count: recentCount, error: countError } = await supabase
+        .from("quotes")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", organization_id)
+        .gt("created_at", ONE_MINUTE_AGO);
+
+    if (recentCount && recentCount >= 5) {
+        throw new Error("Too many quote uploads. Please wait a minute before uploading more.");
+    }
 
     // 1. Upload to Storage
     const { data: uploadData, error: uploadError } = await supabase
@@ -259,6 +285,21 @@ export async function evaluateQuotes(projectId: string) {
     }
 
     const supabase = await createClient()
+    const organization_id = await getOrganizationId()
+
+    // Global Rate Limit (per Organization): Max 5 evaluations per minute
+    const ONE_MINUTE_AGO = new Date(Date.now() - 60 * 1000).toISOString();
+    const { count: recentCount } = await supabase
+        .from("quotes")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", organization_id)
+        .neq("ai_recommendation_status", null)
+        .gt("updated_at", ONE_MINUTE_AGO);
+
+    if (recentCount && recentCount >= 5) {
+        throw new Error("Too many quote evaluations. Please wait a minute.");
+    }
+
 
     // 1. Fetch Project Constraints
     const { data: project, error: projectError } = await supabase

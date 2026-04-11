@@ -6,11 +6,13 @@ import { cookies } from "next/headers"
 
 export async function getOrganizationId() {
     // 1. Check local dev override
-    const cookieStore = await cookies();
-    const devOrgId = cookieStore.get('dev_org_id')?.value;
-    if (devOrgId) {
-        if (devOrgId === '11111111-1111-1111-1111-111111111111') return '00000000-0000-0000-0000-000000000000';
-        return devOrgId;
+    if (process.env.NODE_ENV === 'development') {
+        const cookieStore = await cookies();
+        const devOrgId = cookieStore.get('dev_org_id')?.value;
+        if (devOrgId) {
+            if (devOrgId === '11111111-1111-1111-1111-111111111111') return '00000000-0000-0000-0000-000000000000';
+            return devOrgId;
+        }
     }
 
     // 2. Standard Session Auth
@@ -22,14 +24,20 @@ export async function getOrganizationId() {
         const jwtPayload = JSON.parse(Buffer.from(session.access_token.split('.')[1], 'base64').toString());
         if (jwtPayload.organization_id) return jwtPayload.organization_id;
 
-        // Fallback to user_metadata if JWT doesn't have it yet
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.user_metadata?.organization_id) {
-            return user.user_metadata.organization_id;
+        // Secure fallback: Query user_roles table based on email
+        const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('organization_id')
+            .eq('email', session.user.email)
+            .single();
+
+        if (roleData?.organization_id) {
+            return roleData.organization_id;
         }
 
         return null;
     } catch (e) {
+        console.error("Error in getOrganizationId:", e);
         return null;
     }
 }
