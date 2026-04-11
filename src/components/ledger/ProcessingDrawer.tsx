@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import {
     Dialog,
     DialogContent,
@@ -83,53 +84,133 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
     const isValidAmount = Math.abs(totalSplitAmount - (Number(formData.amount) || 0)) < 0.01;
 
     const handleSave = useCallback(async () => {
-        if (!isValidAmount) return; // Disallow save if amounts don't match
+        // --- 1. Form Validation with Visible Errors ---
+        const validationErrors: string[] = [];
+
+        if (!formData.vendor_name?.trim()) {
+            validationErrors.push("Vendor name is required.");
+        }
+        if (!formData.document_date?.trim()) {
+            validationErrors.push("Document date is required.");
+        }
+        const parsedTotalAmount = parseFloat(String(formData.amount));
+        if (isNaN(parsedTotalAmount) || parsedTotalAmount <= 0) {
+            validationErrors.push("Total Amount must be a valid positive number.");
+        }
+        if (!isValidAmount) {
+            validationErrors.push(`Split amounts ($${totalSplitAmount.toFixed(2)}) do not match the total ($${Number(formData.amount || 0).toFixed(2)}).`);
+        }
+
+        // Validate each split has a fund and category selected
+        splits.forEach((split, idx) => {
+            if (!split.fund_id) {
+                validationErrors.push(`Split #${idx + 1}: Fund is required.`);
+            }
+            if (!split.category_id) {
+                validationErrors.push(`Split #${idx + 1}: Category is required.`);
+            }
+            if (split.fund_id === "custom" && !split.customFundName?.trim()) {
+                validationErrors.push(`Split #${idx + 1}: Custom fund name cannot be empty.`);
+            }
+            if (split.category_id === "custom" && !split.customCategoryName?.trim()) {
+                validationErrors.push(`Split #${idx + 1}: Custom category name cannot be empty.`);
+            }
+            const splitAmt = parseFloat(String(split.amount));
+            if (isNaN(splitAmt) || splitAmt <= 0) {
+                validationErrors.push(`Split #${idx + 1}: Amount must be a valid positive number.`);
+            }
+        });
+
+        if (validationErrors.length > 0) {
+            toast.error("Validation Error: Please check the highlighted fields.", {
+                description: validationErrors.join(" "),
+                duration: 6000,
+            });
+            return;
+        }
+
         setIsSubmitting(true);
         try {
+            // --- 2. Data Type Coercion for Splits ---
             const finalSplits = await Promise.all(splits.map(async (split) => {
                 let fId = split.fund_id;
                 let cId = split.category_id;
 
                 if (fId === "custom" && split.customFundName) {
-                    const newFund = await createFund(split.customFundName.trim());
-                    fId = newFund.id;
+                    try {
+                        const newFund = await createFund(split.customFundName.trim());
+                        fId = newFund.id;
+                    } catch (fundErr: any) {
+                        throw new Error(`Failed to create fund "${split.customFundName}": ${fundErr.message}`);
+                    }
                 }
                 if (cId === "custom" && split.customCategoryName) {
-                    const newCategory = await createCategory(split.customCategoryName.trim());
-                    cId = newCategory.id;
+                    try {
+                        const newCategory = await createCategory(split.customCategoryName.trim());
+                        cId = newCategory.id;
+                    } catch (catErr: any) {
+                        throw new Error(`Failed to create category "${split.customCategoryName}": ${catErr.message}`);
+                    }
                 }
                 return {
-                    amount: Number(split.amount),
+                    amount: parseFloat(String(split.amount)) || 0, // Explicit float coercion
                     fund_id: fId === "custom" ? null : fId,
                     category_id: cId === "custom" ? null : cId
                 };
             }));
 
-            const isAlreadyApproved = document.status === "awaiting_payment" || document.status === "paid";
             let newStatus = formData.document_type === "receipt" ? "paid" : "awaiting_payment";
             if (document.status === "awaiting_payment") {
                 newStatus = "paid";
             } else if (document.status === "paid") {
-                newStatus = "paid"; // keep it paid if it's already paid
+                newStatus = "paid";
             }
 
-            await updateDocument(document.id, {
+            // --- 3. Data Type Coercion for Line Items ---
+            const sanitizedLineItems = lineItems.map((item) => ({
+                description: String(item.description || ""),
+                quantity: parseFloat(String(item.quantity)) || 0,
+                unit_price: parseFloat(String(item.unit_price)) || 0,
+                total: parseFloat(String(item.total)) || 0,
+            }));
+
+            // --- Try/Catch wrapping the actual DB update ---
+            const result = await updateDocument(document.id, {
                 ...formData,
+                amount: parsedTotalAmount, // Coerced float, not raw string
                 splits: finalSplits,
-                fund_id: finalSplits[0]?.fund_id || null, // For backwards compatibility
-                category_id: finalSplits[0]?.category_id || null, // For backwards compatibility
-                line_items: lineItems,
+                fund_id: finalSplits[0]?.fund_id || null,
+                category_id: finalSplits[0]?.category_id || null,
+                line_items: sanitizedLineItems,
                 status: newStatus
             });
 
+            if (result && !result.success) {
+                toast.error("Save Failed", {
+                    description: result.error || "The database rejected the save.",
+                    duration: 6000,
+                });
+                return;
+            }
+
+            toast.success(
+                document.status === "awaiting_payment"
+                    ? "Invoice marked as paid."
+                    : "Document approved successfully."
+            );
+
             if (onNext) onNext();
             else onClose();
-        } catch (e) {
-            console.error(e);
+        } catch (e: any) {
+            console.error("Submission Error:", e);
+            toast.error("Save Failed", {
+                description: e?.message || "An unexpected error occurred while saving. Please try again.",
+                duration: 6000,
+            });
         } finally {
             setIsSubmitting(false);
         }
-    }, [formData, splits, isValidAmount, document?.id, onClose, onNext]);
+    }, [formData, splits, lineItems, isValidAmount, totalSplitAmount, document?.id, document?.status, onClose, onNext]);
 
     // Keyboard handling
     useEffect(() => {
@@ -137,12 +218,12 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
-                if (isValidAmount && !isSubmitting) handleSave();
+                if (!isSubmitting) handleSave();
             }
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isOpen, handleSave, isValidAmount, isSubmitting]);
+    }, [isOpen, handleSave, isSubmitting]);
 
     if (!document) return null;
 
@@ -272,7 +353,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                             </div>
                                             <div className="space-y-1">
                                                 <Label className="text-xs dark:text-slate-300">Fund</Label>
-                                                <Select value={split.fund_id} onValueChange={v => updateSplit(split.id, "fund_id", v)}>
+                                                <Select value={split.fund_id || undefined} onValueChange={v => updateSplit(split.id, "fund_id", v)}>
                                                     <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800"><SelectValue placeholder="Fund..." /></SelectTrigger>
                                                     <SelectContent>
                                                         {funds.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
@@ -285,7 +366,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                             </div>
                                             <div className="space-y-1">
                                                 <Label className="text-xs dark:text-slate-300">Category</Label>
-                                                <Select value={split.category_id} onValueChange={v => updateSplit(split.id, "category_id", v)}>
+                                                <Select value={split.category_id || undefined} onValueChange={v => updateSplit(split.id, "category_id", v)}>
                                                     <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800"><SelectValue placeholder="Category..." /></SelectTrigger>
                                                     <SelectContent>
                                                         {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -402,7 +483,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                             <Button
                                 className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white"
                                 onClick={handleSave}
-                                disabled={isSubmitting || !isValidAmount}
+                                disabled={isSubmitting}
                                 title="Cmd/Ctrl + Enter to Save"
                             >
                                 {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}

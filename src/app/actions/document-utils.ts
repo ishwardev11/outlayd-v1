@@ -58,12 +58,12 @@ export async function updateDocument(id: string, updates: any) {
 
     if (error) {
         console.error("Error updating document:", error)
-        throw new Error("Failed to update document")
+        return { success: false, error: error.message || "Failed to update document" }
     }
 
     revalidatePath("/ledger")
     revalidatePath("/")
     revalidatePath("/vendors")
     revalidatePath("/reports")
-    return data
+    return { success: true, data }
 }
