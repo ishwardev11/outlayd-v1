@@ -278,7 +278,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                     {/* Right Pane - Form Data */}
                     <div className="flex flex-col h-[40vh] md:h-full overflow-hidden bg-white dark:bg-slate-900 border-t md:border-t-0 dark:border-slate-800">
                         {/* Scrollable Form Content */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6" data-lenis-prevent="true">
                             <div className="space-y-4">
                                 <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Extracted Data</h3>
 

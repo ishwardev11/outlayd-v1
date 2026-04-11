@@ -14,7 +14,8 @@ import {
     Zap,
     Star
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Lenis from "lenis";
 
 // Animation Variants
 const fadeIn = {
@@ -29,6 +30,20 @@ const staggerContainer = {
         transition: { staggerChildren: 0.1 }
     }
 };
+
+export function handleSmoothScroll(e: React.MouseEvent<HTMLAnchorElement>, targetId: string) {
+    e.preventDefault();
+    const lenis = (window as any).lenis;
+    if (lenis) {
+        lenis.scrollTo(targetId, { offset: -80 });
+    } else {
+        const el = document.querySelector(targetId);
+        if (el) {
+            const y = el.getBoundingClientRect().top + window.scrollY - 80;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+    }
+}
 
 export default function LandingPage() {
     return (
@@ -61,11 +76,11 @@ function Navbar() {
                 </div>
 
                 <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-                    <Link href="#services" className="hover:text-white transition-colors">Services</Link>
-                    <Link href="#how-it-works" className="hover:text-white transition-colors">How it works</Link>
-                    <Link href="#testimonials" className="hover:text-white transition-colors">Testimonials</Link>
-                    <Link href="#pricing" className="hover:text-white transition-colors">Pricing</Link>
-                    <Link href="#faq" className="hover:text-white transition-colors">FAQ</Link>
+                    <a href="#services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Services</a>
+                    <a href="#how-it-works" onClick={(e) => handleSmoothScroll(e, '#how-it-works')} className="hover:text-white transition-colors">How it works</a>
+                    <a href="#testimonials" onClick={(e) => handleSmoothScroll(e, '#testimonials')} className="hover:text-white transition-colors">Testimonials</a>
+                    <a href="#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</a>
+                    <a href="#faq" onClick={(e) => handleSmoothScroll(e, '#faq')} className="hover:text-white transition-colors">FAQ</a>
                 </nav>
 
                 <div className="flex items-center gap-4">
@@ -112,9 +127,9 @@ function HeroSection() {
                                 Automate Your Ledger
                                 <ArrowRight className="w-4 h-4" />
                             </Link>
-                            <Link href="#pricing" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-full font-medium transition-all active:scale-95">
+                            <a href="#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-full font-medium transition-all active:scale-95 cursor-pointer">
                                 View Pricing
-                            </Link>
+                            </a>
                         </div>
                     </motion.div>
 
@@ -560,8 +575,8 @@ function Footer() {
                         <div>
                             <h4 className="font-semibold mb-4 text-slate-200">Quick Links</h4>
                             <ul className="space-y-3 text-sm text-slate-400">
-                                <li><Link href="#services" className="hover:text-white transition-colors">Features</Link></li>
-                                <li><Link href="#pricing" className="hover:text-white transition-colors">Pricing</Link></li>
+                                <li><a href="#services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Features</a></li>
+                                <li><a href="#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</a></li>
                                 <li><a href="mailto:founder@spendsync.com" className="hover:text-white transition-colors">Contact</a></li>
                             </ul>
                         </div>
