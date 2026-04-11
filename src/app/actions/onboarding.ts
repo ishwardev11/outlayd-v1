@@ -101,7 +101,9 @@ export async function completeOnboardingSetup(data: OnboardingData) {
                 name,
                 organization_id
             }));
-            const { error: catError } = await supabase.from("categories").insert(categoriesToInsert);
+            const { error: catError } = await supabase
+                .from("categories")
+                .upsert(categoriesToInsert, { onConflict: "name,organization_id", ignoreDuplicates: true });
             if (catError) {
                 console.error("Failed to seed categories:", catError);
                 throw new Error(`Failed to seed categories: ${catError.message}`);
@@ -113,7 +115,9 @@ export async function completeOnboardingSetup(data: OnboardingData) {
                 name,
                 organization_id
             }));
-            const { error: fundError } = await supabase.from("funds").insert(fundsToInsert);
+            const { error: fundError } = await supabase
+                .from("funds")
+                .upsert(fundsToInsert, { onConflict: "name,organization_id", ignoreDuplicates: true });
             if (fundError) {
                 console.error("Failed to seed funds:", fundError);
                 throw new Error(`Failed to seed funds: ${fundError.message}`);
