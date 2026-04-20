@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { getOrganizationId } from '@/app/actions/document-utils';
 
-const SPENDSYNC_PRO_PRICE_ID = 'price_1TErcuAoi98hcDUgCdxGVFX3';
+const OUTLAYD_PRO_PRICE_ID = 'price_1TErcuAoi98hcDUgCdxGVFX3';
 
 export async function POST(req: Request) {
     try {

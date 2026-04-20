@@ -9,7 +9,7 @@ export default function OnboardingPage() {
                 <div className="w-12 h-12 bg-indigo-600 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-indigo-200">
                     <Receipt className="h-6 w-6 text-white" />
                 </div>
-                <h1 className="text-3xl font-bold text-slate-900">Welcome to SpendSync AI</h1>
+                <h1 className="text-3xl font-bold text-slate-900">Welcome to Outlayd</h1>
                 <p className="mt-2 text-slate-500">Let&apos;s get your workspace set up in just a few steps.</p>
             </div>
 

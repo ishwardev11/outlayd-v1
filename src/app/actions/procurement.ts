@@ -28,7 +28,7 @@ async function requireProTier(): Promise<void> {
 
     if (org?.subscription_status !== "pro") {
         const err: any = new Error(
-            "This feature requires a SpendSync Pro subscription. Please upgrade to access Procurement."
+            "This feature requires a Outlayd Pro subscription. Please upgrade to access Procurement."
         )
         err.code = "FORBIDDEN"
         throw err

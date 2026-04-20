@@ -33,7 +33,7 @@ export async function POST(req: Request) {
             payment_method_types: ['card'],
             line_items: [
                 {
-                    price: 'price_1TErcuAoi98hcDUgCdxGVFX3', // SpendSync AI Pro recurring price
+                    price: 'price_1TErcuAoi98hcDUgCdxGVFX3', // Outlayd Pro recurring price
                     quantity: 1,
                 },
             ],

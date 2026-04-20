@@ -91,7 +91,7 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                     ) : (
                         <div className="flex flex-col items-center">
                             <Receipt className="text-gray-400 dark:text-slate-500 w-16 h-16 mb-4" />
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Welcome to SpendSync. Let&apos;s automate your ledger.</h3>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Welcome to Outlayd. Let&apos;s automate your ledger.</h3>
                             <p className="text-gray-500 dark:text-slate-400 mb-6 max-w-sm text-center mt-2">
                                 Drag and drop your first receipt or invoice here, and watch the AI extract the data instantly.
                             </p>

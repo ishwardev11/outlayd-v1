@@ -115,9 +115,7 @@ export function Sidebar() {
     return (
         <div className="w-52 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 h-screen p-4 flex flex-col text-gray-900 dark:text-gray-100">
             <div className="mb-8 tracking-tight flex items-baseline">
-                <span className="font-extrabold text-slate-900 dark:text-white text-2xl">Spend</span>
-                <span className="font-light text-cyan-600 dark:text-cyan-400 text-2xl">Sync</span>
-                <span className="font-bold text-indigo-600 dark:text-indigo-400 text-xl ml-1.5">AI</span>
+                <span className="font-extrabold text-slate-900 dark:text-white text-2xl">Outlayd</span>
             </div>
 
             <nav className="flex-1 space-y-2">
@@ -190,7 +188,7 @@ export function Sidebar() {
                             </button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 space-y-4 text-left" data-lenis-prevent="true">
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Common questions to help you get started with SpendSync.</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Common questions to help you get started with Outlayd.</p>
 
                             {faqs.map((faq, idx) => (
                                 <div key={idx} className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">

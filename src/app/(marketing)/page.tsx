@@ -72,7 +72,7 @@ function Navbar() {
                     <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
                         <Receipt className="h-5 w-5 text-white" />
                     </div>
-                    <span className="text-xl font-bold tracking-tight">SpendSync AI</span>
+                    <span className="text-xl font-bold tracking-tight">Outlayd</span>
                 </div>
 
                 <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
@@ -119,7 +119,7 @@ function HeroSection() {
                         </h1>
 
                         <p className="text-lg text-slate-400 mb-8 max-w-xl mx-auto lg:mx-0 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 ease-out fill-mode-both">
-                            SpendSync uses AI to instantly extract data from your invoices and receipts, turning messy paperwork into a real-time, tax-ready ledger.
+                            Outlayd uses AI to instantly extract data from your invoices and receipts, turning messy paperwork into a real-time, tax-ready ledger.
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 ease-out fill-mode-both">
@@ -143,7 +143,7 @@ function HeroSection() {
                             <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-transparent rounded-2xl" />
                             <img
                                 src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2070&auto=format&fit=crop"
-                                alt="SpendSync AI Dashboard"
+                                alt="Outlayd Dashboard"
                                 className="rounded-xl border border-white/5 opacity-80 mix-blend-screen"
                             />
                             {/* Overlay UI elements to make it look like our app */}
@@ -440,7 +440,7 @@ function PricingSection() {
 
 function TestimonialsSection() {
     const reviews = [
-        { text: "SpendSync AI cut our month-end close prep from 5 days to 4 hours. Tracking spending across different client projects is finally easy.", author: "Sarah J.", role: "Director, Digital Agency" },
+        { text: "Outlayd cut our month-end close prep from 5 days to 4 hours. Tracking spending across different client projects is finally easy.", author: "Sarah J.", role: "Director, Digital Agency" },
         { text: "Our staff actually doesn't hate submitting expenses anymore. The vendor directory and AI extraction are basically magic.", author: "Mark T.", role: "Operations, E-Commerce Brand" },
         { text: "The procurement pipeline saved me personally about 4 hours a week. Best software we've adopted this year.", author: "Elena R.", role: "Finance Manager, Retail Chain" }
     ];
@@ -556,7 +556,7 @@ function Footer() {
                             <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
                                 <Receipt className="h-5 w-5 text-white" />
                             </div>
-                            <span className="text-xl font-bold tracking-tight">SpendSync AI</span>
+                            <span className="text-xl font-bold tracking-tight">Outlayd</span>
                         </div>
                         <p className="text-slate-400 text-sm max-w-xs mb-6">
                             The intelligent ledger and spend management platform that growing businesses actually love to use.
@@ -577,25 +577,25 @@ function Footer() {
                             <ul className="space-y-3 text-sm text-slate-400">
                                 <li><a href="#services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Features</a></li>
                                 <li><a href="#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</a></li>
-                                <li><a href="mailto:founder@spendsync.com" className="hover:text-white transition-colors">Contact</a></li>
+                                <li><a href="mailto:founder@outlayd.com" className="hover:text-white transition-colors">Contact</a></li>
                             </ul>
                         </div>
 
                         <div>
                             <h4 className="font-semibold mb-4 text-slate-200">Legal</h4>
                             <ul className="space-y-3 text-sm text-slate-400">
-                                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                                <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+                                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
                             </ul>
                         </div>
                     </div>
                 </div>
 
                 <div className="pt-8 border-t border-white/10 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500">
-                    <p>© {new Date().getFullYear()} SpendSync AI. All rights reserved.</p>
+                    <p>© {new Date().getFullYear()} Outlayd. All rights reserved.</p>
                     <div className="flex gap-6">
-                        <Link href="/privacy" className="hover:text-white">Privacy</Link>
-                        <Link href="/terms" className="hover:text-white">Terms</Link>
+                        <a href="#" className="hover:text-white">Privacy</a>
+                        <a href="#" className="hover:text-white">Terms</a>
                     </div>
                 </div>
             </div>

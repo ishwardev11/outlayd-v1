@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SpendSync AI | AI-Powered AP Automation",
+  title: "Outlayd | Intelligent Expense Management & Procurement",
   description: "An expense tracking and AP automation tool for modern businesses.",
 };
 

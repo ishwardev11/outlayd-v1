@@ -22,7 +22,7 @@ const COPY: Record<PaywallContext, { heading: string; subtext: string }> = {
     procurement: {
         heading: "Procurement is a Pro Feature",
         subtext:
-            "The full Procurement pipeline — RFP management, vendor bidding, and AI-powered quote evaluation — is exclusive to SpendSync Pro. Upgrade to unlock it today.",
+            "The full Procurement pipeline — RFP management, vendor bidding, and AI-powered quote evaluation — is exclusive to Outlayd Pro. Upgrade to unlock it today.",
     },
 };
 
