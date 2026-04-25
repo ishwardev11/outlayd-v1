@@ -95,7 +95,8 @@ export async function addManualQuote(projectId: string, quoteData: any) {
             vendor_name: quoteData.vendor_name,
             total_amount: quoteData.total_amount,
             payment_terms: quoteData.payment_terms,
-            ai_recommendation_status: 'Manual Entry',
+            status: 'uploaded',
+            ai_recommendation_status: null,
             ai_rationale: quoteData.notes || 'Manually entered quote.'
         })
         .select()
@@ -108,6 +109,46 @@ export async function addManualQuote(projectId: string, quoteData: any) {
 
     revalidatePath(`/procurement/${projectId}`)
     return data
+}
+
+export async function deleteQuote(quoteId: string, projectId: string) {
+    await requireProTier()
+    const supabase = await createClient()
+    const organization_id = await getOrganizationId()
+
+    const { error } = await supabase
+        .from("quotes")
+        .delete()
+        .eq("id", quoteId)
+        .eq("organization_id", organization_id)
+
+    if (error) {
+        console.error("Error deleting quote:", error)
+        throw new Error("Failed to delete quote")
+    }
+
+    revalidatePath(`/procurement/${projectId}`)
+    return { success: true }
+}
+
+export async function editQuote(quoteId: string, projectId: string, updates: { vendor_name: string, total_amount: number, payment_terms: string }) {
+    await requireProTier()
+    const supabase = await createClient()
+    const organization_id = await getOrganizationId()
+
+    const { error } = await supabase
+        .from("quotes")
+        .update(updates)
+        .eq("id", quoteId)
+        .eq("organization_id", organization_id)
+
+    if (error) {
+        console.error("Error editing quote:", error)
+        throw new Error("Failed to edit quote")
+    }
+
+    revalidatePath(`/procurement/${projectId}`)
+    return { success: true }
 }
 
 export async function processQuoteUpload(projectId: string, formData: FormData) {
@@ -167,9 +208,12 @@ export async function processQuoteUpload(projectId: string, formData: FormData) 
         .insert({
             project_id: projectId,
             organization_id,
-            vendor_name: "Processing...",
+            vendor_name: "Pending...",
             total_amount: 0,
-            payment_terms: "Processing...",
+            payment_terms: "Pending...",
+            file_url: publicUrl,
+            file_size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+            status: 'uploaded',
             ai_recommendation_status: null
         })
         .select()
@@ -180,20 +224,20 @@ export async function processQuoteUpload(projectId: string, formData: FormData) 
         throw new Error("Failed to create quote record")
     }
 
-    // 3. Kick off Gemini processing asynchronously
-    try {
-        const buffer = await file.arrayBuffer()
-        const base64Data = Buffer.from(buffer).toString("base64")
-
-        await extractQuoteData(quoteData.id, projectId, file.type, base64Data)
-    } catch (e) {
-        console.error("Gemini Extraction failed in processQuoteUpload:", e)
-        // Ensure it doesn't leave the UI hanging permanently
-        updateQuote(quoteData.id, { vendor_name: "Extraction Failed" })
-    }
-
     revalidatePath(`/procurement/${projectId}`)
     return quoteData
+}
+
+export async function runSingleEvaluation(quoteId: string, projectId: string) {
+    await requireProTier()
+    const supabase = await createClient()
+    
+    // Update status to evaluating
+    await supabase.from("quotes").update({ status: 'evaluating' }).eq('id', quoteId)
+    revalidatePath(`/procurement/${projectId}`)
+
+    // Redirect to the bulk evaluation function to ensure full context
+    return await evaluateQuotes(projectId)
 }
 
 export async function extractQuoteData(quoteId: string, projectId: string, mimeType: string, base64Data: string) {
@@ -313,11 +357,12 @@ export async function evaluateQuotes(projectId: string) {
         throw new Error("Failed to fetch project constraints")
     }
 
-    // 2. Fetch all related quotes
+    // 2. Fetch all active quotes (exclude rejected if you only want to compare current options)
     const { data: quotes, error: quotesError } = await supabase
         .from("quotes")
         .select("*")
         .eq("project_id", projectId)
+        .neq("status", "rejected")
 
     if (quotesError || !quotes || quotes.length === 0) {
         console.error("Failed to fetch quotes:", quotesError)
@@ -330,30 +375,40 @@ export async function evaluateQuotes(projectId: string) {
         generationConfig: {
             responseMimeType: "application/json",
             responseSchema: {
-                type: SchemaType.ARRAY,
-                description: "Array of evaluated quotes",
-                items: {
-                    type: SchemaType.OBJECT,
-                    properties: {
-                        quote_id: { type: SchemaType.STRING, description: "The exact quote ID provided" },
-                        ai_recommendation_status: {
-                            type: SchemaType.STRING,
-                            description: "Must be EXACTLY one of: 'Recommended', 'Alternative', 'Rejected'"
-                        },
-                        ai_rationale: {
-                            type: SchemaType.STRING,
-                            description: "Detailed paragraph explaining exactly why it won or lost based on the non-profit's specific constraints"
+                type: SchemaType.OBJECT,
+                description: "Evaluation results for all quotes",
+                properties: {
+                    recommendedBidId: { type: SchemaType.STRING, description: "The UUID of the best overall quote from the provided quotes." },
+                    recommendationReason: { type: SchemaType.STRING, description: "A solid 2-3 sentence explanation of why this vendor was chosen over the others." },
+                    individualEvaluations: {
+                        type: SchemaType.ARRAY,
+                        description: "Array of evaluated quotes",
+                        items: {
+                            type: SchemaType.OBJECT,
+                            properties: {
+                                quote_id: { type: SchemaType.STRING, description: "The exact quote ID provided" },
+                                summary: {
+                                    type: SchemaType.STRING,
+                                    description: "A short summary of the quote analysis"
+                                },
+                                flags: {
+                                    type: SchemaType.ARRAY,
+                                    items: { type: SchemaType.STRING },
+                                    description: "List of identified risks or notable exclusions"
+                                }
+                            },
+                            required: ["quote_id", "summary", "flags"]
                         }
-                    },
-                    required: ["quote_id", "ai_recommendation_status", "ai_rationale"]
-                }
+                    }
+                },
+                required: ["recommendedBidId", "recommendationReason", "individualEvaluations"]
             }
         }
     })
 
     // 4. Construct Prompt
     const prompt = `
-You are acting as a rigorous non-profit Chief Procurement Officer. Your job is to evaluate multiple vendor quotes against strict project constraints and select the best fit.
+You are acting as a rigorous non-profit Chief Procurement Officer. Your job is to analyze all uploaded bids for a project, compare them, and explicitly recommend the best option with a detailed justification.
 
 Here are the constraints for this project:
 - Title: ${project.title}
@@ -367,38 +422,96 @@ ${JSON.stringify(quotes.map((q: any) => ({
         vendor_name: q.vendor_name,
         total_amount: q.total_amount,
         payment_terms: q.payment_terms,
+        notes: q.notes,
         extracted_data: q.extracted_data
     })), null, 2)}
 
 Evaluation Rules:
-1. Identify any hidden exclusions or missing requirements.
-2. Compare payment terms in relation to standard non-profit needs.
-3. Critically penalize quotes that exceed the budget ceiling.
-4. You must select exactly ONE quote to mark as 'Recommended'. 
-5. The remaining quotes must be marked as 'Alternative' or 'Rejected' based on their viability.
-6. Provide a comprehensive paragraph in 'ai_rationale' explaining exactly why this quote was given its status based on the specific constraints above.
+1. Analyze the bids based on total cost, payment terms, and any manual notes.
+2. Critically penalize quotes that exceed the budget ceiling.
+3. Identify any hidden exclusions or missing requirements (e.g. from the notes).
+4. Select exactly ONE quote as the recommended winner (recommendedBidId).
+5. Provide a solid 2-3 sentence explanation of why this vendor was chosen over the others (recommendationReason).
+6. Provide an individual summary and risk flags for EACH quote.
 
-Return the JSON array as strictly defined.
+Return the strict JSON structure.
 `
 
     // 5. Query Gemini
     try {
         const result = await model.generateContent(prompt)
         const text = result.response.text()
-        const evaluations = JSON.parse(text)
+        const evaluationResponse = JSON.parse(text)
+        
+        const { recommendedBidId, recommendationReason, individualEvaluations } = evaluationResponse
 
-        // 6. Update Database
-        for (const evaluation of evaluations) {
+        // 6. Bulk Update Database
+        for (const evaluation of individualEvaluations) {
+            const isWinner = evaluation.quote_id === recommendedBidId
+            
+            const aiNotes = `AI Summary: ${evaluation.summary}\n\nRisks: ${evaluation.flags.length > 0 ? evaluation.flags.join(", ") : "None"}`
+            
             await updateQuote(evaluation.quote_id, {
-                ai_recommendation_status: evaluation.ai_recommendation_status,
-                ai_rationale: evaluation.ai_rationale
+                status: 'evaluated',
+                is_recommended: isWinner,
+                // We'll store the overarching reason in the winning quote's rationale
+                ai_rationale: isWinner ? recommendationReason : 'Not recommended. See notes for details.',
+                ai_recommendation_status: isWinner ? 'Recommended' : 'Alternative',
+                notes: aiNotes
             })
         }
 
         revalidatePath(`/procurement/${projectId}`)
-        return { success: true }
+        return { success: true, recommendedBidId, recommendationReason }
     } catch (error) {
         console.error("Failed to evaluate quotes via Gemini:", error)
         throw new Error("Failed to evaluate quotes")
     }
+}
+
+export async function awardBid(quoteId: string, projectId: string) {
+    await requireProTier()
+    const supabase = await createClient()
+    const organization_id = await getOrganizationId()
+
+    // 1. Award the chosen bid
+    const { error: quoteError } = await supabase
+        .from("quotes")
+        .update({ status: 'awarded' })
+        .eq("id", quoteId)
+        .eq("organization_id", organization_id)
+
+    if (quoteError) {
+        console.error("Error awarding bid:", quoteError)
+        throw new Error("Failed to award bid")
+    }
+
+    // 2. Reject all other bids for this project
+    const { error: rejectError } = await supabase
+        .from("quotes")
+        .update({ status: 'rejected' })
+        .eq("project_id", projectId)
+        .neq("id", quoteId)
+        .eq("organization_id", organization_id)
+        .in("status", ["uploaded", "evaluating", "evaluated"])
+    
+    if (rejectError) {
+        console.warn("Failed to reject other bids:", rejectError)
+    }
+
+    // 3. Update the parent project status to 'Awarded'
+    const { error: projectError } = await supabase
+        .from("procurement_projects")
+        .update({ status: 'Awarded' })
+        .eq("id", projectId)
+        .eq("organization_id", organization_id)
+
+    if (projectError) {
+        console.error("Error updating project status:", projectError)
+        // We don't throw here to avoid a half-awarded state confusion, but it's an issue
+    }
+
+    revalidatePath(`/procurement/${projectId}`)
+    revalidatePath("/procurement")
+    return { success: true }
 }

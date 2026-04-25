@@ -346,35 +346,35 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         )}
-                                        <div className="grid grid-cols-3 gap-3">
-                                            <div className="space-y-1">
+                                        <div className="grid grid-cols-[1fr_2fr_2fr] gap-4 items-start w-full">
+                                            <div className="space-y-1 w-full min-w-0">
                                                 <Label className="text-xs dark:text-slate-300">Amount</Label>
-                                                <Input className="dark:bg-slate-900 dark:border-slate-800" type="number" value={split.amount} onChange={e => updateSplit(split.id, "amount", e.target.value)} />
+                                                <Input className="w-full dark:bg-slate-900 dark:border-slate-800" type="number" value={split.amount} onChange={e => updateSplit(split.id, "amount", e.target.value)} />
                                             </div>
-                                            <div className="space-y-1">
+                                            <div className="space-y-1 w-full min-w-0">
                                                 <Label className="text-xs dark:text-slate-300">Fund</Label>
                                                 <Select value={split.fund_id || undefined} onValueChange={v => updateSplit(split.id, "fund_id", v)}>
-                                                    <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800"><SelectValue placeholder="Fund..." /></SelectTrigger>
+                                                    <SelectTrigger className="w-full dark:bg-slate-900 dark:border-slate-800 [&>span]:truncate text-left"><SelectValue placeholder="Fund..." /></SelectTrigger>
                                                     <SelectContent>
                                                         {funds.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
                                                         <SelectItem value="custom" className="text-indigo-600 dark:text-indigo-400 font-medium">+ Custom</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 {split.fund_id === "custom" && (
-                                                    <Input className="mt-1 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-900/30" placeholder="New fund name..." value={split.customFundName || ""} onChange={e => updateSplit(split.id, "customFundName", e.target.value)} />
+                                                    <Input className="mt-1 w-full bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-900/30" placeholder="New fund name..." value={split.customFundName || ""} onChange={e => updateSplit(split.id, "customFundName", e.target.value)} />
                                                 )}
                                             </div>
-                                            <div className="space-y-1">
+                                            <div className="space-y-1 w-full min-w-0">
                                                 <Label className="text-xs dark:text-slate-300">Category</Label>
                                                 <Select value={split.category_id || undefined} onValueChange={v => updateSplit(split.id, "category_id", v)}>
-                                                    <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800"><SelectValue placeholder="Category..." /></SelectTrigger>
+                                                    <SelectTrigger className="w-full dark:bg-slate-900 dark:border-slate-800 [&>span]:truncate text-left"><SelectValue placeholder="Category..." /></SelectTrigger>
                                                     <SelectContent>
                                                         {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                                         <SelectItem value="custom" className="text-indigo-600 dark:text-indigo-400 font-medium">+ Custom</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 {split.category_id === "custom" && (
-                                                    <Input className="mt-1 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-900/30" placeholder="New category name..." value={split.customCategoryName || ""} onChange={e => updateSplit(split.id, "customCategoryName", e.target.value)} />
+                                                    <Input className="mt-1 w-full bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-900/30" placeholder="New category name..." value={split.customCategoryName || ""} onChange={e => updateSplit(split.id, "customCategoryName", e.target.value)} />
                                                 )}
                                             </div>
                                         </div>

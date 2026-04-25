@@ -58,7 +58,11 @@ export default async function ProcurementPage() {
                                             </div>
                                             <CardTitle className="text-xl pr-6 text-gray-900">{project.title}</CardTitle>
                                         </div>
-                                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                        <Badge variant="outline" className={
+                                            project.status.toLowerCase() === 'awarded'
+                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                : "bg-blue-50 text-blue-700 border-blue-200"
+                                        }>
                                             {project.status.replace("_", " ")}
                                         </Badge>
                                     </div>
