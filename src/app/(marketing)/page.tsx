@@ -12,7 +12,11 @@ import {
     Receipt,
     ShieldCheck,
     Zap,
-    Star
+    Star,
+    Sparkles,
+    Database,
+    Triangle,
+    Atom
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Lenis from "lenis";
@@ -32,6 +36,10 @@ const staggerContainer = {
 };
 
 export function handleSmoothScroll(e: React.MouseEvent<HTMLAnchorElement>, targetId: string) {
+    if (window.location.pathname !== '/') {
+        return; // Let standard link navigation handle cross-page routing
+    }
+    
     e.preventDefault();
     const lenis = (window as any).lenis;
     if (lenis) {
@@ -64,23 +72,23 @@ export default function LandingPage() {
     );
 }
 
-function Navbar() {
+export function Navbar() {
     return (
         <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-slate-950/80 backdrop-blur-md">
             <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
                         <Receipt className="h-5 w-5 text-white" />
                     </div>
                     <span className="text-xl font-bold tracking-tight">Outlayd</span>
-                </div>
+                </Link>
 
                 <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-                    <a href="#services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Services</a>
-                    <a href="#how-it-works" onClick={(e) => handleSmoothScroll(e, '#how-it-works')} className="hover:text-white transition-colors">How it works</a>
-                    <a href="#testimonials" onClick={(e) => handleSmoothScroll(e, '#testimonials')} className="hover:text-white transition-colors">Testimonials</a>
-                    <a href="#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</a>
-                    <a href="#faq" onClick={(e) => handleSmoothScroll(e, '#faq')} className="hover:text-white transition-colors">FAQ</a>
+                    <Link href="/#services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Services</Link>
+                    <Link href="/#how-it-works" onClick={(e) => handleSmoothScroll(e, '#how-it-works')} className="hover:text-white transition-colors">How it works</Link>
+                    <Link href="/#testimonials" onClick={(e) => handleSmoothScroll(e, '#testimonials')} className="hover:text-white transition-colors">Testimonials</Link>
+                    <Link href="/#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</Link>
+                    <Link href="/#faq" onClick={(e) => handleSmoothScroll(e, '#faq')} className="hover:text-white transition-colors">FAQ</Link>
                 </nav>
 
                 <div className="flex items-center gap-4">
@@ -127,9 +135,9 @@ function HeroSection() {
                                 Automate Your Ledger
                                 <ArrowRight className="w-4 h-4" />
                             </Link>
-                            <a href="#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-full font-medium transition-all active:scale-95 cursor-pointer">
+                            <Link href="/#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-full font-medium transition-all active:scale-95 cursor-pointer">
                                 View Pricing
-                            </a>
+                            </Link>
                         </div>
                     </motion.div>
 
@@ -184,16 +192,23 @@ function HeroSection() {
 }
 
 function PartnersSection() {
+    const techStack = [
+        { name: "Google Gemini", icon: <Sparkles className="w-5 h-5 text-indigo-400" /> },
+        { name: "Stripe", icon: <CreditCard className="w-5 h-5 text-indigo-400" /> },
+        { name: "Supabase", icon: <Database className="w-5 h-5 text-indigo-400" /> },
+        { name: "Vercel", icon: <Triangle className="w-4 h-4 text-indigo-400 fill-current" /> },
+        { name: "React", icon: <Atom className="w-5 h-5 text-indigo-400" /> },
+    ];
+
     return (
         <section className="py-10 border-y border-white/5 bg-white/2">
             <div className="container mx-auto px-4 text-center">
-                <p className="text-sm font-medium text-slate-400 mb-8 uppercase tracking-widest">Trusted by finance teams at</p>
-                <div className="flex flex-wrap justify-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
-                    {/* Fictional abstract logos using CSS shapes */}
-                    {[1, 2, 3, 4, 5, 6].map(i => (
-                        <div key={i} className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full border-4 border-current opacity-70" />
-                            <span className="text-lg font-bold tracking-tighter">Brand{i}</span>
+                <p className="text-sm font-medium text-slate-400 mb-8 uppercase tracking-widest">Powered by enterprise infrastructure</p>
+                <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+                    {techStack.map((tech, i) => (
+                        <div key={i} className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors duration-300">
+                            {tech.icon}
+                            <span className="text-lg font-bold tracking-tighter">{tech.name}</span>
                         </div>
                     ))}
                 </div>
@@ -440,9 +455,9 @@ function PricingSection() {
 
 function TestimonialsSection() {
     const reviews = [
-        { text: "Outlayd cut our month-end close prep from 5 days to 4 hours. Tracking spending across different client projects is finally easy.", author: "Sarah J.", role: "Director, Digital Agency" },
-        { text: "Our staff actually doesn't hate submitting expenses anymore. The vendor directory and AI extraction are basically magic.", author: "Mark T.", role: "Operations, E-Commerce Brand" },
-        { text: "The procurement pipeline saved me personally about 4 hours a week. Best software we've adopted this year.", author: "Elena R.", role: "Finance Manager, Retail Chain" }
+        { text: "Outlayd cut our month-end close prep from 5 days to 4 hours. Tracking spending across different client projects is finally easy.", author: "Sarah J.", role: "Director, Digital Agency", image: "/sarah.png" },
+        { text: "Our staff actually doesn't hate submitting expenses anymore. The vendor directory and AI extraction are basically magic.", author: "Mark T.", role: "Operations, E-Commerce Brand", image: "/mark.png" },
+        { text: "The procurement pipeline saved me personally about 4 hours a week. Best software we've adopted this year.", author: "Elena R.", role: "Finance Manager, Retail Chain", image: "/elena.png" }
     ];
 
     return (
@@ -458,7 +473,11 @@ function TestimonialsSection() {
                             </div>
                             <p className="text-slate-300 mb-6 text-sm leading-relaxed">&ldquo;{r.text}&rdquo;</p>
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/10" />
+                                {r.image ? (
+                                    <img src={r.image} alt={r.author} className="w-10 h-10 rounded-full object-cover object-top border border-white/10" />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/10" />
+                                )}
                                 <div>
                                     <div className="text-sm font-medium">{r.author}</div>
                                     <div className="text-xs text-slate-500">{r.role}</div>
@@ -474,7 +493,7 @@ function TestimonialsSection() {
 
 function FAQSection() {
     const faqs = [
-        { q: "How exact is the AI receipt extraction?", a: "Our Gemini-powered AI extracts data with 99.5% accuracy. It handles multiple currencies, messy handwriting, and complex multi-page invoices with line items." },
+        { q: "How exact is the AI receipt extraction?", a: "Our AI extracts data with 99.5% accuracy. It handles multiple currencies, messy handwriting, and complex multi-page invoices with line items." },
         { q: "Can I generate reports for my board of directors?", a: "Yes, our reporting tools allow you to filter expenses by exact dates, funds, and statuses, giving you ready-to-present data in seconds." },
         { q: "How does the vendor directory work?", a: "It auto-tracks every vendor from your uploaded documents, calculating total outstanding balances automatically without manual entry." },
         { q: "What's the cancellation policy?", a: "You can cancel your subscription at any time. We don't believe in long-term lock-in contracts for growing businesses." }
@@ -546,37 +565,30 @@ function CTASection() {
     );
 }
 
-function Footer() {
+export function Footer() {
     return (
         <footer className="border-t border-white/10 bg-slate-950 pt-16 pb-8 px-4">
             <div className="container mx-auto max-w-6xl">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 mb-16">
                     <div className="md:col-span-1">
-                        <div className="flex items-center gap-2 mb-4">
+                        <Link href="/" className="flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity">
                             <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
                                 <Receipt className="h-5 w-5 text-white" />
                             </div>
                             <span className="text-xl font-bold tracking-tight">Outlayd</span>
-                        </div>
+                        </Link>
                         <p className="text-slate-400 text-sm max-w-xs mb-6">
                             The intelligent ledger and spend management platform that growing businesses actually love to use.
                         </p>
-                        <div className="flex gap-4">
-                            <a href="#" /* TODO: add X link */ className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 cursor-pointer transition-colors">
-                                <span className="text-xs mt-0.5">X</span>
-                            </a>
-                            <a href="#" /* TODO: add LinkedIn link */ className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 cursor-pointer transition-colors">
-                                <span className="text-xs mt-0.5">in</span>
-                            </a>
-                        </div>
+
                     </div>
 
                     <div className="grid grid-cols-2 gap-8 md:col-span-2 md:ml-auto md:w-3/4 lg:w-2/3">
                         <div>
                             <h4 className="font-semibold mb-4 text-slate-200">Quick Links</h4>
                             <ul className="space-y-3 text-sm text-slate-400">
-                                <li><a href="#services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Features</a></li>
-                                <li><a href="#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</a></li>
+                                <li><Link href="/#services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Features</Link></li>
+                                <li><Link href="/#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</Link></li>
                                 <li><a href="mailto:founder@outlayd.com" className="hover:text-white transition-colors">Contact</a></li>
                             </ul>
                         </div>
@@ -584,8 +596,8 @@ function Footer() {
                         <div>
                             <h4 className="font-semibold mb-4 text-slate-200">Legal</h4>
                             <ul className="space-y-3 text-sm text-slate-400">
-                                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
+                                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                                <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
                             </ul>
                         </div>
                     </div>
@@ -594,8 +606,8 @@ function Footer() {
                 <div className="pt-8 border-t border-white/10 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500">
                     <p>© {new Date().getFullYear()} Outlayd. All rights reserved.</p>
                     <div className="flex gap-6">
-                        <a href="#" className="hover:text-white">Privacy</a>
-                        <a href="#" className="hover:text-white">Terms</a>
+                        <Link href="/privacy" className="hover:text-white">Privacy</Link>
+                        <Link href="/terms" className="hover:text-white">Terms</Link>
                     </div>
                 </div>
             </div>
