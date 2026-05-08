@@ -29,7 +29,7 @@ export function SettingsLayout({ orgSettings, initialFunds, initialCategories, i
     return (
         <div className="flex flex-col md:flex-row gap-8">
             {/* Sidebar Navigation */}
-            <nav className="w-full md:w-64 flex-shrink-0 flex md:flex-col gap-2 overflow-x-auto pb-4 md:pb-0 scrollbar-hide">
+            <nav className="w-full md:w-64 shrink-0 flex md:flex-col gap-2 overflow-x-auto pb-4 md:pb-0 scrollbar-hide">
                 {TABS.map(tab => (
                     <button
                         key={tab.id}

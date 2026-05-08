@@ -388,18 +388,18 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
 
                             <div className="pt-8 mb-4">
                                 <div className="flex items-center justify-between mb-5">
-                                    <h3 className="text-sm font-[600] text-[#0f172a] dark:text-slate-200 tracking-wide uppercase">LINE ITEMS</h3>
+                                    <h3 className="text-sm font-semibold text-[#0f172a] dark:text-slate-200 tracking-wide uppercase">LINE ITEMS</h3>
                                     <button
                                         type="button"
                                         onClick={() => setLineItems([...lineItems, { description: "", quantity: 1, unit_price: 0, total: 0 }])}
-                                        className="text-[#3b27b9] dark:text-[#818cf8] hover:text-[#2d1b96] dark:hover:text-[#6366f1] text-[14px] font-[500] flex items-center"
+                                        className="text-[#3b27b9] dark:text-[#818cf8] hover:text-[#2d1b96] dark:hover:text-[#6366f1] text-[14px] font-medium flex items-center"
                                     >
-                                        <Plus className="w-4 h-4 mr-1 stroke-[2]" /> Add item
+                                        <Plus className="w-4 h-4 mr-1 stroke-2" /> Add item
                                     </button>
                                 </div>
 
                                 <div className="space-y-0 relative">
-                                    <div className="grid grid-cols-[60px_1fr_100px_100px_32px] gap-2 py-[10px] border-y border-[#e2e8f0] dark:border-slate-800 text-[13px] font-[600] text-[#94a3b8] dark:text-slate-400 mb-2 items-center">
+                                    <div className="grid grid-cols-[60px_1fr_100px_100px_32px] gap-2 py-[10px] border-y border-[#e2e8f0] dark:border-slate-800 text-[13px] font-semibold text-[#94a3b8] dark:text-slate-400 mb-2 items-center">
                                         <div className="text-center">Qty</div>
                                         <div>Description</div>
                                         <div className="text-right">Unit $</div>
@@ -444,7 +444,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                     className="bg-transparent border border-transparent rounded-[6px] h-[36px] px-1 text-[14px] text-right text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
                                                     placeholder="0.00"
                                                 />
-                                                <div className="font-[500] text-[#1e293b] dark:text-slate-300 text-[14px] text-right pr-2">
+                                                <div className="font-medium text-[#1e293b] dark:text-slate-300 text-[14px] text-right pr-2">
                                                     {(Number(item.total) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </div>
                                                 <button
@@ -466,8 +466,8 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
 
                                     <div className="flex flex-col items-end pt-5 mt-4 border-t border-[#f1f5f9] dark:border-slate-800 gap-2">
                                         <div className="grid grid-cols-[1fr_100px] gap-2 items-center w-[250px]">
-                                            <div className="text-[14px] font-[600] text-[#0f172a] dark:text-slate-200 text-right">Total:</div>
-                                            <div className="text-[15px] font-[600] text-[#0f172a] dark:text-slate-200 text-right pr-8">
+                                            <div className="text-[14px] font-semibold text-[#0f172a] dark:text-slate-200 text-right">Total:</div>
+                                            <div className="text-[15px] font-semibold text-[#0f172a] dark:text-slate-200 text-right pr-8">
                                                 ${(lineItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>
                                         </div>

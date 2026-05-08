@@ -210,7 +210,7 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {vendor.totalUnpaid > 0 ? (
-                                            <div className="flex items-center justify-end font-semibold text-red-600 gap-1.5 bg-red-50 px-2 py-1 rounded-md inline-flex border border-red-100 ">
+                                            <div className="items-center justify-end font-semibold text-red-600 gap-1.5 bg-red-50 px-2 py-1 rounded-md inline-flex border border-red-100 ">
                                                 <AlertCircle className="w-3.5 h-3.5" />
                                                 ${vendor.totalUnpaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>

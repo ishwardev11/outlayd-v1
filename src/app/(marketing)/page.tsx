@@ -99,7 +99,7 @@ function Navbar() {
 function HeroSection() {
     return (
         <section className="relative pt-16 pb-20 lg:pt-24 lg:pb-32 overflow-hidden px-4">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/40 via-slate-950 to-slate-950 -z-10" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-indigo-900/40 via-slate-950 to-slate-950 -z-10" />
 
             <div className="container mx-auto max-w-6xl">
                 <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
@@ -115,7 +115,7 @@ function HeroSection() {
                         </div>
 
                         <h1 className="text-5xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 ease-out fill-mode-both">
-                            Stop typing out receipts. <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">Automate your business accounts payable.</span>
+                            Stop typing out receipts. <br /><span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-cyan-400">Automate your business accounts payable.</span>
                         </h1>
 
                         <p className="text-lg text-slate-400 mb-8 max-w-xl mx-auto lg:mx-0 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 ease-out fill-mode-both">
@@ -140,7 +140,7 @@ function HeroSection() {
                         className="relative mx-auto w-full max-w-lg lg:max-w-none"
                     >
                         <div className="relative rounded-2xl border border-white/10 bg-slate-900/50 backdrop-blur-sm p-2 shadow-2xl">
-                            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-transparent rounded-2xl" />
+                            <div className="absolute inset-0 bg-linear-to-tr from-indigo-500/10 to-transparent rounded-2xl" />
                             <img
                                 src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2070&auto=format&fit=crop"
                                 alt="Outlayd Dashboard"
@@ -172,7 +172,7 @@ function HeroSection() {
                                     <div className="w-1/6 h-[40%] bg-indigo-500/50 rounded-t-sm" />
                                     <div className="w-1/6 h-[80%] bg-indigo-500/90 rounded-t-sm" />
                                     <div className="w-1/6 h-[60%] bg-indigo-500/70 rounded-t-sm" />
-                                    <div className="w-1/6 h-[100%] bg-indigo-400 rounded-t-sm shadow-[0_0_15px_rgba(129,140,248,0.5)]" />
+                                    <div className="w-1/6 h-full bg-indigo-400 rounded-t-sm shadow-[0_0_15px_rgba(129,140,248,0.5)]" />
                                 </div>
                             </div>
                         </div>
@@ -185,7 +185,7 @@ function HeroSection() {
 
 function PartnersSection() {
     return (
-        <section className="py-10 border-y border-white/5 bg-white/[0.02]">
+        <section className="py-10 border-y border-white/5 bg-white/2">
             <div className="container mx-auto px-4 text-center">
                 <p className="text-sm font-medium text-slate-400 mb-8 uppercase tracking-widest">Trusted by finance teams at</p>
                 <div className="flex flex-wrap justify-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
@@ -215,7 +215,7 @@ function BenefitsSection() {
                     {/* Bento Box 1 - Large */}
                     <motion.div
                         initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
-                        className="md:col-span-2 bg-gradient-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
+                        className="md:col-span-2 bg-linear-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
                     >
                         <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-110 transition-transform duration-700">
                             <Zap className="w-32 h-32 text-indigo-500" />
@@ -243,7 +243,7 @@ function BenefitsSection() {
                     {/* Bento Box 2 */}
                     <motion.div
                         initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
-                        className="bg-gradient-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
+                        className="bg-linear-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
                     >
                         <div className="h-full flex flex-col">
                             <div className="h-12 w-12 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center mb-6">
@@ -257,7 +257,7 @@ function BenefitsSection() {
                     {/* Bento Box 3 */}
                     <motion.div
                         initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
-                        className="bg-gradient-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
+                        className="bg-linear-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
                     >
                         <div className="h-full flex flex-col">
                             <div className="h-12 w-12 bg-cyan-500/10 text-cyan-400 rounded-xl flex items-center justify-center mb-6">
@@ -271,7 +271,7 @@ function BenefitsSection() {
                     {/* Bento Box 4 - Medium */}
                     <motion.div
                         initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
-                        className="md:col-span-2 bg-gradient-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg group"
+                        className="md:col-span-2 bg-linear-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg group"
                     >
                         <div className="flex flex-col md:flex-row h-full gap-8">
                             <div className="flex-1 flex flex-col justify-center">
@@ -337,7 +337,7 @@ function HowItWorksSection() {
 
                 <div className="grid md:grid-cols-3 gap-8 relative">
                     {/* Connector Line */}
-                    <div className="hidden md:block absolute top-[45px] left-[15%] right-[15%] h-[2px] bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
+                    <div className="hidden md:block absolute top-[45px] left-[15%] right-[15%] h-[2px] bg-linear-to-r from-transparent via-indigo-500/50 to-transparent" />
 
                     {steps.map((step, i) => (
                         <motion.div
@@ -390,7 +390,7 @@ function PricingSection() {
                     </div>
 
                     {/* Pro */}
-                    <div className="bg-gradient-to-b from-indigo-900/50 to-slate-900 border border-indigo-500/50 rounded-3xl p-8 flex flex-col relative shadow-[0_0_50px_-12px_rgba(79,70,229,0.3)]">
+                    <div className="bg-linear-to-b from-indigo-900/50 to-slate-900 border border-indigo-500/50 rounded-3xl p-8 flex flex-col relative shadow-[0_0_50px_-12px_rgba(79,70,229,0.3)]">
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-500 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full">
                             Most Popular
                         </div>
@@ -525,7 +525,7 @@ function CTASection() {
         <section className="py-24 px-4">
             <div className="container mx-auto max-w-5xl">
                 <div className="relative rounded-3xl overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-violet-800" />
+                    <div className="absolute inset-0 bg-linear-to-br from-indigo-600 to-violet-800" />
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 mix-blend-overlay" />
 
                     <div className="relative z-10 p-12 lg:p-20 text-center">

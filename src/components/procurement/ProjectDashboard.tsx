@@ -314,6 +314,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                     project_id: project.id,
                     organization_id: project.organization_id,
                     vendor_name: 'Pending...',
+                    total_amount: 0,
                     file_url: publicUrl,
                     file_size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
                     status: 'uploaded'
@@ -322,7 +323,40 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                 .single()
             
             if (quoteError) throw quoteError
+
+            // Optimistically add the pending bid
             setBids(prev => [...prev, quoteToBid(quoteData)])
+
+            // Extract data using AI
+            try {
+                const base64Data = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader()
+                    reader.readAsDataURL(file)
+                    reader.onload = () => resolve((reader.result as string).split(',')[1])
+                    reader.onerror = error => reject(error)
+                })
+
+                const { extractQuoteData } = await import("@/app/actions/procurement")
+                const extractedData = await extractQuoteData(quoteData.id, project.id, file.type, base64Data)
+
+                // Update the local state with the extracted data
+                setBids(prev => prev.map(b => 
+                    b.id === quoteData.id 
+                        ? { 
+                            ...b, 
+                            vendorName: extractedData.vendor_name,
+                            totalAmount: extractedData.total_amount,
+                            paymentTerms: extractedData.payment_terms,
+                            aiRecommendationStatus: extractedData.ai_recommendation_status,
+                            aiRationale: extractedData.ai_rationale,
+                            extractedData: extractedData.extracted_data
+                          } 
+                        : b
+                ))
+            } catch (extractionError) {
+                console.error("AI Extraction failed:", extractionError)
+                // Continue even if extraction fails, as the file is already uploaded
+            }
         } catch (error) {
             console.error(error)
             alert("Upload failed")
@@ -396,12 +430,12 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                     <FileUp className="w-4 h-4" />
                     <span className="text-sm font-semibold">Upload</span>
                 </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground/30 flex-shrink-0" />
+                <ChevronRight className="w-5 h-5 text-muted-foreground/30 shrink-0" />
                 <div className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-colors ${evaluatedBids.length > 0 ? 'bg-primary/10 border-primary text-primary' : 'bg-transparent border-border text-muted-foreground'}`}>
                     <BrainCircuit className="w-4 h-4" />
                     <span className="text-sm font-semibold">Evaluate</span>
                 </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground/30 flex-shrink-0" />
+                <ChevronRight className="w-5 h-5 text-muted-foreground/30 shrink-0" />
                 <div className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-colors ${awardedBids.length > 0 ? 'bg-primary/10 border-primary text-primary' : 'bg-transparent border-border text-muted-foreground'}`}>
                     <Trophy className="w-4 h-4" />
                     <span className="text-sm font-semibold">Award</span>

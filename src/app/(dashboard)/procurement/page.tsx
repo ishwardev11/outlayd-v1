@@ -49,19 +49,19 @@ export default async function ProcurementPage() {
                 {projects?.map(project => (
                     <div key={project.id} className="relative group h-full">
                         <Link href={`/procurement/${project.id}`} className="block h-full">
-                            <Card className="h-full bg-white border border-gray-200 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all">
+                            <Card className="h-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:shadow-md transition-all">
                                 <CardHeader className="pb-3">
                                     <div className="flex items-start justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors">
-                                                <Target className="w-5 h-5 text-indigo-600" />
+                                            <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 transition-colors">
+                                                <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                                             </div>
-                                            <CardTitle className="text-xl pr-6 text-gray-900">{project.title}</CardTitle>
+                                            <CardTitle className="text-xl pr-6 text-gray-900 dark:text-white">{project.title}</CardTitle>
                                         </div>
                                         <Badge variant="outline" className={
                                             project.status.toLowerCase() === 'awarded'
-                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                                : "bg-blue-50 text-blue-700 border-blue-200"
+                                                ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20"
+                                                : "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20"
                                         }>
                                             {project.status.replace("_", " ")}
                                         </Badge>
@@ -70,15 +70,15 @@ export default async function ProcurementPage() {
                                 <CardContent>
                                     <div className="flex items-center gap-6 mt-2">
                                         <div>
-                                            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Budget Ceiling</p>
-                                            <p className="text-lg font-bold text-gray-900 mt-1">${Number(project.budget_ceiling).toLocaleString()}</p>
+                                            <p className="text-xs text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider">Budget Ceiling</p>
+                                            <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">${Number(project.budget_ceiling).toLocaleString()}</p>
                                         </div>
                                         <div>
-                                            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Deadline</p>
-                                            <p className="text-sm font-medium text-gray-700 mt-2">{new Date(project.required_deadline).toLocaleDateString('en-US', { timeZone: 'UTC' })}</p>
+                                            <p className="text-xs text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider">Deadline</p>
+                                            <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mt-2">{new Date(project.required_deadline).toLocaleDateString('en-US', { timeZone: 'UTC' })}</p>
                                         </div>
                                         <div className="ml-auto mt-4">
-                                            <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                                            <ArrowRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors" />
                                         </div>
                                     </div>
                                 </CardContent>
