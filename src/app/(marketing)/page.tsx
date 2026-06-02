@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Lenis from "lenis";
+import { PlaygroundDemo } from "@/components/marketing/PlaygroundDemo";
 
 // Animation Variants
 const fadeIn = {
@@ -74,8 +75,8 @@ export default function LandingPage() {
 
 export function Navbar() {
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-slate-950/80 backdrop-blur-md">
-            <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <header className="sticky top-4 z-50 mx-auto max-w-6xl w-[calc(100%-2rem)] border border-white/10 bg-slate-950/80 backdrop-blur-md rounded-2xl shadow-lg shadow-black/40">
+            <div className="px-6 h-16 flex items-center justify-between">
                 <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
                         <Receipt className="h-5 w-5 text-white" />
@@ -84,18 +85,18 @@ export function Navbar() {
                 </Link>
 
                 <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-                    <Link href="/#services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Services</Link>
-                    <Link href="/#how-it-works" onClick={(e) => handleSmoothScroll(e, '#how-it-works')} className="hover:text-white transition-colors">How it works</Link>
-                    <Link href="/#testimonials" onClick={(e) => handleSmoothScroll(e, '#testimonials')} className="hover:text-white transition-colors">Testimonials</Link>
-                    <Link href="/#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</Link>
-                    <Link href="/#faq" onClick={(e) => handleSmoothScroll(e, '#faq')} className="hover:text-white transition-colors">FAQ</Link>
+                    <Link href="/#services" id="nav-link-services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Services</Link>
+                    <Link href="/#how-it-works" id="nav-link-how-it-works" onClick={(e) => handleSmoothScroll(e, '#how-it-works')} className="hover:text-white transition-colors">How it works</Link>
+                    <Link href="/#testimonials" id="nav-link-testimonials" onClick={(e) => handleSmoothScroll(e, '#testimonials')} className="hover:text-white transition-colors">Testimonials</Link>
+                    <Link href="/#pricing" id="nav-link-pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</Link>
+                    <Link href="/#faq" id="nav-link-faq" onClick={(e) => handleSmoothScroll(e, '#faq')} className="hover:text-white transition-colors">FAQ</Link>
                 </nav>
 
                 <div className="flex items-center gap-4">
-                    <Link href="/login" className="text-sm font-medium text-slate-300 hover:text-white transition-colors hidden sm:block">
+                    <Link href="/login" id="nav-login-btn" className="text-sm font-medium text-slate-300 hover:text-white transition-colors hidden sm:block">
                         Log in
                     </Link>
-                    <Link href="/signup" className="bg-white text-slate-950 hover:bg-slate-200 px-4 py-2 rounded-full text-sm font-medium transition-colors">
+                    <Link href="/signup" id="nav-signup-btn" className="bg-white text-slate-950 hover:bg-slate-200 px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer">
                         Get Started
                     </Link>
                 </div>
@@ -131,60 +132,19 @@ function HeroSection() {
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 ease-out fill-mode-both">
-                            <Link href="/signup" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-full font-medium transition-all shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] active:scale-95">
+                            <Link href="/signup" id="hero-signup-btn" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-full font-medium transition-all shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] active:scale-95 cursor-pointer">
                                 Automate Your Ledger
                                 <ArrowRight className="w-4 h-4" />
                             </Link>
-                            <Link href="/#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-full font-medium transition-all active:scale-95 cursor-pointer">
+                            <Link href="/#pricing" id="hero-pricing-btn" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-full font-medium transition-all active:scale-95 cursor-pointer">
                                 View Pricing
                             </Link>
                         </div>
                     </motion.div>
 
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
-                        className="relative mx-auto w-full max-w-lg lg:max-w-none"
-                    >
-                        <div className="relative rounded-2xl border border-white/10 bg-slate-900/50 backdrop-blur-sm p-2 shadow-2xl">
-                            <div className="absolute inset-0 bg-linear-to-tr from-indigo-500/10 to-transparent rounded-2xl" />
-                            <img
-                                src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2070&auto=format&fit=crop"
-                                alt="Outlayd Dashboard"
-                                className="rounded-xl border border-white/5 opacity-80 mix-blend-screen"
-                            />
-                            {/* Overlay UI elements to make it look like our app */}
-                            <div className="absolute top-8 left-8 right-8 bottom-8 rounded-lg border border-white/10 bg-slate-950/80 p-4 shadow-2xl flex flex-col gap-4">
-                                <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                                    <div className="h-4 w-32 bg-white/10 rounded-full" />
-                                    <div className="h-8 w-8 bg-indigo-500/20 rounded-full" />
-                                </div>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="h-24 bg-white/5 rounded-lg p-4 border border-white/5">
-                                        <div className="h-3 w-16 bg-white/20 rounded-full mb-3" />
-                                        <div className="h-6 w-24 bg-indigo-400 rounded-full" />
-                                    </div>
-                                    <div className="h-24 bg-white/5 rounded-lg p-4 border border-white/5">
-                                        <div className="h-3 w-16 bg-white/20 rounded-full mb-3" />
-                                        <div className="h-6 w-24 bg-white/80 rounded-full" />
-                                    </div>
-                                    <div className="h-24 bg-white/5 rounded-lg p-4 border border-white/5">
-                                        <div className="h-3 w-16 bg-white/20 rounded-full mb-3" />
-                                        <div className="h-6 w-24 bg-emerald-400 rounded-full" />
-                                    </div>
-                                </div>
-                                <div className="flex-1 bg-white/5 rounded-lg border border-white/5 p-4 flex items-end gap-2">
-                                    <div className="w-1/6 h-[30%] bg-indigo-500/40 rounded-t-sm" />
-                                    <div className="w-1/6 h-[50%] bg-indigo-500/60 rounded-t-sm" />
-                                    <div className="w-1/6 h-[40%] bg-indigo-500/50 rounded-t-sm" />
-                                    <div className="w-1/6 h-[80%] bg-indigo-500/90 rounded-t-sm" />
-                                    <div className="w-1/6 h-[60%] bg-indigo-500/70 rounded-t-sm" />
-                                    <div className="w-1/6 h-full bg-indigo-400 rounded-t-sm shadow-[0_0_15px_rgba(129,140,248,0.5)]" />
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
+                    <div className="w-full lg:max-w-none">
+                        <PlaygroundDemo />
+                    </div>
                 </div>
             </div>
         </section>
@@ -399,7 +359,7 @@ function PricingSection() {
                                 </li>
                             ))}
                         </ul>
-                        <Link href="/signup" className="w-full py-3 px-4 rounded-xl border border-white/20 font-medium text-center hover:bg-white/5 transition-colors">
+                        <Link href="/signup" id="pricing-starter-btn" className="w-full py-3 px-4 rounded-xl border border-white/20 font-medium text-center hover:bg-white/5 transition-all active:scale-95 cursor-pointer">
                             Get Started
                         </Link>
                     </div>
@@ -423,7 +383,7 @@ function PricingSection() {
                                 </li>
                             ))}
                         </ul>
-                        <Link href="/signup" className="w-full py-3 px-4 rounded-xl bg-indigo-600 font-medium text-center hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/25">
+                        <Link href="/signup" id="pricing-growth-btn" className="w-full py-3 px-4 rounded-xl bg-indigo-600 font-medium text-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/25 active:scale-95 cursor-pointer">
                             Get Started
                         </Link>
                     </div>
@@ -443,7 +403,7 @@ function PricingSection() {
                                 </li>
                             ))}
                         </ul>
-                        <Link href="#contact" className="w-full py-3 px-4 rounded-xl border border-white/20 font-medium text-center hover:bg-white/5 transition-colors">
+                        <Link href="#contact" id="pricing-enterprise-btn" className="w-full py-3 px-4 rounded-xl border border-white/20 font-medium text-center hover:bg-white/5 transition-all active:scale-95 cursor-pointer">
                             Contact Sales
                         </Link>
                     </div>
@@ -520,10 +480,10 @@ function FAQItem({ question, answer }: { question: string, answer: string }) {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <div className="border border-white/10 rounded-2xl bg-slate-900/30 overflow-hidden">
+        <div className="border border-white/10 rounded-2xl bg-slate-900/30 overflow-hidden transition-colors hover:bg-slate-900/40">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full p-6 text-left flex items-center justify-between focus:outline-none"
+                className="w-full p-6 text-left flex items-center justify-between focus:outline-none cursor-pointer"
             >
                 <span className="font-medium text-slate-200">{question}</span>
                 <ChevronDown className={`w-5 h-5 text-slate-500 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
@@ -553,7 +513,7 @@ function CTASection() {
                             Join thousands of modern companies who have automated their entire expense reporting workflow.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                            <Link href="/signup" className="w-full sm:w-auto bg-white text-indigo-900 font-bold px-8 py-4 rounded-full hover:scale-105 transition-transform">
+                            <Link href="/signup" id="cta-signup-btn" className="w-full sm:w-auto bg-white text-indigo-900 font-bold px-8 py-4 rounded-full transition-all active:scale-95 hover:bg-slate-100 cursor-pointer">
                                 Get Started Now
                             </Link>
                         </div>
