@@ -37,18 +37,8 @@ export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upl
         setIsLoading(true);
         try {
             const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-            let orgId = null;
-
-            if (session?.access_token) {
-                const jwtPayload = JSON.parse(Buffer.from(session.access_token.split('.')[1], 'base64').toString());
-                orgId = jwtPayload.organization_id;
-            }
-
-            if (!orgId) {
-                const { data: { user } } = await supabase.auth.getUser();
-                orgId = user?.user_metadata?.organization_id;
-            }
+            const { data: { user } } = await supabase.auth.getUser();
+            const orgId = user?.user_metadata?.organization_id || null;
 
             const response = await fetch('/api/create-checkout-session', {
                 method: 'POST',

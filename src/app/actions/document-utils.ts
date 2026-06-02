@@ -17,18 +17,19 @@ export async function getOrganizationId() {
 
     // 2. Standard Session Auth
     const supabase = await createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) return null; // Instead of default UUID
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null;
 
     try {
-        const jwtPayload = JSON.parse(Buffer.from(session.access_token.split('.')[1], 'base64').toString());
-        if (jwtPayload.organization_id) return jwtPayload.organization_id;
+        if (user.user_metadata?.organization_id) {
+            return user.user_metadata.organization_id;
+        }
 
         // Secure fallback: Query user_roles table based on email
-        const { data: roleData, error: roleError } = await supabase
+        const { data: roleData } = await supabase
             .from('user_roles')
             .select('organization_id')
-            .eq('email', session.user.email)
+            .eq('email', user.email)
             .single();
 
         if (roleData?.organization_id) {

@@ -112,7 +112,7 @@ export function PlaygroundDemo() {
     };
 
     return (
-        <div className="w-full bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-md shadow-2xl flex flex-col xl:flex-row gap-8">
+        <div className="w-full bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-md shadow-2xl flex flex-col gap-8">
             {/* Left: Document Simulator */}
             <div className="flex-1 flex flex-col gap-4">
                 <div className="flex gap-2 border-b border-slate-800 pb-3 overflow-x-auto">

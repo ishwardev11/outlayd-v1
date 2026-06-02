@@ -350,7 +350,7 @@ function PricingSection() {
                         </div>
                         <p className="text-sm text-slate-400 mb-8 border-b border-white/10 pb-8">Perfect for small businesses and agencies just getting started.</p>
                         <ul className="space-y-4 mb-8 flex-1">
-                            {['Up to 5 users', 'AI Document Extraction (5/mo)', 'Digital Agencies & SaaS', 'Vendor Directory'].map((feature, i) => (
+                            {['Limited to 1 user', 'AI Document Extraction (5/mo)', 'Digital Agencies & SaaS', 'Vendor Directory'].map((feature, i) => (
                                 <li key={i} className="flex items-start gap-3 text-sm">
                                     <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" />
                                     <span>{feature}</span>
@@ -374,7 +374,7 @@ function PricingSection() {
                         </div>
                         <p className="text-sm text-slate-400 mb-8 border-b border-white/10 pb-8">For growing e-commerce and SaaS brands that need robust expense tracking.</p>
                         <ul className="space-y-4 mb-8 flex-1">
-                            {['Up to 20 users', 'Unlimited AI Extraction', 'E-Commerce Brands', 'Exportable Board Reports', 'Custom category allocation'].map((feature, i) => (
+                            {['Up to 5 users', 'Unlimited AI Extraction', 'E-Commerce Brands', 'Exportable Board Reports', 'Custom category allocation'].map((feature, i) => (
                                 <li key={i} className="flex items-start gap-3 text-sm">
                                     <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" />
                                     <span>{feature}</span>

@@ -15,7 +15,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
     const supabase = await createClient();
 
     // 1. Get current user (support local dev fallback)
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
         console.log("Local Dev: Bypassing DB insert for unauthenticated user.");
@@ -48,8 +48,30 @@ export async function completeOnboardingSetup(data: OnboardingData) {
 
         const organization_id = org.id;
 
-        // 3. (REMOVED) Link user via user_metadata - Now handled via user_roles table below
-        // This is no longer needed as RLS now joins with user_roles
+        // 3. Link user to organization via user_metadata IMMEDIATELY
+        // This is strictly required before inserting categories/funds/roles to pass RLS checks
+        if (user) {
+            const { error: updateError } = await supabase.auth.updateUser({
+                data: { organization_id }
+            });
+
+            if (updateError) {
+                console.error("Error updating user metadata:", updateError);
+                throw new Error("Failed to link user to organization");
+            }
+        }
+
+        // 4. Assign user roles (current user as Admin only)
+        // MUST be inserted before categories/funds seeding so get_user_org_id() can resolve the organization
+        const rolesToInsert = [
+            { organization_id, email: userEmail, role: "Admin", full_name: userFullName }
+        ];
+
+        const { error: rolesError } = await supabase.from("user_roles").insert(rolesToInsert);
+        if (rolesError) {
+            console.error("Error creating user roles:", rolesError);
+            throw new Error(`Failed to assign user role: ${rolesError.message}`);
+        }
 
 
         // 4. Seed template data with robust switch statement
@@ -115,13 +137,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
             }
         }
 
-        // 5. Assign user roles (current user as Admin only)
-        const rolesToInsert = [
-            { organization_id, email: userEmail, role: "Admin", full_name: userFullName }
-        ];
 
-        const { error: rolesError } = await supabase.from("user_roles").insert(rolesToInsert);
-        if (rolesError) console.error("Error creating user roles:", rolesError);
 
         return { success: true, organization_id };
     } catch (error: any) {
