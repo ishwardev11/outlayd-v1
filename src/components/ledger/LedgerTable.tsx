@@ -200,9 +200,10 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                             </TableCell>
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                 <Button
+                                    id={`delete-btn-${doc.id}`}
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 opacity-0 -translate-x-2 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-200"
+                                    className="h-8 w-8 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 lg:opacity-0 lg:-translate-x-2 lg:group-hover:translate-x-0 lg:group-hover:opacity-100 transition-all duration-200 cursor-pointer active:scale-[0.95]"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         onDelete?.(doc.id);

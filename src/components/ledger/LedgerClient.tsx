@@ -23,6 +23,7 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
     const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [isBulkApproving, setIsBulkApproving] = useState<boolean>(false);
+    const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
 
     // Filtering States
     const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -127,7 +128,23 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
         } finally {
             setIsBulkApproving(false);
         }
-    }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedDocs.length === 0) return;
+        if (window.confirm(`Are you sure you want to permanently delete the ${selectedDocs.length} selected documents?`)) {
+            setIsBulkDeleting(true);
+            try {
+                await Promise.all(selectedDocs.map(id => deleteDocument(id)));
+                setSelectedDocs([]);
+            } catch (error) {
+                console.error(error);
+                alert("Failed to delete some documents");
+            } finally {
+                setIsBulkDeleting(false);
+            }
+        }
+    };
 
     return (
         <div className="space-y-4">
@@ -184,6 +201,17 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
                     <div className="flex gap-2">
                         <Button id="bulk-cancel-btn" variant="outline" size="sm" onClick={() => setSelectedDocs([])} className="bg-white hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800/80 cursor-pointer rounded-xl active:scale-[0.98] transition-all">
                             Cancel
+                        </Button>
+                        <Button
+                            id="bulk-delete-btn"
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleBulkDelete}
+                            disabled={isBulkDeleting}
+                            className="bg-red-600 hover:bg-red-700 dark:bg-red-750 dark:hover:bg-red-700 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all"
+                        >
+                            {isBulkDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Delete Selected
                         </Button>
                         <Button id="bulk-approve-btn" size="sm" onClick={handleBulkApprove} disabled={isBulkApproving} className="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all">
                             {isBulkApproving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

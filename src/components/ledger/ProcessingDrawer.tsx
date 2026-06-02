@@ -17,7 +17,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { updateDocument, createFund, createCategory } from "@/app/actions/ledger";
+import { updateDocument, createFund, createCategory, deleteDocument } from "@/app/actions/ledger";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
 interface Split {
@@ -224,6 +224,23 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [isOpen, handleSave, isSubmitting]);
+
+    const handleDelete = async () => {
+        if (!document?.id) return;
+        if (window.confirm("Are you sure you want to permanently delete this document?")) {
+            setIsSubmitting(true);
+            try {
+                await deleteDocument(document.id);
+                toast.success("Document deleted successfully");
+                onClose();
+            } catch (error) {
+                console.error(error);
+                toast.error(error instanceof Error ? error.message : "Failed to delete document");
+            } finally {
+                setIsSubmitting(false);
+            }
+        }
+    };
 
     if (!document) return null;
 
@@ -478,18 +495,31 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                         </div>
 
                         {/* Pinned Action Buttons Footer */}
-                        <div className="p-4 border-t dark:border-slate-800 bg-slate-50 dark:bg-slate-950 shrink-0 flex gap-3 mt-auto">
-                            <Button variant="outline" className="flex-1 bg-white dark:bg-slate-900 dark:border-slate-700" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+                        <div className="p-4 border-t dark:border-slate-800 bg-slate-50 dark:bg-slate-950 shrink-0 flex gap-3 mt-auto justify-between items-center w-full">
                             <Button
-                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white"
-                                onClick={handleSave}
+                                id="drawer-delete-btn"
+                                variant="destructive"
+                                className="bg-red-600 hover:bg-red-700 dark:bg-red-750 dark:hover:bg-red-700 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all px-4"
+                                onClick={handleDelete}
                                 disabled={isSubmitting}
-                                title="Cmd/Ctrl + Enter to Save"
                             >
-                                {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                                {document.status === "awaiting_payment" ? "Mark as Paid" : "Approve & Next"}
-                                <span className="ml-2 py-0.5 px-1.5 bg-indigo-800 text-indigo-100 rounded text-[10px] font-mono opacity-80 border border-indigo-900 shadow-inner tracking-wider">⌘↵</span>
+                                {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                                Delete Document
                             </Button>
+                            <div className="flex gap-3">
+                                <Button id="drawer-cancel-btn" variant="outline" className="bg-white dark:bg-slate-900 dark:border-slate-700 cursor-pointer rounded-xl active:scale-[0.98] transition-all" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+                                <Button
+                                    id="drawer-save-btn"
+                                    className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all"
+                                    onClick={handleSave}
+                                    disabled={isSubmitting}
+                                    title="Cmd/Ctrl + Enter to Save"
+                                >
+                                    {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                                    {document.status === "awaiting_payment" ? "Mark as Paid" : "Approve & Next"}
+                                    <span className="ml-2 py-0.5 px-1.5 bg-indigo-800 text-indigo-100 rounded text-[10px] font-mono opacity-80 border border-indigo-900 shadow-inner tracking-wider">⌘↵</span>
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
