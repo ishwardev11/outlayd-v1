@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 "use client";
+
 
 import { useState, useMemo } from "react";
 import { KanbanFilters } from "@/components/ledger/KanbanFilters";
@@ -136,22 +138,22 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
             />
 
             {/* Control Panel / Omnibar */}
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-md border border-gray-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row gap-4 items-center animate-in fade-in">
+            <div className="bg-white/80 dark:bg-slate-950/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800/80 shadow-md flex flex-col sm:flex-row gap-4 items-center animate-in fade-in backdrop-blur-sm">
                 <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input
                         placeholder="Search vendor, amount, or line items..."
-                        className="pl-9 w-full bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder-slate-500 focus-visible:ring-indigo-500"
+                        className="pl-9 w-full bg-white dark:bg-slate-900 border-slate-250 dark:border-slate-850 text-slate-900 dark:text-white placeholder:text-slate-450 dark:placeholder:slate-500 focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:border-indigo-500 transition-all rounded-lg"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                     <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
-                        <SelectTrigger className="w-[140px] bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white">
+                        <SelectTrigger className="w-[140px] bg-white dark:bg-slate-900 border-slate-250 dark:border-slate-850 text-slate-900 dark:text-white rounded-lg cursor-pointer hover:border-slate-350 dark:hover:border-slate-700 transition-colors">
                             <SelectValue placeholder="Date Range" />
                         </SelectTrigger>
-                        <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
+                        <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl">
                             <SelectItem value="all">All Time</SelectItem>
                             <SelectItem value="7days">Last 7 Days</SelectItem>
                             <SelectItem value="30days">Last 30 Days</SelectItem>
@@ -160,10 +162,10 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
                     </Select>
 
                     <Select value={fundFilter} onValueChange={setFundFilter}>
-                        <SelectTrigger className="w-[140px] bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white">
+                        <SelectTrigger className="w-[140px] bg-white dark:bg-slate-900 border-slate-250 dark:border-slate-850 text-slate-900 dark:text-white rounded-lg cursor-pointer hover:border-slate-350 dark:hover:border-slate-700 transition-colors">
                             <SelectValue placeholder="Fund Tag" />
                         </SelectTrigger>
-                        <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
+                        <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl">
                             <SelectItem value="all">All Funds</SelectItem>
                             {funds.map(fund => (
                                 <SelectItem key={fund.id} value={fund.id}>{fund.name}</SelectItem>
@@ -174,16 +176,16 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
             </div>
 
             {selectedDocs.length > 0 && (
-                <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-300 px-4 py-3 rounded-md flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2">
+                <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-900/60 text-indigo-900 dark:text-indigo-300 px-4 py-3 rounded-xl flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2 backdrop-blur-sm">
                     <div className="flex items-center gap-2">
                         <CheckCircle className="w-5 h-5 text-indigo-600 dark:text-indigo-500" />
                         <span className="font-medium">{selectedDocs.length} items selected</span>
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setSelectedDocs([])} className="bg-white hover:bg-slate-100 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                        <Button id="bulk-cancel-btn" variant="outline" size="sm" onClick={() => setSelectedDocs([])} className="bg-white hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800/80 cursor-pointer rounded-xl active:scale-[0.98] transition-all">
                             Cancel
                         </Button>
-                        <Button size="sm" onClick={handleBulkApprove} disabled={isBulkApproving} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                        <Button id="bulk-approve-btn" size="sm" onClick={handleBulkApprove} disabled={isBulkApproving} className="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all">
                             {isBulkApproving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                             Bulk Approve
                         </Button>
