@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -115,7 +117,7 @@ export function Sidebar() {
     return (
         <div className="w-52 bg-white/85 dark:bg-slate-950/70 border-r border-slate-200 dark:border-slate-800/80 h-screen p-4 flex flex-col text-slate-900 dark:text-slate-100 backdrop-blur-md">
             <div className="mb-8 tracking-tight flex items-baseline">
-                <span className="font-extrabold text-slate-900 dark:text-white text-2xl bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">Outlayd</span>
+                <span className="font-extrabold text-2xl bg-linear-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">Outlayd</span>
             </div>
 
             <nav className="flex-1 space-y-2">
