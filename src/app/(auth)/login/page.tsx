@@ -21,16 +21,15 @@ export default function LoginPage() {
             setError(result.error);
             setIsLoading(false);
         }
-        // If successful, the action will redirect
     };
 
     return (
         <>
             <div className="mb-6 text-center">
-                <h2 className="text-2xl font-bold text-slate-900">Sign in to your account</h2>
-                <p className="mt-2 text-sm text-slate-600">
+                <h2 className="text-2xl font-bold text-white tracking-tight">Sign in to your account</h2>
+                <p className="mt-2 text-sm text-slate-400">
                     Or{" "}
-                    <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
+                    <Link href="/signup" id="signup-link" className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors">
                         create a new account
                     </Link>
                 </p>
@@ -38,40 +37,45 @@ export default function LoginPage() {
 
             <form className="space-y-6" onSubmit={handleSubmit}>
                 {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                    <div className="bg-red-950/40 border border-red-850 text-red-400 px-4 py-3 rounded-lg text-sm">
                         {error}
                     </div>
                 )}
 
                 <div>
-                    <label className="block text-sm font-medium text-slate-700">Email address</label>
+                    <label htmlFor="email-input" className="block text-sm font-medium text-slate-300">Email address</label>
                     <div className="mt-1">
                         <input
+                            id="email-input"
                             name="email"
                             type="email"
                             required
-                            className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            placeholder="name@company.com"
+                            className="appearance-none block w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg shadow-sm placeholder-slate-500 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all sm:text-sm"
                         />
                     </div>
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-slate-700">Password</label>
+                    <label htmlFor="password-input" className="block text-sm font-medium text-slate-300">Password</label>
                     <div className="mt-1">
                         <input
+                            id="password-input"
                             name="password"
                             type="password"
                             required
-                            className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            placeholder="••••••••"
+                            className="appearance-none block w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg shadow-sm placeholder-slate-500 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all sm:text-sm"
                         />
                     </div>
                 </div>
 
                 <div>
                     <Button
+                        id="signin-btn"
                         type="submit"
                         disabled={isLoading}
-                        className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70"
+                        className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 cursor-pointer"
                     >
                         {isLoading ? "Signing in..." : "Sign in"}
                     </Button>
