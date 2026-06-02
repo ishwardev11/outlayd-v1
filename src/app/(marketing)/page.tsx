@@ -8,7 +8,6 @@ import {
     ChevronDown,
     CreditCard,
     LineChart,
-    Lock,
     Receipt,
     ShieldCheck,
     Zap,
@@ -18,8 +17,7 @@ import {
     Triangle,
     Atom
 } from "lucide-react";
-import { useState, useEffect } from "react";
-import Lenis from "lenis";
+import { useState } from "react";
 import { PlaygroundDemo } from "@/components/marketing/PlaygroundDemo";
 
 // Animation Variants
@@ -42,9 +40,9 @@ export function handleSmoothScroll(e: React.MouseEvent<HTMLAnchorElement>, targe
     }
     
     e.preventDefault();
-    const lenis = (window as any).lenis;
+    const lenis = (window as Window & { lenis?: unknown }).lenis;
     if (lenis) {
-        lenis.scrollTo(targetId, { offset: -80 });
+        (lenis as { scrollTo: (target: string, options?: Record<string, unknown>) => void }).scrollTo(targetId, { offset: -80 });
     } else {
         const el = document.querySelector(targetId);
         if (el) {
