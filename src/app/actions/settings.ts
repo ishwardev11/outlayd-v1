@@ -3,9 +3,10 @@
 import { createClient } from "@/utils/supabase/server"
 import { getOrganizationId } from "./document-utils"
 import { revalidatePath } from "next/cache"
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import Stripe from 'stripe';
 import { TEMPLATES } from "@/utils/templates"
+import { createAdminClient } from "@/utils/supabase/admin"
 
 // --- Organization Profile ---
 
@@ -19,6 +20,7 @@ export async function getOrganizationSettings() {
         const orgName = cookieStore.get('dev_org_name')?.value || "Local Dev Organization";
         const baseCurrency = cookieStore.get('dev_org_currency')?.value || "USD";
         const fiscalYearStart = parseInt(cookieStore.get('dev_org_fiscal_year')?.value || "1", 10);
+        const devStatus = cookieStore.get('dev_org_status')?.value || "pro";
 
         return {
             id: organization_id,
@@ -26,7 +28,8 @@ export async function getOrganizationSettings() {
             base_currency: baseCurrency,
             fiscal_year_start: fiscalYearStart,
             registration_id: "",
-            subscription_status: cookieStore.get('dev_org_status')?.value || "pro",
+            subscription_status: devStatus,
+            subscription_tier: devStatus === 'pro' ? 'growth' : 'free',
             cancel_at_period_end: cookieStore.get('dev_org_cancelled')?.value === 'true',
             subscription_end_date: cookieStore.get('dev_org_end_date')?.value || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
         };
@@ -235,30 +238,308 @@ export async function getTeamMembers() {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    const { data, error } = await supabase
+    // 1. Fetch active members
+    const { data: activeMembers, error: activeError } = await supabase
         .from("user_roles")
         .select("*")
         .eq("organization_id", organization_id)
         .order("created_at")
 
-    if (error) return []
-    return data
+    if (activeError) {
+        console.error("Failed to fetch active team members:", activeError)
+    }
+
+    // 2. Fetch pending invites
+    const { data: pendingInvites, error: pendingError } = await supabase
+        .from("workspace_invites")
+        .select("*")
+        .eq("organization_id", organization_id)
+        .order("created_at")
+
+    if (pendingError) {
+        console.error("Failed to fetch pending workspace invites:", pendingError)
+    }
+
+    const activeList = activeMembers || []
+    const pendingList = (pendingInvites || []).map((invite: any) => ({
+        id: invite.id,
+        organization_id: invite.organization_id,
+        email: invite.email,
+        role: invite.role,
+        full_name: null, // renders as "Pending Invite" in frontend
+        created_at: invite.created_at,
+        is_pending: true
+    }))
+
+    return [...activeList, ...pendingList]
 }
 
 export async function inviteTeamMember(email: string, full_name: string, role: string) {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    const { error } = await supabase
+    // 1. Check if user is already an active member of this organization
+    const { data: existingMember, error: memberCheckError } = await supabase
         .from("user_roles")
+        .select("id")
+        .eq("organization_id", organization_id)
+        .eq("email", email)
+        .maybeSingle()
+
+    if (memberCheckError) {
+        console.error("Error checking existing members:", memberCheckError)
+    }
+
+    if (existingMember) {
+        return {
+            success: false,
+            error: "ALREADY_MEMBER",
+            message: "This email is already a member of this workspace."
+        }
+    }
+
+    // 2. Check if user already has a pending invite for this organization
+    const adminClient = createAdminClient()
+    const { data: existingInvite, error: inviteCheckError } = await adminClient
+        .from("workspace_invites")
+        .select("id")
+        .eq("organization_id", organization_id)
+        .eq("email", email)
+        .maybeSingle()
+
+    if (inviteCheckError) {
+        console.error("Error checking existing invites:", inviteCheckError)
+    }
+
+    if (existingInvite) {
+        return {
+            success: false,
+            error: "ALREADY_INVITED",
+            message: "An invitation has already been sent to this email address."
+        }
+    }
+
+    // 3. Determine tier and seat limits
+    let isGrowth = false
+    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
+        const cookieStore = await cookies();
+        const devStatus = cookieStore.get('dev_org_status')?.value || "pro";
+        isGrowth = devStatus === 'pro';
+    } else {
+        const { data: org, error: orgError } = await supabase
+            .from("organizations")
+            .select("subscription_tier, subscription_status")
+            .eq("id", organization_id)
+            .single()
+
+        if (orgError) {
+            console.error("Failed to verify subscription status:", orgError)
+            throw new Error("Failed to verify subscription status")
+        }
+
+        isGrowth = org?.subscription_tier === 'growth' || org?.subscription_status === 'pro';
+    }
+
+    const limit = isGrowth ? 5 : 1;
+
+    // 4. Count existing active members
+    const { data: members, error: countError } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("organization_id", organization_id)
+
+    if (countError) {
+        console.error("Failed to verify team size:", countError)
+        throw new Error("Failed to verify team size")
+    }
+
+    // 5. Count existing pending invites
+    const { count: pendingCount, error: pendingCountError } = await adminClient
+        .from("workspace_invites")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", organization_id)
+
+    if (pendingCountError) {
+        console.error("Failed to verify pending invites count:", pendingCountError)
+        throw new Error("Failed to verify pending invites count")
+    }
+
+    const totalSeatsUsed = (members?.length || 0) + (pendingCount || 0)
+
+    // 6. Block if total seats used (active + pending) exceeds limits
+    if (totalSeatsUsed >= limit) {
+        return { 
+            success: false, 
+            error: "LIMIT_REACHED",
+            message: `You have reached your seat limit of ${limit} members. Please upgrade your subscription to add more.`
+        }
+    }
+
+    // 7. Store the invite relation in workspace_invites
+    const { error: dbInviteError } = await adminClient
+        .from("workspace_invites")
         .insert({
             organization_id,
             email,
-            full_name,
             role
         })
 
-    if (error) throw new Error("Failed to invite team member: " + error.message)
+    if (dbInviteError) {
+        if (dbInviteError.code === "23505") {
+            return {
+                success: false,
+                error: "ALREADY_INVITED",
+                message: "An invitation has already been sent to this email address."
+            }
+        }
+        console.error("Failed to save invitation to database:", dbInviteError)
+        throw new Error("Failed to create invitation: " + dbInviteError.message)
+    }
+
+    // 8. Call Supabase Auth admin API to invite user
+    let isAlreadyRegistered = false
+    try {
+        const headersList = await headers()
+        const host = headersList.get("host") || "localhost:3000"
+        const protocol = process.env.NODE_ENV === "development" ? "http" : "https"
+        const redirectTo = `${protocol}://${host}/accept-invite`
+
+        const { error: authInviteError } = await adminClient.auth.admin.inviteUserByEmail(
+            email,
+            { redirectTo }
+        )
+
+        if (authInviteError) {
+            if (authInviteError.message.toLowerCase().includes("already") && authInviteError.message.toLowerCase().includes("registered")) {
+                isAlreadyRegistered = true
+            } else {
+                console.error("Supabase Admin Auth invite error:", authInviteError)
+                // Roll back database invite entry
+                await adminClient
+                    .from("workspace_invites")
+                    .delete()
+                    .eq("organization_id", organization_id)
+                    .eq("email", email)
+                    
+                throw new Error(authInviteError.message)
+            }
+        }
+    } catch (inviteErr: any) {
+        if (inviteErr.message.toLowerCase().includes("already") && inviteErr.message.toLowerCase().includes("registered")) {
+            isAlreadyRegistered = true
+        } else {
+            throw new Error("Failed to dispatch auth invitation email: " + inviteErr.message)
+        }
+    }
+
+    revalidatePath("/settings")
+    if (isAlreadyRegistered) {
+        return { 
+            success: true, 
+            message: "This user is already registered with Outlayd. They have been added to this workspace's invites and will gain access automatically upon their next login." 
+        }
+    }
+    return { success: true }
+}
+
+export async function revokeTeamMember(memberId: string) {
+    const supabase = await createClient()
+    const organization_id = await getOrganizationId()
+
+    // 1. Try deleting from workspace_invites first (pending invites)
+    const { data: inviteDeleted, error: inviteDeleteError } = await supabase
+        .from("workspace_invites")
+        .delete()
+        .eq("id", memberId)
+        .eq("organization_id", organization_id)
+        .select()
+
+    // 2. If no invite was deleted, delete from user_roles (active members)
+    if (inviteDeleteError || !inviteDeleted || inviteDeleted.length === 0) {
+        const { error: roleDeleteError } = await supabase
+            .from("user_roles")
+            .delete()
+            .eq("id", memberId)
+            .eq("organization_id", organization_id)
+
+        if (roleDeleteError) {
+            console.error("Failed to revoke active team member:", roleDeleteError)
+            throw new Error("Failed to revoke team member: " + roleDeleteError.message)
+        }
+    }
+
+    revalidatePath("/settings")
+    return { success: true }
+}
+
+export async function acceptInvite(password: string, fullName: string) {
+    const supabase = await createClient()
+
+    // 1. Get currently authenticated user (invited link login)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !user || !user.email) {
+        return { success: false, error: "AUTH_REQUIRED", message: "You must use the secure link sent to your email to accept this invite." }
+    }
+
+    // 2. Fetch pending invite from workspace_invites using admin client
+    const adminClient = createAdminClient()
+    const { data: invite, error: inviteError } = await adminClient
+        .from("workspace_invites")
+        .select("*")
+        .eq("email", user.email)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    if (inviteError || !invite) {
+        console.error("Invite record look up failed:", inviteError)
+        return { success: false, error: "INVITE_NOT_FOUND", message: "No active workspace invitation was found for your email address." }
+    }
+
+    const { organization_id, role } = invite
+
+    // 3. Set the password and user full name
+    const { error: authUpdateError } = await supabase.auth.updateUser({
+        password,
+        data: { full_name: fullName }
+    })
+
+    if (authUpdateError) {
+        return { success: false, error: "PASSWORD_UPDATE_FAILED", message: authUpdateError.message }
+    }
+
+    // 4. Update the user metadata with organization_id via Admin client
+    const { error: metadataError } = await adminClient.auth.admin.updateUserById(
+        user.id,
+        { user_metadata: { organization_id } }
+    )
+
+    if (metadataError) {
+        console.error("Failed to update organization metadata on user auth:", metadataError)
+    }
+
+    // 5. Insert active role mapped to user_roles
+    const { error: roleInsertError } = await adminClient
+        .from("user_roles")
+        .insert({
+            organization_id,
+            email: user.email,
+            role,
+            full_name: fullName
+        })
+
+    if (roleInsertError) {
+        console.error("Failed to insert mapping inside user_roles table:", roleInsertError)
+        return { success: false, error: "ROLE_ASSIGNMENT_FAILED", message: "Failed to map user access: " + roleInsertError.message }
+    }
+
+    // 6. Cleanup workspace_invites record
+    await adminClient
+        .from("workspace_invites")
+        .delete()
+        .eq("id", invite.id)
+
     revalidatePath("/settings")
     return { success: true }
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { inviteTeamMember } from "@/app/actions/settings"
+import { inviteTeamMember, revokeTeamMember } from "@/app/actions/settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,11 +10,15 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, UserPlus, Mail, ShieldAlert } from "lucide-react"
 import {
     Dialog,
+    DialogClose,
     DialogContent,
+    DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
+import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal"
 
 interface TeamMember {
     id: string;
@@ -24,25 +28,65 @@ interface TeamMember {
     created_at: string;
 }
 
-export function TeamManagementTab({ initialTeam }: { initialTeam: TeamMember[] }) {
+interface OrgSettings {
+    id: string;
+    name: string;
+    subscription_tier?: string;
+    subscription_status?: string;
+}
+
+export function TeamManagementTab({ initialTeam, orgSettings }: { initialTeam: TeamMember[], orgSettings: OrgSettings | null }) {
     const [isInviting, setIsInviting] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isPaywallOpen, setIsPaywallOpen] = useState(false)
     const [email, setEmail] = useState("")
     const [fullName, setFullName] = useState("")
-    const [role, setRole] = useState("Viewer")
+    const [role, setRole] = useState("Admin")
+
+    // Revoke states
+    const [memberToRevoke, setMemberToRevoke] = useState<TeamMember | null>(null)
+    const [isRevoking, setIsRevoking] = useState(false)
+
+    const isGrowth = orgSettings?.subscription_tier === 'growth' || orgSettings?.subscription_status === 'pro';
+    const limit = isGrowth ? 5 : 1;
+    const usedSeats = initialTeam.length;
+    const isLimitReached = usedSeats >= limit;
+
+    const handleRevoke = async () => {
+        if (!memberToRevoke) return
+        setIsRevoking(true)
+        try {
+            await revokeTeamMember(memberToRevoke.id)
+            setMemberToRevoke(null)
+        } catch (error) {
+            console.error(error)
+            alert("Failed to revoke team member access.")
+        } finally {
+            setIsRevoking(false)
+        }
+    }
 
     const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsInviting(true)
         try {
-            await inviteTeamMember(email, fullName, role)
-            setIsModalOpen(false)
-            setEmail("")
-            setFullName("")
-            setRole("Viewer")
-        } catch (error) {
+            const result = await inviteTeamMember(email, fullName, role)
+            if (result && !result.success) {
+                if (result.error === "LIMIT_REACHED") {
+                    setIsModalOpen(false)
+                    setIsPaywallOpen(true)
+                } else {
+                    alert(result.message || "Failed to invite team member.")
+                }
+            } else {
+                setIsModalOpen(false)
+                setEmail("")
+                setFullName("")
+                setRole("Admin")
+            }
+        } catch (error: any) {
             console.error(error)
-            alert("Failed to invite team member. They might already be invited.")
+            alert(error.message || "Failed to invite team member. They might already be invited.")
         } finally {
             setIsInviting(false)
         }
@@ -58,13 +102,26 @@ export function TeamManagementTab({ initialTeam }: { initialTeam: TeamMember[] }
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Team Members</h2>
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Team Members</h2>
+                        <div className="flex items-center gap-1.5 text-xs bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700/60 font-medium">
+                            <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{usedSeats}</span>
+                            <span className="text-slate-400">/</span>
+                            <span className="text-slate-600 dark:text-slate-300">{limit} Seats Used</span>
+                        </div>
+                    </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage who has access to this organization&apos;s data.</p>
                 </div>
 
-                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <Dialog open={isModalOpen} onOpenChange={(open) => {
+                    if (open && isLimitReached) {
+                        setIsPaywallOpen(true)
+                    } else {
+                        setIsModalOpen(open)
+                    }
+                }}>
                     <DialogTrigger asChild>
                         <Button className="bg-indigo-600 hover:bg-indigo-700">
                             <UserPlus className="w-4 h-4 mr-2" />
@@ -101,22 +158,7 @@ export function TeamManagementTab({ initialTeam }: { initialTeam: TeamMember[] }
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label>Role</Label>
-                                <Select value={role} onValueChange={setRole}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Admin">Admin</SelectItem>
-                                        <SelectItem value="Treasurer">Treasurer</SelectItem>
-                                        <SelectItem value="Viewer">Viewer</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-xs text-slate-500 pt-1">
-                                    Admins have full access. Treasurers can approve transactions. Viewers have read-only access.
-                                </p>
-                            </div>
+
                             <Button type="submit" disabled={isInviting} className="w-full bg-indigo-600 hover:bg-indigo-700 mt-4">
                                 {isInviting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
                                 Send Request
@@ -159,7 +201,12 @@ export function TeamManagementTab({ initialTeam }: { initialTeam: TeamMember[] }
                                     {new Date(member.created_at).toLocaleDateString()}
                                 </td>
                                 <td className="px-4 py-4 text-right">
-                                    <Button variant="ghost" size="sm" className="text-slate-400 dark:text-slate-400 dark:hover:text-red-400 hover:text-red-600">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="text-slate-400 dark:text-slate-400 dark:hover:text-red-400 hover:text-red-600"
+                                        onClick={() => setMemberToRevoke(member)}
+                                    >
                                         Revoke
                                     </Button>
                                 </td>
@@ -176,6 +223,41 @@ export function TeamManagementTab({ initialTeam }: { initialTeam: TeamMember[] }
                     </tbody>
                 </table>
             </div>
+
+            <UpgradePaywallModal
+                isOpen={isPaywallOpen}
+                onClose={() => setIsPaywallOpen(false)}
+                context="team_limit"
+            />
+
+            {/* Revoke Member Confirmation Modal */}
+            <Dialog open={!!memberToRevoke} onOpenChange={(open) => { if (!open) setMemberToRevoke(null) }}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-slate-900 dark:text-white">Revoke Team Member Access?</DialogTitle>
+                        <DialogDescription className="text-slate-500 dark:text-slate-400 mt-2">
+                            Are you sure you want to revoke access for <span className="font-semibold text-slate-800 dark:text-slate-200">{memberToRevoke?.full_name || memberToRevoke?.email}</span>? 
+                            This action will immediately remove their access permissions to this organization.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="mt-6 flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            onClick={() => setMemberToRevoke(null)}
+                            disabled={isRevoking}
+                        >
+                            Cancel
+                        </Button>
+                        <Button 
+                            className="bg-red-600 hover:bg-red-700 text-white" 
+                            onClick={handleRevoke}
+                            disabled={isRevoking}
+                        >
+                            {isRevoking ? "Revoking..." : "Yes, Revoke"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

@@ -36,6 +36,50 @@ export async function getOrganizationId() {
             return roleData.organization_id;
         }
 
+        if (!user.email) {
+            return null;
+        }
+
+        // Check if there is a pending workspace invite for this user's email
+        const { createAdminClient } = await import("@/utils/supabase/admin")
+        const adminClient = createAdminClient()
+        const { data: invite } = await adminClient
+            .from("workspace_invites")
+            .select("*")
+            .eq("email", user.email)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+        if (invite) {
+            const { organization_id, role } = invite
+
+            // 1. Update user metadata
+            await adminClient.auth.admin.updateUserById(
+                user.id,
+                { user_metadata: { organization_id } }
+            )
+
+            // 2. Insert into user_roles
+            await adminClient
+                .from("user_roles")
+                .insert({
+                    organization_id,
+                    email: user.email,
+                    role,
+                    full_name: user.user_metadata?.full_name || user.email.split("@")[0]
+                })
+
+            // 3. Delete invite
+            await adminClient
+                .from("workspace_invites")
+                .delete()
+                .eq("id", invite.id)
+
+            revalidatePath("/settings")
+            return organization_id;
+        }
+
         return null;
     } catch (e) {
         console.error("Error in getOrganizationId:", e);

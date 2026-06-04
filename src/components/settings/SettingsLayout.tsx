@@ -19,7 +19,7 @@ const TABS = [
     { id: 'general', label: 'General', icon: Settings },
     { id: 'organization', label: 'Organization Profile', icon: Building2 },
     { id: 'financial', label: 'Financial Customization', icon: Landmark },
-    // { id: 'team', label: 'Team Management', icon: Users },
+    { id: 'team', label: 'Team Management', icon: Users },
     { id: 'billing', label: 'Billing & Subscription', icon: CreditCard },
 ]
 
@@ -59,9 +59,9 @@ export function SettingsLayout({ orgSettings, initialFunds, initialCategories, i
                     {activeTab === 'financial' && (
                         <FinancialCustomizationTab initialFunds={initialFunds} initialCategories={initialCategories} />
                     )}
-                    {/* {activeTab === 'team' && (
-                        <TeamManagementTab initialTeam={initialTeam} />
-                    )} */}
+                    {activeTab === 'team' && (
+                        <TeamManagementTab initialTeam={initialTeam} orgSettings={orgSettings} />
+                    )}
                     {activeTab === 'billing' && (
                         <BillingSettingsTab orgSettings={orgSettings} />
                     )}
