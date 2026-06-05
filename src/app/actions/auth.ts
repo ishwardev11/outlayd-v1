@@ -16,6 +16,66 @@ export async function signUpAction(formData: FormData) {
 
     const supabase = await createClient();
 
+    // Check if there is a pending invite in workspace_invites for this email
+    const { createAdminClient } = await import("@/utils/supabase/admin");
+    const adminClient = createAdminClient();
+    const { data: invite } = await adminClient
+        .from("workspace_invites")
+        .select("*")
+        .eq("email", email)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (invite) {
+        // User has a pending invite and was already pre-created in auth.users by inviteUserByEmail.
+        // We find their user id and update password / metadata via the admin client.
+        const { data: { users }, error: listError } = await adminClient.auth.admin.listUsers();
+        if (listError) {
+            console.error("Failed to list users during invited signup check:", listError);
+        }
+        
+        const existingUser = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+        if (existingUser) {
+            const { error: updateError } = await adminClient.auth.admin.updateUserById(existingUser.id, {
+                password: password,
+                email_confirm: true,
+                user_metadata: {
+                    full_name: fullName
+                }
+            });
+
+            if (updateError) {
+                return { error: "Failed to update account: " + updateError.message };
+            }
+
+            // Sign in to establish a session
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (signInError) {
+                return { error: "Account activated, but failed to log in: " + signInError.message };
+            }
+
+            // Clear local dev cookies
+            const cookieStore = await cookies();
+            cookieStore.set('dev_org_id', '', { maxAge: 0, path: '/' });
+            cookieStore.set('dev_org_name', '', { maxAge: 0, path: '/' });
+            cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
+            cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
+
+            const orgId = await getOrganizationId();
+            if (orgId) {
+                redirect("/dashboard");
+            } else {
+                redirect("/onboarding");
+            }
+        }
+    }
+
     const { error, data } = await supabase.auth.signUp({
         email,
         password,
@@ -43,7 +103,12 @@ export async function signUpAction(formData: FormData) {
     cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
 
     // Successful signup automatically logs them in as well
-    redirect("/onboarding");
+    const orgId = await getOrganizationId();
+    if (orgId) {
+        redirect("/dashboard");
+    } else {
+        redirect("/onboarding");
+    }
 }
 
 export async function signInAction(formData: FormData) {

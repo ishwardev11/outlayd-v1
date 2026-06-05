@@ -249,8 +249,9 @@ export async function getTeamMembers() {
         console.error("Failed to fetch active team members:", activeError)
     }
 
-    // 2. Fetch pending invites
-    const { data: pendingInvites, error: pendingError } = await supabase
+    // 2. Fetch pending invites using the admin client to bypass RLS
+    const adminClient = createAdminClient()
+    const { data: pendingInvites, error: pendingError } = await adminClient
         .from("workspace_invites")
         .select("*")
         .eq("organization_id", organization_id)
@@ -446,8 +447,9 @@ export async function revokeTeamMember(memberId: string) {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    // 1. Try deleting from workspace_invites first (pending invites)
-    const { data: inviteDeleted, error: inviteDeleteError } = await supabase
+    // 1. Try deleting from workspace_invites first (pending invites) using the admin client to bypass RLS
+    const adminClient = createAdminClient()
+    const { data: inviteDeleted, error: inviteDeleteError } = await adminClient
         .from("workspace_invites")
         .delete()
         .eq("id", memberId)
