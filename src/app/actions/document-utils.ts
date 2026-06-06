@@ -26,11 +26,15 @@ export async function getOrganizationId() {
         }
 
         // Secure fallback: Query user_roles table based on email
-        const { data: roleData } = await supabase
+        // We use the admin client here to bypass RLS because the user's browser session JWT
+        // might be stale immediately after they accept an invitation or sign up.
+        const { createAdminClient } = await import("@/utils/supabase/admin")
+        const adminClient = createAdminClient()
+        const { data: roleData } = await adminClient
             .from('user_roles')
             .select('organization_id')
             .eq('email', user.email)
-            .single();
+            .maybeSingle();
 
         if (roleData?.organization_id) {
             return roleData.organization_id;
@@ -41,8 +45,6 @@ export async function getOrganizationId() {
         }
 
         // Check if there is a pending workspace invite for this user's email
-        const { createAdminClient } = await import("@/utils/supabase/admin")
-        const adminClient = createAdminClient()
         const { data: invite } = await adminClient
             .from("workspace_invites")
             .select("*")
@@ -53,13 +55,16 @@ export async function getOrganizationId() {
 
         if (invite) {
             // User has a pending invite, force them to set a password and join properly
-            // We use dynamic import for redirect to avoid circular dependencies in some setups, or just standard redirect
             const { redirect } = await import("next/navigation")
             redirect("/accept-invite")
         }
 
         return null;
-    } catch (e) {
+    } catch (e: any) {
+        // Rethrow Next.js redirect exceptions so they aren't swallowed by our try-catch block
+        if (e && e.digest && e.digest.startsWith("NEXT_REDIRECT")) {
+            throw e;
+        }
         console.error("Error in getOrganizationId:", e);
         return null;
     }

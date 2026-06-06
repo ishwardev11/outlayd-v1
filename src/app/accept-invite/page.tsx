@@ -17,6 +17,7 @@ export default function AcceptInvitePage() {
     const [isLoading, setIsLoading] = useState(false)
     const [isVerifyingUser, setIsVerifyingUser] = useState(true)
     const [userEmail, setUserEmail] = useState<string | null>(null)
+    const [tokenHash, setTokenHash] = useState<string | null>(null)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
     const router = useRouter()
@@ -39,6 +40,19 @@ export default function AcceptInvitePage() {
 
         if (errorParam || errorDesc) {
             setErrorMsg(errorDesc || errorParam || "An error occurred during verification.")
+            setIsVerifyingUser(false)
+            return
+        }
+
+        // Check if we have token_hash in search params (custom email template link)
+        const tokenHashParam = searchParams.get("token_hash")
+        const emailParam = searchParams.get("email")
+
+        if (tokenHashParam) {
+            setTokenHash(tokenHashParam)
+            if (emailParam) {
+                setUserEmail(emailParam)
+            }
             setIsVerifyingUser(false)
             return
         }
@@ -99,6 +113,20 @@ export default function AcceptInvitePage() {
 
         setIsLoading(true)
         try {
+            // If we have a tokenHash, verify the OTP first to log the user in
+            if (tokenHash) {
+                const { error: verifyError } = await supabase.auth.verifyOtp({
+                    token_hash: tokenHash,
+                    type: "invite"
+                })
+
+                if (verifyError) {
+                    setErrorMsg("Failed to verify invitation token: " + verifyError.message)
+                    setIsLoading(false)
+                    return
+                }
+            }
+
             const res = await acceptInvite(password, fullName)
             if (res.success) {
                 toast.success("Welcome to the team!", {

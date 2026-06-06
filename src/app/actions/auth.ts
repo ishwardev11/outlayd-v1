@@ -38,17 +38,41 @@ export async function signUpAction(formData: FormData) {
         const existingUser = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
         if (existingUser) {
+            // Update password, name, and organization metadata on their auth profile
             const { error: updateError } = await adminClient.auth.admin.updateUserById(existingUser.id, {
                 password: password,
                 email_confirm: true,
                 user_metadata: {
-                    full_name: fullName
+                    full_name: fullName,
+                    organization_id: invite.organization_id,
+                    onboarding_completed: true
                 }
             });
 
             if (updateError) {
                 return { error: "Failed to update account: " + updateError.message };
             }
+
+            // Insert role into user_roles
+            const { error: roleInsertError } = await adminClient
+                .from("user_roles")
+                .insert({
+                    organization_id: invite.organization_id,
+                    email: email,
+                    role: invite.role,
+                    full_name: fullName
+                });
+
+            if (roleInsertError) {
+                console.error("Failed to map user_roles on signup:", roleInsertError);
+                return { error: "Failed to map user access: " + roleInsertError.message };
+            }
+
+            // Delete pending invite
+            await adminClient
+                .from("workspace_invites")
+                .delete()
+                .eq("id", invite.id);
 
             // Sign in to establish a session
             const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -67,12 +91,7 @@ export async function signUpAction(formData: FormData) {
             cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
             cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
 
-            const orgId = await getOrganizationId();
-            if (orgId) {
-                redirect("/dashboard");
-            } else {
-                redirect("/onboarding");
-            }
+            redirect("/dashboard");
         }
     }
 
