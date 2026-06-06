@@ -3,7 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { getOrganizationId } from "./document-utils";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 export async function signUpAction(formData: FormData) {
     const email = formData.get("email")?.toString();
@@ -95,10 +95,16 @@ export async function signUpAction(formData: FormData) {
         }
     }
 
+    const headersList = await headers();
+    const host = headersList.get("host") || "localhost:3000";
+    const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+    const emailRedirectTo = `${protocol}://${host}/login`;
+
     const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
+            emailRedirectTo,
             data: {
                 full_name: fullName,
             }
