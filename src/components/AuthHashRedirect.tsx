@@ -12,7 +12,7 @@ export function AuthHashRedirect() {
         const hash = window.location.hash
         if (!hash) return
 
-        // Check if the hash contains error parameters from a failed Supabase redirect
+        // 1. Check if the hash contains error parameters from a failed Supabase redirect
         if (hash.includes("error=") || hash.includes("error_description=")) {
             const hashClean = hash.substring(1) // remove '#'
             const params = new URLSearchParams(hashClean)
@@ -31,7 +31,17 @@ export function AuthHashRedirect() {
 
                 // Redirect to accept-invite page with the error details in the query parameters
                 router.replace(`/accept-invite?${searchParams.toString()}`)
+                return
             }
+        }
+
+        // 2. Check if the hash contains a successful verification redirect from an invitation
+        if (hash.includes("access_token=") && (hash.includes("type=invite") || hash.includes("type=signup"))) {
+            // Clean the hash from the address bar
+            window.history.replaceState(null, "", window.location.pathname + window.location.search)
+            // Redirect to accept-invite page so they can complete their password/profile configuration
+            router.replace("/accept-invite")
+            return
         }
     }, [router])
 

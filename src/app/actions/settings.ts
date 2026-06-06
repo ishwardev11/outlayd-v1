@@ -448,10 +448,16 @@ export async function inviteTeamMember(email: string, full_name: string, role: s
 
 export async function revokeTeamMember(memberId: string) {
     const supabase = await createClient()
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+
+    if (!currentUser || !currentUser.email) {
+        throw new Error("Authentication required")
+    }
+
     const organization_id = await getOrganizationId()
+    const adminClient = createAdminClient()
 
     // 1. Try deleting from workspace_invites first (pending invites) using the admin client to bypass RLS
-    const adminClient = createAdminClient()
     const { data: inviteDeleted, error: inviteDeleteError } = await adminClient
         .from("workspace_invites")
         .delete()
@@ -459,17 +465,54 @@ export async function revokeTeamMember(memberId: string) {
         .eq("organization_id", organization_id)
         .select()
 
-    // 2. If no invite was deleted, delete from user_roles (active members)
-    if (inviteDeleteError || !inviteDeleted || inviteDeleted.length === 0) {
-        const { error: roleDeleteError } = await supabase
+    let deletedEmail: string | null = null
+
+    if (inviteDeleted && inviteDeleted.length > 0) {
+        deletedEmail = inviteDeleted[0].email
+    } else {
+        // 2. If no invite was deleted, delete from user_roles (active members)
+        // Find the active member first to get their email and verify it's not the current user
+        const { data: activeMember } = await supabase
             .from("user_roles")
-            .delete()
+            .select("email")
             .eq("id", memberId)
             .eq("organization_id", organization_id)
+            .single()
 
-        if (roleDeleteError) {
-            console.error("Failed to revoke active team member:", roleDeleteError)
-            throw new Error("Failed to revoke team member: " + roleDeleteError.message)
+        if (activeMember?.email) {
+            deletedEmail = activeMember.email
+
+            // Guard: Prevent self-revocation
+            if (activeMember.email.toLowerCase() === currentUser.email.toLowerCase()) {
+                throw new Error("You cannot revoke your own access to the workspace.")
+            }
+
+            const { error: roleDeleteError } = await supabase
+                .from("user_roles")
+                .delete()
+                .eq("id", memberId)
+                .eq("organization_id", organization_id)
+
+            if (roleDeleteError) {
+                console.error("Failed to revoke active team member:", roleDeleteError)
+                throw new Error("Failed to revoke team member: " + roleDeleteError.message)
+            }
+        }
+    }
+
+    // 3. Delete the corresponding user from auth.users using the admin client
+    if (deletedEmail) {
+        const { data: { users }, error: listError } = await adminClient.auth.admin.listUsers()
+        if (listError) {
+            console.error("Failed to list users during revocation:", listError)
+        } else {
+            const targetUser = users?.find(u => u.email?.toLowerCase() === deletedEmail!.toLowerCase())
+            if (targetUser) {
+                const { error: deleteUserError } = await adminClient.auth.admin.deleteUser(targetUser.id)
+                if (deleteUserError) {
+                    console.error("Failed to delete user from Supabase Auth:", deleteUserError)
+                }
+            }
         }
     }
 
