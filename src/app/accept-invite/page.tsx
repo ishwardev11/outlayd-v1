@@ -24,8 +24,37 @@ export default function AcceptInvitePage() {
 
     useEffect(() => {
         const checkUser = async () => {
-            // Wait briefly for the client Auth listener to resolve URL hash fragments if present
-            await new Promise((resolve) => setTimeout(resolve, 800))
+            const searchParams = new URLSearchParams(window.location.search)
+            const errorParam = searchParams.get("error")
+            const errorDesc = searchParams.get("error_description")
+
+            if (errorParam || errorDesc) {
+                setErrorMsg(errorDesc || errorParam || "An error occurred during verification.")
+                setIsVerifyingUser(false)
+                return
+            }
+
+            const code = searchParams.get("code")
+            if (code) {
+                try {
+                    const { error } = await supabase.auth.exchangeCodeForSession(code)
+                    if (error) {
+                        console.error("Error exchanging code for session:", error)
+                        setErrorMsg("Failed to verify invitation token: " + error.message)
+                        setIsVerifyingUser(false)
+                        return
+                    }
+                } catch (err: any) {
+                    console.error("Exception exchanging code for session:", err)
+                    setErrorMsg("An error occurred during verification: " + err.message)
+                    setIsVerifyingUser(false)
+                    return
+                }
+            } else {
+                // Wait briefly for the client Auth listener to resolve URL hash fragments if present
+                await new Promise((resolve) => setTimeout(resolve, 800))
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
                 setUserEmail(user.email || null)
