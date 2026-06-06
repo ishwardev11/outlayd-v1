@@ -66,8 +66,15 @@ export default function AcceptInvitePage() {
                         setUserEmail(session.user.email || null)
                         setIsVerifyingUser(false)
                     } else if (event === "INITIAL_SESSION" && !searchParams.get("code")) {
-                        setErrorMsg("No active invitation session found. Please click the secure invitation link in your email.")
-                        setIsVerifyingUser(false)
+                        // If there is an access_token or error in the hash fragment,
+                        // wait for Supabase client to parse it and trigger SIGNED_IN or error redirection
+                        const hasHashToken = typeof window !== "undefined" && 
+                            (window.location.hash.includes("access_token=") || window.location.hash.includes("error="));
+                        
+                        if (!hasHashToken) {
+                            setErrorMsg("No active invitation session found. Please click the secure invitation link in your email.")
+                            setIsVerifyingUser(false)
+                        }
                     }
                 }
             }
