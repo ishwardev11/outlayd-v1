@@ -279,6 +279,9 @@ export async function inviteTeamMember(email: string, full_name: string, role: s
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
+    // Force role to admin as requested
+    role = "admin"
+
     // 1. Check if user is already an active member of this organization
     const { data: existingMember, error: memberCheckError } = await supabase
         .from("user_roles")
@@ -514,7 +517,7 @@ export async function acceptInvite(password: string, fullName: string) {
     // 4. Update the user metadata with organization_id via Admin client
     const { error: metadataError } = await adminClient.auth.admin.updateUserById(
         user.id,
-        { user_metadata: { organization_id } }
+        { user_metadata: { organization_id, onboarding_completed: true } }
     )
 
     if (metadataError) {

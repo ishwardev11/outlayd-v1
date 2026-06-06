@@ -23,47 +23,56 @@ export default function AcceptInvitePage() {
     const supabase = createClient()
 
     useEffect(() => {
-        const checkUser = async () => {
-            const searchParams = new URLSearchParams(window.location.search)
-            const errorParam = searchParams.get("error")
-            const errorDesc = searchParams.get("error_description")
+        let isMounted = true
 
-            if (errorParam || errorDesc) {
-                setErrorMsg(errorDesc || errorParam || "An error occurred during verification.")
-                setIsVerifyingUser(false)
-                return
-            }
+        const searchParams = new URLSearchParams(window.location.search)
+        const errorParam = searchParams.get("error")
+        const errorDesc = searchParams.get("error_description")
 
-            const code = searchParams.get("code")
-            if (code) {
-                try {
-                    const { error } = await supabase.auth.exchangeCodeForSession(code)
-                    if (error) {
-                        console.error("Error exchanging code for session:", error)
-                        setErrorMsg("Failed to verify invitation token: " + error.message)
-                        setIsVerifyingUser(false)
-                        return
-                    }
-                } catch (err: any) {
-                    console.error("Exception exchanging code for session:", err)
-                    setErrorMsg("An error occurred during verification: " + err.message)
-                    setIsVerifyingUser(false)
-                    return
-                }
-            } else {
-                // Wait briefly for the client Auth listener to resolve URL hash fragments if present
-                await new Promise((resolve) => setTimeout(resolve, 800))
-            }
-
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                setUserEmail(user.email || null)
-            } else {
-                setErrorMsg("No active invitation session found. Please click the secure invitation link in your email.")
-            }
+        if (errorParam || errorDesc) {
+            setErrorMsg(errorDesc || errorParam || "An error occurred during verification.")
             setIsVerifyingUser(false)
+            return
         }
-        checkUser()
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+                if (!isMounted) return
+
+                if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+                    if (session?.user) {
+                        setUserEmail(session.user.email || null)
+                        setIsVerifyingUser(false)
+                    } else if (event === "INITIAL_SESSION" && !searchParams.get("code")) {
+                        setErrorMsg("No active invitation session found. Please click the secure invitation link in your email.")
+                        setIsVerifyingUser(false)
+                    }
+                }
+            }
+        )
+
+        const code = searchParams.get("code")
+        if (code) {
+            supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+                if (!isMounted) return
+                if (error) {
+                    console.error("Error exchanging code for session:", error)
+                    setErrorMsg("Failed to verify invitation token: " + error.message)
+                    setIsVerifyingUser(false)
+                }
+                // Success is handled by onAuthStateChange SIGNED_IN event
+            }).catch((err) => {
+                if (!isMounted) return
+                console.error("Exception exchanging code for session:", err)
+                setErrorMsg("An error occurred during verification: " + err.message)
+                setIsVerifyingUser(false)
+            })
+        }
+
+        return () => {
+            isMounted = false
+            subscription.unsubscribe()
+        }
     }, [supabase])
 
     const handleSubmit = async (e: React.FormEvent) => {

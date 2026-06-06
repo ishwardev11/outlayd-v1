@@ -52,32 +52,10 @@ export async function getOrganizationId() {
             .maybeSingle()
 
         if (invite) {
-            const { organization_id, role } = invite
-
-            // 1. Update user metadata
-            await adminClient.auth.admin.updateUserById(
-                user.id,
-                { user_metadata: { organization_id } }
-            )
-
-            // 2. Insert into user_roles
-            await adminClient
-                .from("user_roles")
-                .insert({
-                    organization_id,
-                    email: user.email,
-                    role,
-                    full_name: user.user_metadata?.full_name || user.email.split("@")[0]
-                })
-
-            // 3. Delete invite
-            await adminClient
-                .from("workspace_invites")
-                .delete()
-                .eq("id", invite.id)
-
-            revalidatePath("/settings")
-            return organization_id;
+            // User has a pending invite, force them to set a password and join properly
+            // We use dynamic import for redirect to avoid circular dependencies in some setups, or just standard redirect
+            const { redirect } = await import("next/navigation")
+            redirect("/accept-invite")
         }
 
         return null;
