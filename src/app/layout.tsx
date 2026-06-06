@@ -26,6 +26,8 @@ export const metadata: Metadata = {
   description: "An expense tracking and AP automation tool for modern businesses.",
 };
 
+import { AuthHashRedirect } from "@/components/AuthHashRedirect";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -61,6 +63,7 @@ export default function RootLayout({
       >
         <ThemeProvider defaultTheme="system">
           <SmoothScrollProvider>
+            <AuthHashRedirect />
             {children}
           </SmoothScrollProvider>
         </ThemeProvider>

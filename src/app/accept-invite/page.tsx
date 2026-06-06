@@ -26,8 +26,16 @@ export default function AcceptInvitePage() {
         let isMounted = true
 
         const searchParams = new URLSearchParams(window.location.search)
-        const errorParam = searchParams.get("error")
-        const errorDesc = searchParams.get("error_description")
+        let errorParam = searchParams.get("error")
+        let errorDesc = searchParams.get("error_description")
+
+        // Parse from hash if search parameters do not have the error
+        if (!errorParam && typeof window !== "undefined" && window.location.hash) {
+            const hash = window.location.hash.substring(1)
+            const hashParams = new URLSearchParams(hash)
+            errorParam = hashParams.get("error")
+            errorDesc = hashParams.get("error_description")
+        }
 
         if (errorParam || errorDesc) {
             setErrorMsg(errorDesc || errorParam || "An error occurred during verification.")
@@ -146,86 +154,128 @@ export default function AcceptInvitePage() {
                             </p>
                         </div>
 
-                        {errorMsg && (
-                            <div className="p-4 bg-red-950/40 border border-red-900/50 rounded-xl text-red-400 text-sm leading-relaxed flex items-start gap-3">
-                                <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
-                                <span>{errorMsg}</span>
+                        {errorMsg && !userEmail ? (
+                            <div className="space-y-4 animate-in fade-in duration-300">
+                                <div className="p-4 bg-red-950/40 border border-red-900/50 rounded-xl text-red-400 text-sm leading-relaxed flex items-start gap-3">
+                                    <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+                                    <div className="space-y-1">
+                                        <p className="font-semibold text-white">Verification Failed</p>
+                                        <p className="text-red-400/90">{errorMsg}</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-850/60 space-y-2 text-xs text-slate-400 leading-relaxed">
+                                    <p className="font-semibold text-slate-300">Why did this happen?</p>
+                                    <ul className="list-disc pl-4 space-y-1">
+                                        <li>The invitation link may have expired (links are valid for 24 hours).</li>
+                                        <li>The link might have been scanned or clicked in the background by your email provider&apos;s link protection filter, which consumes the one-time token.</li>
+                                    </ul>
+                                    <p className="mt-2 text-amber-400/90 font-medium">
+                                        Good news: You can still join by signing up manually with your invited email address! Our system will automatically link you to the workspace.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2 pt-2">
+                                    <Button
+                                        onClick={() => router.push("/signup")}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition-all shadow-md active:scale-[0.98] flex items-center justify-center cursor-pointer"
+                                    >
+                                        Create Account / Sign Up
+                                    </Button>
+
+                                    <Button
+                                        onClick={() => router.push("/login")}
+                                        variant="outline"
+                                        className="w-full bg-transparent border-slate-800 hover:bg-slate-800/50 text-slate-300 hover:text-white font-medium py-3 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
+                                    >
+                                        Back to Sign In
+                                    </Button>
+                                </div>
                             </div>
-                        )}
-
-                        {userEmail && (
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                {/* Read-Only Email Display */}
-                                <div className="space-y-1 bg-slate-950/50 p-4 rounded-xl border border-slate-850">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Your Email Address</span>
-                                    <p className="text-white text-sm font-medium">{userEmail}</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="fullName" className="text-slate-300 text-xs font-medium">Full Name</Label>
-                                    <div className="relative">
-                                        <User className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
-                                        <Input
-                                            id="fullName"
-                                            placeholder="Jane Doe"
-                                            className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
-                                            value={fullName}
-                                            onChange={(e) => setFullName(e.target.value)}
-                                            required
-                                            disabled={isLoading}
-                                        />
+                        ) : (
+                            <>
+                                {errorMsg && (
+                                    <div className="p-4 bg-red-950/40 border border-red-900/50 rounded-xl text-red-400 text-sm leading-relaxed flex items-start gap-3">
+                                        <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+                                        <span>{errorMsg}</span>
                                     </div>
-                                </div>
+                                )}
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="password" className="text-slate-300 text-xs font-medium">Password</Label>
-                                    <div className="relative">
-                                        <Lock className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            placeholder="••••••••"
-                                            className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            required
+                                {userEmail && (
+                                    <form onSubmit={handleSubmit} className="space-y-4">
+                                        {/* Read-Only Email Display */}
+                                        <div className="space-y-1 bg-slate-950/50 p-4 rounded-xl border border-slate-850">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Your Email Address</span>
+                                            <p className="text-white text-sm font-medium">{userEmail}</p>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="fullName" className="text-slate-300 text-xs font-medium">Full Name</Label>
+                                            <div className="relative">
+                                                <User className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
+                                                <Input
+                                                    id="fullName"
+                                                    placeholder="Jane Doe"
+                                                    className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
+                                                    value={fullName}
+                                                    onChange={(e) => setFullName(e.target.value)}
+                                                    required
+                                                    disabled={isLoading}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="password" className="text-slate-300 text-xs font-medium">Password</Label>
+                                            <div className="relative">
+                                                <Lock className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
+                                                <Input
+                                                    id="password"
+                                                    type="password"
+                                                    placeholder="••••••••"
+                                                    className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    required
+                                                    disabled={isLoading}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="confirmPassword" className="text-slate-300 text-xs font-medium">Confirm Password</Label>
+                                            <div className="relative">
+                                                <Lock className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
+                                                <Input
+                                                    id="confirmPassword"
+                                                    type="password"
+                                                    placeholder="••••••••"
+                                                    className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
+                                                    value={confirmPassword}
+                                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                                    required
+                                                    disabled={isLoading}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            type="submit"
                                             disabled={isLoading}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="confirmPassword" className="text-slate-300 text-xs font-medium">Confirm Password</Label>
-                                    <div className="relative">
-                                        <Lock className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
-                                        <Input
-                                            id="confirmPassword"
-                                            type="password"
-                                            placeholder="••••••••"
-                                            className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
-                                            value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
-                                            required
-                                            disabled={isLoading}
-                                        />
-                                    </div>
-                                </div>
-
-                                <Button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition-all shadow-md active:scale-[0.98] mt-4 flex items-center justify-center cursor-pointer"
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                            Joining workspace...
-                                        </>
-                                    ) : (
-                                        "Join Workspace"
-                                    )}
-                                </Button>
-                            </form>
+                                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition-all shadow-md active:scale-[0.98] mt-4 flex items-center justify-center cursor-pointer"
+                                        >
+                                            {isLoading ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                                    Joining workspace...
+                                                </>
+                                            ) : (
+                                                "Join Workspace"
+                                            )}
+                                        </Button>
+                                    </form>
+                                )}
+                            </>
                         )}
                     </>
                 )}
