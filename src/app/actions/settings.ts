@@ -279,8 +279,8 @@ export async function inviteTeamMember(email: string, full_name: string, role: s
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    // Force role to admin as requested
-    role = "admin"
+    // Force role to Admin as requested, matching the database constraint
+    role = "Admin"
 
     // 1. Check if user is already an active member of this organization
     const { data: existingMember, error: memberCheckError } = await supabase
