@@ -19,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { updateDocument, createFund, createCategory, deleteDocument } from "@/app/actions/ledger";
 import { Loader2, Plus, Trash2 } from "lucide-react";
+import { useRole } from "@/components/RoleProvider";
 
 interface Split {
     id: string; // temporary UI id
@@ -43,6 +44,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
     const [formData, setFormData] = useState<any>({});
     const [splits, setSplits] = useState<Split[]>([]);
     const [lineItems, setLineItems] = useState<any[]>([]);
+    const { isViewer } = useRole();
 
     useEffect(() => {
         if (document) {
@@ -307,6 +309,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                             className="dark:bg-slate-950 dark:border-slate-800"
                                             value={formData.vendor_name}
                                             onChange={e => setFormData({ ...formData, vendor_name: e.target.value })}
+                                            disabled={isViewer}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -316,6 +319,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                             className="dark:bg-slate-950 dark:border-slate-800"
                                             value={formData.document_date}
                                             onChange={e => setFormData({ ...formData, document_date: e.target.value })}
+                                            disabled={isViewer}
                                         />
                                     </div>
                                 </div>
@@ -328,6 +332,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                             value={formData.amount}
                                             onChange={e => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
                                             className="text-lg font-semibold dark:bg-slate-950 dark:border-slate-800"
+                                            disabled={isViewer}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -335,6 +340,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                         <Select
                                             value={formData.document_type}
                                             onValueChange={v => setFormData({ ...formData, document_type: v })}
+                                            disabled={isViewer}
                                         >
                                             <SelectTrigger className="dark:bg-slate-950 dark:border-slate-800">
                                                 <SelectValue />
@@ -501,7 +507,8 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                 variant="destructive"
                                 className="bg-red-600 hover:bg-red-700 dark:bg-red-750 dark:hover:bg-red-700 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all px-4"
                                 onClick={handleDelete}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isViewer}
+                                title={isViewer ? "Viewers cannot delete documents" : ""}
                             >
                                 {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
                                 Delete Document
@@ -512,8 +519,8 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                     id="drawer-save-btn"
                                     className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all"
                                     onClick={handleSave}
-                                    disabled={isSubmitting}
-                                    title="Cmd/Ctrl + Enter to Save"
+                                    disabled={isSubmitting || isViewer}
+                                    title={isViewer ? "Viewers cannot edit documents" : "Cmd/Ctrl + Enter to Save"}
                                 >
                                     {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                                     {document.status === "awaiting_payment" ? "Mark as Paid" : "Approve & Next"}

@@ -70,7 +70,44 @@ export async function getOrganizationId() {
     }
 }
 
+export async function getCurrentUserRole() {
+    // 1. Check local dev override
+    if (process.env.NODE_ENV === 'development') {
+        const cookieStore = await cookies();
+        const devRole = cookieStore.get('dev_user_role')?.value;
+        if (devRole) return devRole;
+        // If not explicitly set in dev, assume Admin to allow access
+        return 'Admin';
+    }
+
+    // 2. Standard Session Auth
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || !user.email) return null;
+
+    try {
+        const { createAdminClient } = await import("@/utils/supabase/admin")
+        const adminClient = createAdminClient()
+        const { data: roleData } = await adminClient
+            .from('user_roles')
+            .select('role')
+            .eq('email', user.email)
+            .maybeSingle();
+
+        if (roleData?.role) {
+            return roleData.role;
+        }
+
+        return null;
+    } catch (e: any) {
+        console.error("Error in getCurrentUserRole:", e);
+        return null;
+    }
+}
+
+
 export async function updateDocument(id: string, updates: any) {
+    await checkWriteAccess();
     const supabase = await createClient()
 
     // Automatically link vendor_id if editing the vendor_name manually in the UI
@@ -103,3 +140,12 @@ export async function updateDocument(id: string, updates: any) {
     revalidatePath("/reports")
     return { success: true, data }
 }
+
+export async function checkWriteAccess() {
+    const role = await getCurrentUserRole();
+    if (role === 'Viewer') {
+        throw new Error("Unauthorized: Viewers cannot perform this action.");
+    }
+    return role;
+}
+

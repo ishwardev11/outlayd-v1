@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { getOrganizationId } from "./ledger"
+import { checkWriteAccess } from "./document-utils"
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai"
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
@@ -12,6 +13,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
  * Call this at the top of every write action in this file.
  */
 async function requireProTier(): Promise<void> {
+    await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 

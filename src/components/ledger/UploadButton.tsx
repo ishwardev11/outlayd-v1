@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
 import { processUpload } from "@/app/actions/ledger";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
+import { useRole } from "@/components/RoleProvider";
 
 export function UploadButton() {
     const [isUploading, setIsUploading] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
+    const { isViewer } = useRole();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,7 +56,8 @@ export function UploadButton() {
             <Button
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
+                disabled={isUploading || isViewer}
+                title={isViewer ? "Viewers cannot upload documents" : ""}
             >
                 {isUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
                 {isUploading ? "Processing..." : "Upload Document"}

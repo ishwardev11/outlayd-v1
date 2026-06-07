@@ -4,10 +4,12 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Check, CreditCard, Loader2, Sparkles, ExternalLink } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
+import { useRole } from "@/components/RoleProvider"
 
 export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
     const [isLoading, setIsLoading] = useState(false)
     const [isPortalLoading, setIsPortalLoading] = useState(false)
+    const { isAdmin } = useRole()
 
     const isPro = orgSettings?.subscription_status === 'pro';
 
@@ -102,8 +104,9 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
                             </p>
                             <Button 
                                 onClick={handleUpgrade}
-                                disabled={isLoading}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                                disabled={isLoading || !isAdmin}
+                                title={!isAdmin ? "Only organization admins can upgrade the plan" : ""}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
                             >
                                 {isLoading ? (
                                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
@@ -111,6 +114,9 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
                                     <><Sparkles className="w-4 h-4 mr-2" /> Upgrade to Pro - $20/mo</>
                                 )}
                             </Button>
+                            {!isAdmin && (
+                                <p className="text-xs text-center mt-3 text-slate-400">Only Admins can upgrade.</p>
+                            )}
                         </>
                     ) : (
                         <>
@@ -119,9 +125,10 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
                             </p>
                             <Button
                                 onClick={handleManageSubscription}
-                                disabled={isPortalLoading}
+                                disabled={isPortalLoading || !isAdmin}
+                                title={!isAdmin ? "Only organization admins can manage subscriptions" : ""}
                                 variant="outline"
-                                className="w-full border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-300"
+                                className="w-full border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-300 disabled:opacity-50"
                             >
                                 {isPortalLoading ? (
                                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Redirecting...</>
@@ -129,6 +136,9 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
                                     <><ExternalLink className="w-4 h-4 mr-2" />Manage Subscription</>
                                 )}
                             </Button>
+                            {!isAdmin && (
+                                <p className="text-xs text-center mt-3 text-slate-400">Only Admins can manage billing.</p>
+                            )}
                         </>
                     )}
                 </div>

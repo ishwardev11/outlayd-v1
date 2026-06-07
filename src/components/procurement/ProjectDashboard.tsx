@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { createClient } from "@/utils/supabase/client"
 import { runSingleEvaluation } from "@/app/actions/procurement"
+import { useRole } from "@/components/RoleProvider"
 
 export type BidStatus = 'uploaded' | 'evaluating' | 'evaluated' | 'awarded' | 'rejected'
 
@@ -73,6 +74,7 @@ function quoteToBid(q: any): Bid {
 
 export function ProjectDashboard({ project, quotes }: { project: any, quotes: any[] }) {
     const supabase = createClient()
+    const { isViewer } = useRole()
     // ── Project state ──
     const [projectStatus, setProjectStatus] = useState(project.status)
 
@@ -457,7 +459,8 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
 
                     <Button 
                         onClick={handleEvaluateAll} 
-                        disabled={uploadedBids.length === 0 || isEvaluatingAll} 
+                        disabled={uploadedBids.length === 0 || isEvaluatingAll || isViewer} 
+                        title={isViewer ? "Viewers cannot evaluate bids" : ""}
                         variant="default"
                         className="w-full shadow-md transition-all group"
                     >
@@ -466,12 +469,12 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                     </Button>
 
                     <div
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
+                        onDragOver={(e) => !isViewer && handleDragOver(e)}
+                        onDragLeave={(e) => !isViewer && handleDragLeave(e)}
+                        onDrop={(e) => !isViewer && handleDrop(e)}
                         className={`
                             border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all bg-card ${isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30 dark:hover:border-muted-foreground/30'}
-                            ${isUploading ? 'opacity-50 pointer-events-none' : ''}
+                            ${isUploading || isViewer ? 'opacity-50 pointer-events-none' : ''}
                         `}
                     >
                         {isUploading ? (
@@ -490,12 +493,13 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                     <span className="bg-background border border-border text-foreground hover:bg-muted dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:hover:bg-slate-700 px-4 py-2 rounded-md text-sm font-medium inline-block transition-colors">
                                         Browse Files
                                     </span>
-                                    <input
-                                        type="file"
-                                        className="hidden"
-                                        accept="application/pdf,image/*"
-                                        onChange={handleFileInput}
-                                    />
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept="application/pdf,image/*"
+                                            onChange={handleFileInput}
+                                            disabled={isViewer}
+                                        />
                                 </label>
                             </>
                         )}
@@ -503,7 +507,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
 
                     <Dialog open={isManualModalOpen} onOpenChange={setIsManualModalOpen}>
                         <DialogTrigger asChild>
-                            <Button variant="outline" className="w-full border-dashed text-muted-foreground hover:text-primary hover:border-primary/50">
+                            <Button variant="outline" className="w-full border-dashed text-muted-foreground hover:text-primary hover:border-primary/50" disabled={isViewer} title={isViewer ? "Viewers cannot add quotes" : ""}>
                                 <Plus className="w-4 h-4 mr-2" />
                                 Add Quote Manually
                             </Button>
@@ -593,10 +597,10 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                             {bid.status === 'evaluating' && (
                                                 <Loader2 className="w-4 h-4 text-primary animate-spin mr-2" />
                                             )}
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title="Edit" onClick={(e) => { e.stopPropagation(); openEditModal(bid); }}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title={isViewer ? "Viewers cannot edit" : "Edit"} disabled={isViewer} onClick={(e) => { e.stopPropagation(); openEditModal(bid); }}>
                                                 <Edit className="w-4 h-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" title="Delete" onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: bid.id, name: bid.vendorName }); }}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" title={isViewer ? "Viewers cannot delete" : "Delete"} disabled={isViewer} onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: bid.id, name: bid.vendorName }); }}>
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>
                                         </div>
@@ -604,7 +608,8 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                     <Button 
                                         variant="default"
                                         className="w-full shadow-sm transition-all group mt-1"
-                                        disabled={bid.status === 'evaluating' || evaluatingBidId === bid.id}
+                                        disabled={bid.status === 'evaluating' || evaluatingBidId === bid.id || isViewer}
+                                        title={isViewer ? "Viewers cannot evaluate" : ""}
                                         onClick={(e) => { e.stopPropagation(); handleRunEvaluation(bid); }}
                                     >
                                         {evaluatingBidId === bid.id || bid.status === 'evaluating' 
@@ -666,10 +671,10 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                         <div className="flex items-center gap-1">
                                             {bid.status !== 'rejected' && (
                                                 <>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" title="Edit" onClick={(e) => { e.stopPropagation(); openEditModal(bid); }}>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" title={isViewer ? "Viewers cannot edit" : "Edit"} disabled={isViewer} onClick={(e) => { e.stopPropagation(); openEditModal(bid); }}>
                                                         <Edit className="w-3.5 h-3.5" />
                                                     </Button>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title="Delete" onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: bid.id, name: bid.vendorName }); }}>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title={isViewer ? "Viewers cannot delete" : "Delete"} disabled={isViewer} onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: bid.id, name: bid.vendorName }); }}>
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </Button>
                                                 </>
@@ -700,7 +705,8 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                             variant="default"
                                             className="w-full mt-4 shadow-sm transition-all"
                                             onClick={(e) => { e.stopPropagation(); handleAwardBid(bid); }}
-                                            disabled={isAwardingId === bid.id}
+                                            disabled={isAwardingId === bid.id || isViewer}
+                                            title={isViewer ? "Viewers cannot award bids" : ""}
                                         >
                                             {isAwardingId === bid.id ? (
                                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

@@ -1,7 +1,17 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
-import { getOrganizationId } from "./document-utils"
+import { getOrganizationId, getCurrentUserRole } from "./document-utils"
+
+async function checkWriteAccess() {
+    if (process.env.NODE_ENV === 'development') return 'Admin';
+    const role = await getCurrentUserRole();
+    if (role === 'Viewer') {
+        throw new Error("Unauthorized: Viewers cannot perform this action.");
+    }
+    return role;
+}
+
 import { revalidatePath } from "next/cache"
 import { cookies, headers } from "next/headers"
 import Stripe from 'stripe';
@@ -49,6 +59,7 @@ export async function getOrganizationSettings() {
 }
 
 export async function updateOrganizationSettings(updates: any) {
+    await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
@@ -111,6 +122,7 @@ export async function getSettingsFunds() {
 }
 
 export async function addSettingFund(name: string, code?: string) {
+    await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
@@ -136,6 +148,7 @@ export async function addSettingFund(name: string, code?: string) {
 }
 
 export async function deleteSettingFund(id: string) {
+    await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
@@ -186,6 +199,7 @@ export async function getSettingsCategories() {
 }
 
 export async function addSettingCategory(name: string) {
+    await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
@@ -210,6 +224,7 @@ export async function addSettingCategory(name: string) {
 }
 
 export async function deleteSettingCategory(id: string) {
+    await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
@@ -276,11 +291,14 @@ export async function getTeamMembers() {
 }
 
 export async function inviteTeamMember(email: string, full_name: string, role: string) {
+    const currentUserRole = await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    // Force role to Admin as requested, matching the database constraint
-    role = "Admin"
+    // Validate the requested role. Admin can only be created by the system initially.
+    if (role !== "Editor" && role !== "Viewer") {
+        role = "Viewer";
+    }
 
     // 1. Check if user is already an active member of this organization
     const { data: existingMember, error: memberCheckError } = await supabase
@@ -447,6 +465,7 @@ export async function inviteTeamMember(email: string, full_name: string, role: s
 }
 
 export async function revokeTeamMember(memberId: string) {
+    await checkWriteAccess();
     const supabase = await createClient()
     const { data: { user: currentUser } } = await supabase.auth.getUser()
 

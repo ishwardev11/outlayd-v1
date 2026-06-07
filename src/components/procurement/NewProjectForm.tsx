@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { DollarSign, Calendar, X, Plus, Target, CheckCircle2 } from "lucide-react";
 import { createProcurementProject } from "@/app/actions/procurement";
 import { useRouter } from "next/navigation";
+import { useRole } from "@/components/RoleProvider";
 
 export function NewProjectForm() {
     const router = useRouter();
@@ -18,6 +19,7 @@ export function NewProjectForm() {
     const [requirementInput, setRequirementInput] = useState("");
     const [requirements, setRequirements] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { isViewer } = useRole();
 
     const handleAddRequirement = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter") {
@@ -166,7 +168,8 @@ export function NewProjectForm() {
                 <CardFooter className="bg-slate-50/50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-slate-800 p-6 rounded-b-xl flex justify-end">
                     <Button
                         type="submit"
-                        disabled={isSubmitting || !title || !budget || !deadline}
+                        disabled={isSubmitting || !title || !budget || !deadline || isViewer}
+                        title={isViewer ? "Viewers cannot create projects" : ""}
                         className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white min-w-[240px] shadow-sm transition-all"
                     >
                         {isSubmitting ? (

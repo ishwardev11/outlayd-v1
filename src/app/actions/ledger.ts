@@ -4,7 +4,7 @@ import crypto from "crypto"
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 
-import { getOrganizationId, updateDocument } from "./document-utils"
+import { getOrganizationId, updateDocument, checkWriteAccess } from "./document-utils"
 import { extractDocumentData } from "./ai"
 export { getOrganizationId, updateDocument }
 
@@ -68,6 +68,7 @@ export async function getCategories() {
 }
 
 export async function createFund(name: string) {
+    await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
@@ -87,6 +88,7 @@ export async function createFund(name: string) {
 }
 
 export async function createCategory(name: string) {
+    await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
@@ -106,6 +108,7 @@ export async function createCategory(name: string) {
 }
 
 export async function deleteDocument(id: string) {
+    await checkWriteAccess();
     const supabase = await createClient()
     const { error } = await supabase
         .from("documents")
@@ -124,6 +127,7 @@ export async function deleteDocument(id: string) {
 }
 
 export async function deleteVendor(id: string) {
+    await checkWriteAccess();
     const supabase = await createClient()
     const { error } = await supabase
         .from("vendors")
@@ -150,6 +154,7 @@ export async function getVendors() {
 }
 
 export async function updateVendor(id: string, updates: any) {
+    await checkWriteAccess();
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -171,6 +176,7 @@ export async function updateVendor(id: string, updates: any) {
 }
 
 export async function mergeVendors(primaryId: string, secondaryId: string) {
+    await checkWriteAccess();
     const supabase = await createClient()
 
     // 1. Reassign documents from secondary -> primary
@@ -204,6 +210,7 @@ export async function mergeVendors(primaryId: string, secondaryId: string) {
 }
 
 export async function processUpload(formData: FormData) {
+    await checkWriteAccess();
     try {
         const file = formData.get("file") as File
         if (!file) throw new Error("No file uploaded")

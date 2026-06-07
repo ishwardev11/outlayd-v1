@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Save } from "lucide-react"
+import { useRole } from "@/components/RoleProvider"
 
 export function OrganizationProfileTab({ orgSettings }: { orgSettings: any }) {
+    const { isViewer } = useRole()
     const [isSaving, setIsSaving] = useState(false)
     const [formData, setFormData] = useState({
         name: orgSettings?.name || "",
@@ -101,7 +103,7 @@ export function OrganizationProfileTab({ orgSettings }: { orgSettings: any }) {
                 </div>
 
                 <div className="pt-4 flex justify-end">
-                    <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+                    <Button type="submit" disabled={isSaving || isViewer} title={isViewer ? "Viewers cannot edit organization settings" : ""} className="bg-indigo-600 hover:bg-indigo-700">
                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                         Save Changes
                     </Button>

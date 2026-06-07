@@ -19,6 +19,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal"
+import { useRole } from "@/components/RoleProvider"
 
 interface TeamMember {
     id: string;
@@ -39,9 +40,10 @@ export function TeamManagementTab({ initialTeam, orgSettings }: { initialTeam: T
     const [isInviting, setIsInviting] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isPaywallOpen, setIsPaywallOpen] = useState(false)
+    const { isViewer } = useRole()
     const [email, setEmail] = useState("")
     const [fullName, setFullName] = useState("")
-    const [role, setRole] = useState("Admin")
+    const [role, setRole] = useState("Editor")
 
     // Revoke states
     const [memberToRevoke, setMemberToRevoke] = useState<TeamMember | null>(null)
@@ -82,7 +84,7 @@ export function TeamManagementTab({ initialTeam, orgSettings }: { initialTeam: T
                 setIsModalOpen(false)
                 setEmail("")
                 setFullName("")
-                setRole("Admin")
+                setRole("Editor")
             }
         } catch (error: any) {
             console.error(error)
@@ -95,7 +97,8 @@ export function TeamManagementTab({ initialTeam, orgSettings }: { initialTeam: T
     const getRoleColor = (r: string) => {
         switch (r) {
             case 'Admin': return 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800'
-            case 'Treasurer': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+            case 'Editor': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+            case 'Viewer': return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
             default: return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
         }
     }
@@ -123,7 +126,7 @@ export function TeamManagementTab({ initialTeam, orgSettings }: { initialTeam: T
                     }
                 }}>
                     <DialogTrigger asChild>
-                        <Button className="bg-indigo-600 hover:bg-indigo-700">
+                        <Button className="bg-indigo-600 hover:bg-indigo-700" disabled={isViewer} title={isViewer ? "Viewers cannot invite team members" : ""}>
                             <UserPlus className="w-4 h-4 mr-2" />
                             Invite Member
                         </Button>
@@ -157,6 +160,19 @@ export function TeamManagementTab({ initialTeam, orgSettings }: { initialTeam: T
                                         required
                                     />
                                 </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="role">Role</Label>
+                                <Select value={role} onValueChange={setRole}>
+                                    <SelectTrigger id="role">
+                                        <SelectValue placeholder="Select a role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Editor">Editor (Write Access)</SelectItem>
+                                        <SelectItem value="Viewer">Viewer (Read Only)</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <Button type="submit" disabled={isInviting} className="w-full bg-indigo-600 hover:bg-indigo-700 mt-4">
@@ -201,14 +217,16 @@ export function TeamManagementTab({ initialTeam, orgSettings }: { initialTeam: T
                                     {new Date(member.created_at).toLocaleDateString()}
                                 </td>
                                 <td className="px-4 py-4 text-right">
-                                    <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="text-slate-400 dark:text-slate-400 dark:hover:text-red-400 hover:text-red-600"
-                                        onClick={() => setMemberToRevoke(member)}
-                                    >
-                                        Revoke
-                                    </Button>
+                                    {!isViewer && (
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="text-slate-400 dark:text-slate-400 dark:hover:text-red-400 hover:text-red-600"
+                                            onClick={() => setMemberToRevoke(member)}
+                                        >
+                                            Revoke
+                                        </Button>
+                                    )}
                                 </td>
                             </tr>
                         ))}

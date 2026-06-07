@@ -16,6 +16,7 @@ import { Trash2, Image as ImageIcon, SearchX, Loader2, Receipt, HelpCircle } fro
 import { UploadButton } from "./UploadButton";
 import { processUpload } from "@/app/actions/ledger";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
+import { useRole } from "@/components/RoleProvider";
 
 interface LedgerTableProps {
     documents: any[];
@@ -31,6 +32,7 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
     const [isUploading, setIsUploading] = useState(false);
     const [isDragActive, setIsDragActive] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
+    const { isViewer } = useRole();
 
     const handleFile = async (file: File) => {
         setIsUploading(true);
@@ -78,10 +80,10 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
         return (
             <>
                 <div 
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-xl p-12 text-center transition-all duration-200 ease-in-out block w-full ${isDragActive ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 scale-[1.02]' : 'border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800'} ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                    onDragOver={(e) => !isViewer && handleDragOver(e)}
+                    onDragLeave={(e) => !isViewer && handleDragLeave(e)}
+                    onDrop={(e) => !isViewer && handleDrop(e)}
+                    className={`border-2 border-dashed rounded-xl p-12 text-center transition-all duration-200 ease-in-out block w-full ${isDragActive ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 scale-[1.02]' : 'border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800'} ${isUploading || isViewer ? 'opacity-50 pointer-events-none' : ''}`}
                 >
                     {isUploading ? (
                          <div className="flex flex-col items-center justify-center py-4">
@@ -203,6 +205,8 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                     id={`delete-btn-${doc.id}`}
                                     variant="ghost"
                                     size="icon"
+                                    disabled={isViewer}
+                                    title={isViewer ? "Viewers cannot delete documents" : ""}
                                     className="h-8 w-8 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 lg:opacity-0 lg:-translate-x-2 lg:group-hover:translate-x-0 lg:group-hover:opacity-100 transition-all duration-200 cursor-pointer active:scale-[0.95]"
                                     onClick={(e) => {
                                         e.stopPropagation();

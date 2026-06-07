@@ -17,6 +17,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { useRole } from "@/components/RoleProvider";
 
 export function LedgerClient({ documents, funds, categories }: { documents: any[], funds: any[], categories: any[] }) {
     const [selectedDocId, setSelectedDocId] = useState<string | undefined>();
@@ -24,6 +25,7 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [isBulkApproving, setIsBulkApproving] = useState<boolean>(false);
     const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
+    const { isViewer } = useRole();
 
     // Filtering States
     const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -207,13 +209,14 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
                             variant="destructive"
                             size="sm"
                             onClick={handleBulkDelete}
-                            disabled={isBulkDeleting}
+                            disabled={isBulkDeleting || isViewer}
+                            title={isViewer ? "Viewers cannot bulk delete" : ""}
                             className="bg-red-600 hover:bg-red-700 dark:bg-red-750 dark:hover:bg-red-700 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all"
                         >
                             {isBulkDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                             Delete Selected
                         </Button>
-                        <Button id="bulk-approve-btn" size="sm" onClick={handleBulkApprove} disabled={isBulkApproving} className="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all">
+                        <Button id="bulk-approve-btn" size="sm" onClick={handleBulkApprove} disabled={isBulkApproving || isViewer} title={isViewer ? "Viewers cannot bulk approve" : ""} className="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all">
                             {isBulkApproving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                             Bulk Approve
                         </Button>
