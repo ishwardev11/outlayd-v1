@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Mail, User, MessageSquare, Clock, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Loader2, Mail, User, MessageSquare, Clock, CheckCircle2, ArrowLeft, Tag } from "lucide-react";
 import Link from "next/link";
 
 export default function ContactPage() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
+    const [subject, setSubject] = useState("");
     const [message, setMessage] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
@@ -85,6 +86,24 @@ export default function ContactPage() {
                                                 className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
+                                                required
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Subject Input */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="subject" className="text-slate-350 text-xs font-semibold">Subject</Label>
+                                        <div className="relative">
+                                            <Tag className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
+                                            <Input
+                                                id="subject"
+                                                type="text"
+                                                placeholder="What is this regarding?"
+                                                className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
+                                                value={subject}
+                                                onChange={(e) => setSubject(e.target.value)}
                                                 required
                                                 disabled={isLoading}
                                             />
