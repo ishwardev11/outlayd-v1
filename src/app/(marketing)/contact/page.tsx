@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Mail, User, MessageSquare, Clock, CheckCircle2, ArrowLeft, Tag } from "lucide-react";
 import Link from "next/link";
+import { sendContactEmail } from "@/app/actions/contact";
 
 export default function ContactPage() {
     const [name, setName] = useState("");
@@ -17,16 +18,25 @@ export default function ContactPage() {
     const [message, setMessage] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setError(null);
 
-        // Simulate API call to send message
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-
-        setIsLoading(false);
-        setIsSubmitted(true);
+        try {
+            const result = await sendContactEmail({ name, email, subject, message });
+            if (result.success) {
+                setIsSubmitted(true);
+            } else {
+                setError(result.error || "Failed to send message. Please try again.");
+            }
+        } catch (err: any) {
+            setError("An unexpected error occurred. Please try again later.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -54,6 +64,12 @@ export default function ContactPage() {
                                         Have questions about Outlayd? Send us a message and we will help you out.
                                     </p>
                                 </div>
+
+                                {error && (
+                                    <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-2xl text-center">
+                                        {error}
+                                    </div>
+                                )}
 
                                 <form onSubmit={handleSubmit} className="space-y-4">
                                     {/* Name Input */}
