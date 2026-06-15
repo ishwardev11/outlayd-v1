@@ -340,7 +340,7 @@ function PricingSection() {
                     <p className="text-slate-400 text-lg">Start for free, upgrade when you need more power.</p>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
                     {/* Basic */}
                     <div className="bg-slate-900/50 border border-white/10 rounded-3xl p-8 flex flex-col mt-4 md:mt-8">
                         <h3 className="text-lg font-medium text-slate-300 mb-2">Starter</h3>
@@ -383,26 +383,6 @@ function PricingSection() {
                         </ul>
                         <Link href="/signup" id="pricing-growth-btn" className="w-full py-3 px-4 rounded-xl bg-indigo-600 font-medium text-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/25 active:scale-95 cursor-pointer">
                             Get Started
-                        </Link>
-                    </div>
-
-                    {/* Scale */}
-                    <div className="bg-slate-900/50 border border-white/10 rounded-3xl p-8 flex flex-col mt-4 md:mt-8">
-                        <h3 className="text-lg font-medium text-slate-300 mb-2">Enterprise</h3>
-                        <div className="mb-6">
-                            <span className="text-4xl font-bold">Custom</span>
-                        </div>
-                        <p className="text-sm text-slate-400 mb-8 border-b border-white/10 pb-8">Contact us for details. Advanced controls and dedicated support for multi-location retail operations.</p>
-                        <ul className="space-y-4 mb-8 flex-1">
-                            {['Unlimited users', 'Retail Operations', 'Custom ERP integrations', 'Dedicated Account Manager', 'SAML SSO'].map((feature, i) => (
-                                <li key={i} className="flex items-start gap-3 text-sm">
-                                    <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" />
-                                    <span>{feature}</span>
-                                </li>
-                            ))}
-                        </ul>
-                        <Link href="#contact" id="pricing-enterprise-btn" className="w-full py-3 px-4 rounded-xl border border-white/20 font-medium text-center hover:bg-white/5 transition-all active:scale-95 cursor-pointer">
-                            Contact Sales
                         </Link>
                     </div>
                 </div>
