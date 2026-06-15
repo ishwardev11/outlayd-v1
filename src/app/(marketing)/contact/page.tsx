@@ -115,7 +115,7 @@ export default function ContactPage() {
                                         <div className="space-y-1">
                                             <p className="font-semibold text-amber-300">Lean Support Disclaimer</p>
                                             <p className="text-slate-400">
-                                                Outlayd is managed by a lean team of founders. We read and respond to every single query carefully, but please allow **24 to 48 hours** for us to get back to you. We appreciate your patience!
+                                                Outlayd is managed by a lean team of founders. We read and respond to every single query carefully, but please allow <strong className="font-semibold text-amber-300">24 to 48 hours</strong> for us to get back to you. We appreciate your patience!
                                             </p>
                                         </div>
                                     </div>
