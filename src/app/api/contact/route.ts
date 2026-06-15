@@ -1,28 +1,26 @@
-"use server";
-
+import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export async function sendContactEmail(formData: {
-    name: string;
-    email: string;
-    subject: string;
-    message: string;
-}) {
+export async function POST(request: Request) {
     try {
-        const { name, email, subject, message } = formData;
+        const body = await request.json();
+        const { name, email, subject, message } = body;
 
         if (!name || !email || !subject || !message) {
-            return { success: false, error: "Missing required fields" };
+            return NextResponse.json(
+                { success: false, error: "Missing required fields" },
+                { status: 400 }
+            );
         }
 
         const { data, error } = await resend.emails.send({
             from: "Outlayd Contact <onboarding@resend.dev>",
-            to: "ishwar.k.96@gmail.com", // Free tier account owner email address
+            to: "ishwar.k.96@gmail.com",
             subject: `New Contact Submission: ${subject}`,
             html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 8px;">
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
                     <h2 style="color: #4f46e5; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">New Contact Message</h2>
                     <p style="margin: 10px 0;"><strong>Name:</strong> ${name}</p>
                     <p style="margin: 10px 0;"><strong>Email:</strong> ${email}</p>
@@ -36,13 +34,16 @@ export async function sendContactEmail(formData: {
         });
 
         if (error) {
-            console.error("Resend delivery error:", error);
-            return { success: false, error: error.message };
+            console.error("Resend API Route error:", error);
+            return NextResponse.json({ success: false, error: error.message }, { status: 500 });
         }
 
-        return { success: true };
+        return NextResponse.json({ success: true, data });
     } catch (error: any) {
-        console.error("Contact form action error:", error);
-        return { success: false, error: error.message || "An unexpected error occurred." };
+        console.error("Contact API Route unexpected error:", error);
+        return NextResponse.json(
+            { success: false, error: error.message || "An unexpected error occurred." },
+            { status: 500 }
+        );
     }
 }

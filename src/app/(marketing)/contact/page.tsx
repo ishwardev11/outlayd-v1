@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Mail, User, MessageSquare, Clock, CheckCircle2, ArrowLeft, Tag } from "lucide-react";
 import Link from "next/link";
-import { sendContactEmail } from "@/app/actions/contact";
 
 export default function ContactPage() {
     const [name, setName] = useState("");
@@ -26,8 +25,17 @@ export default function ContactPage() {
         setError(null);
 
         try {
-            const result = await sendContactEmail({ name, email, subject, message });
-            if (result.success) {
+            const response = await fetch("/api/contact", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ name, email, subject, message }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
                 setIsSubmitted(true);
             } else {
                 setError(result.error || "Failed to send message. Please try again.");
