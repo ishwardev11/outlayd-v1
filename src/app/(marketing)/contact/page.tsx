@@ -38,7 +38,10 @@ export default function ContactPage() {
             if (response.ok && result.success) {
                 setIsSubmitted(true);
             } else {
-                setError(result.error || "Failed to send message. Please try again.");
+                const errorMessage = typeof result.error === "object" && result.error !== null
+                    ? result.error.message || JSON.stringify(result.error)
+                    : result.error || "Failed to send message. Please try again.";
+                setError(errorMessage);
             }
         } catch (err: any) {
             setError("An unexpected error occurred. Please try again later.");

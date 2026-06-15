@@ -1,48 +1,48 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
+// Initialize Resend with your API key from environment variables
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
-        const { name, email, subject, message } = body;
+        const { name, email, subject, message } = await request.json();
 
+        // Validation fallback
         if (!name || !email || !subject || !message) {
             return NextResponse.json(
-                { success: false, error: "Missing required fields" },
+                { error: "All fields are required." },
                 { status: 400 }
             );
         }
 
+        // Send the email to your personal inbox
         const { data, error } = await resend.emails.send({
-            from: "Outlayd Contact <onboarding@resend.dev>",
-            to: "ishwar.k.96@gmail.com",
-            subject: `New Contact Submission: ${subject}`,
+            from: "Outlayd Support <onboarding@resend.dev>", // Replace with your verified custom domain later if needed
+            to: "ishwardev011@gmail.com",
+            replyTo: email, // This lets you hit "Reply" in Gmail to answer the user directly
+            subject: `[Outlayd Contact Form] ${subject}`,
             html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                    <h2 style="color: #4f46e5; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">New Contact Message</h2>
-                    <p style="margin: 10px 0;"><strong>Name:</strong> ${name}</p>
-                    <p style="margin: 10px 0;"><strong>Email:</strong> ${email}</p>
-                    <p style="margin: 10px 0;"><strong>Subject:</strong> ${subject}</p>
-                    <div style="margin-top: 20px; padding: 15px; background-color: #f8fafc; border-radius: 6px; border-left: 4px solid #4f46e5;">
-                        <p style="margin: 0; font-weight: bold; margin-bottom: 5px;">Message:</p>
-                        <p style="margin: 0; white-space: pre-wrap; color: #334155; line-height: 1.5;">${message}</p>
-                    </div>
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px;">
+                    <h2 style="color: #4F46E5; border-bottom: 1px solid #f3f4f6; padding-bottom: 10px;">New Contact Form Message</h2>
+                    <p><strong>Name:</strong> ${name}</p>
+                    <p><strong>Email:</strong> ${email}</p>
+                    <p><strong>Subject:</strong> ${subject}</p>
+                    <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 20px 0;" />
+                    <p><strong>Message:</strong></p>
+                    <p style="white-space: pre-wrap; background-color: #f9fafb; padding: 15px; border-radius: 5px; color: #374151;">${message}</p>
                 </div>
             `,
         });
 
         if (error) {
-            console.error("Resend API Route error:", error);
-            return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+            return NextResponse.json({ error }, { status: 400 });
         }
 
-        return NextResponse.json({ success: true, data });
-    } catch (error: any) {
-        console.error("Contact API Route unexpected error:", error);
+        return NextResponse.json({ success: true, data }, { status: 200 });
+    } catch (err: any) {
         return NextResponse.json(
-            { success: false, error: error.message || "An unexpected error occurred." },
+            { error: err.message || "Something went wrong" },
             { status: 500 }
         );
     }
