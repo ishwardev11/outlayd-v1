@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Mail, User, MessageSquare, Clock, CheckCircle2, ArrowLeft, Tag } from "lucide-react";
+import { Loader2, Mail, User, MessageSquare, Clock, CheckCircle2, ArrowLeft, Tag, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function ContactPage() {
@@ -17,12 +17,12 @@ export default function ContactPage() {
     const [message, setMessage] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [errorMessage, setErrorMessage] = useState("");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setError(null);
+        setErrorMessage("");
 
         try {
             const response = await fetch("/api/contact", {
@@ -35,16 +35,13 @@ export default function ContactPage() {
 
             const result = await response.json();
 
-            if (response.ok && result.success) {
-                setIsSubmitted(true);
-            } else {
-                const errorMessage = typeof result.error === "object" && result.error !== null
-                    ? result.error.message || JSON.stringify(result.error)
-                    : result.error || "Failed to send message. Please try again.";
-                setError(errorMessage);
+            if (!response.ok) {
+                throw new Error(result.error || "Failed to send message. Please try again.");
             }
-        } catch (err: any) {
-            setError("An unexpected error occurred. Please try again later.");
+
+            setIsSubmitted(true);
+        } catch (error: any) {
+            setErrorMessage(error.message || "An unexpected error occurred.");
         } finally {
             setIsLoading(false);
         }
@@ -76,9 +73,10 @@ export default function ContactPage() {
                                     </p>
                                 </div>
 
-                                {error && (
-                                    <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-2xl text-center">
-                                        {error}
+                                {errorMessage && (
+                                    <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-200 text-sm rounded-xl flex items-center gap-3">
+                                        <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                                        <p>{errorMessage}</p>
                                     </div>
                                 )}
 
