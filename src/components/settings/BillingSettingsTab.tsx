@@ -6,7 +6,9 @@ import { Check, CreditCard, Loader2, Sparkles, ExternalLink } from "lucide-react
 import { createClient } from "@/utils/supabase/client"
 import { useRole } from "@/components/RoleProvider"
 
-export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
+import { OrgSettings } from "./SettingsLayout"
+
+export function BillingSettingsTab({ orgSettings }: { orgSettings: OrgSettings | null }) {
     const [isLoading, setIsLoading] = useState(false)
     const [isPortalLoading, setIsPortalLoading] = useState(false)
     const { isAdmin } = useRole()
@@ -53,9 +55,10 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
             } else {
                 throw new Error(data.error || 'Failed to open billing portal');
             }
-        } catch (error: any) {
-            console.error('Portal error:', error);
-            alert(error.message || 'Failed to open billing portal. Please try again.');
+        } catch (error: unknown) {
+            const err = error as Error;
+            console.error('Portal error:', err);
+            alert(err.message || 'Failed to open billing portal. Please try again.');
             setIsPortalLoading(false);
         }
     };

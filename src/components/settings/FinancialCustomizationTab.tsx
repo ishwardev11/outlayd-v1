@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Plus, Trash2 } from "lucide-react"
 import { useRole } from "@/components/RoleProvider"
+import { Fund, Category } from "./SettingsLayout"
 
-export function FinancialCustomizationTab({ initialFunds, initialCategories }: { initialFunds: any[], initialCategories: any[] }) {
+export function FinancialCustomizationTab({ initialFunds, initialCategories }: { initialFunds: Fund[], initialCategories: Category[] }) {
     const { isViewer } = useRole()
     const [isSavingFund, setIsSavingFund] = useState(false)
     const [isSavingCategory, setIsSavingCategory] = useState(false)

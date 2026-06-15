@@ -8,11 +8,42 @@ import { FinancialCustomizationTab } from "./FinancialCustomizationTab"
 import { TeamManagementTab } from "./TeamManagementTab"
 import { BillingSettingsTab } from "./BillingSettingsTab"
 
+export interface OrgSettings {
+    id: string;
+    name: string;
+    registration_id?: string | null;
+    base_currency?: string | null;
+    fiscal_year_start?: number | null;
+    subscription_status?: string | null;
+    subscription_tier?: string | null;
+    cancel_at_period_end?: boolean | null;
+    subscription_end_date?: string | null;
+}
+
+export interface Fund {
+    id: string;
+    name: string;
+    code?: string;
+}
+
+export interface Category {
+    id: string;
+    name: string;
+}
+
+export interface TeamMember {
+    id: string;
+    full_name: string | null;
+    email: string;
+    role: string;
+    created_at: string;
+}
+
 interface SettingsLayoutProps {
-    orgSettings: any
-    initialFunds: any[]
-    initialCategories: any[]
-    initialTeam: any[]
+    orgSettings: OrgSettings | null;
+    initialFunds: Fund[];
+    initialCategories: Category[];
+    initialTeam: TeamMember[];
 }
 
 const TABS = [

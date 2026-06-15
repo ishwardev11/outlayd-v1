@@ -279,63 +279,33 @@ export async function processUpload(formData: FormData) {
         }
 
 
-        // 1. Upload to Storage
-        const { data: uploadData, error: uploadError } = await supabase
-            .storage
-            .from("receipts")
-            .upload(fileName, file)
+        // 1. Calculate file hash first to prevent duplicate processing
+        const buffer = await file.arrayBuffer()
+        const fileHash = crypto.createHash('sha256').update(Buffer.from(buffer)).digest('hex')
+        const mimeType = file.type
+        const base64Data = Buffer.from(buffer).toString("base64")
 
-        if (uploadError) {
-            console.error("Storage upload error:", uploadError)
-            throw new Error(`Storage upload failed: ${uploadError.message}`)
-        }
-
-        const { data: { publicUrl } } = supabase
-            .storage
-            .from("receipts")
-            .getPublicUrl(fileName)
-
-        // 2. Insert blank document record
-
-        const { data: docData, error: docError } = await supabase
+        // 2. Check if this file has already been uploaded by this organization
+        const { data: existingHashDocs } = await supabase
             .from("documents")
-            .insert({
-                image_url: publicUrl,
-                status: "extracting",
-                organization_id
-            })
-            .select()
-            .single()
+            .select("*")
+            .eq("file_hash", fileHash)
+            .eq("organization_id", organization_id)
+            .neq("status", "DUPLICATE_WARNING")
+            .limit(1)
 
-        if (docError) {
-            console.error("Database insert error:", docError)
-            throw new Error(`Database record creation failed: ${docError.message}`)
-        }
+        if (existingHashDocs && existingHashDocs.length > 0) {
+            console.log(`Duplicate detected via early File Hash lookup: ${fileHash}. Bypassing storage upload and AI extraction.`);
+            const exDoc = existingHashDocs[0];
 
-        // 3. Trigger async Gemini extraction or Phase 1 Duplication skip
-        try {
-            const buffer = await file.arrayBuffer()
-            const base64Data = Buffer.from(buffer).toString("base64")
-            const mimeType = file.type
-
-            // Phase 1: Zero-Cost File Hashing (Pre-AI)
-            const fileHash = crypto.createHash('sha256').update(Buffer.from(buffer)).digest('hex');
-
-            const { data: existingHashDocs } = await supabase
+            // Re-use the existing image_url to save storage space and bypass costly extraction
+            const { data: docData, error: docError } = await supabase
                 .from("documents")
-                .select("*")
-                .eq("file_hash", fileHash)
-                .eq("organization_id", organization_id)
-                .limit(1);
-
-            if (existingHashDocs && existingHashDocs.length > 0) {
-                console.log(`Duplicate detected via Phase 1 (File Hash): ${fileHash}. Bypassing AI.`);
-                const exDoc = existingHashDocs[0];
-                
-                // Update the blank document with duplicated data + DUPLICATE_WARNING
-                await supabase.from("documents").update({
+                .insert({
+                    image_url: exDoc.image_url,
                     file_hash: fileHash,
                     status: "DUPLICATE_WARNING",
+                    organization_id,
                     vendor_name: exDoc.vendor_name,
                     vendor_id: exDoc.vendor_id,
                     amount: exDoc.amount,
@@ -351,17 +321,110 @@ export async function processUpload(formData: FormData) {
                     confidence_score: exDoc.confidence_score,
                     splits: exDoc.splits,
                     line_items: exDoc.line_items
-                }).eq("id", docData.id);
-            } else {
-                // Update with just the file_hash first
-                await supabase.from("documents").update({ file_hash: fileHash }).eq("id", docData.id);
-                
-                // Proceed to Gemini API Extraction
-                await extractDocumentData(docData.id, mimeType, base64Data)
+                })
+                .select()
+                .single()
+
+            if (docError) {
+                console.error("Database insert error for duplicate record:", docError)
+                throw new Error(`Database record creation failed: ${docError.message}`)
             }
+
+            revalidatePath("/ledger")
+            revalidatePath("/")
+            return docData
+        }
+
+        // 3. Upload to Storage
+        const { data: uploadData, error: uploadError } = await supabase
+            .storage
+            .from("receipts")
+            .upload(fileName, file)
+
+        if (uploadError) {
+            console.error("Storage upload error:", uploadError)
+            throw new Error(`Storage upload failed: ${uploadError.message}`)
+        }
+
+        const { data: { publicUrl } } = supabase
+            .storage
+            .from("receipts")
+            .getPublicUrl(fileName)
+
+        // 4. Insert active document record
+        const { data: docData, error: docError } = await supabase
+            .from("documents")
+            .insert({
+                image_url: publicUrl,
+                file_hash: fileHash,
+                status: "extracting",
+                organization_id
+            })
+            .select()
+            .single()
+
+        if (docError) {
+            // Check if it's a unique constraint violation (concurrent upload race condition)
+            if (docError.code === "23505") {
+                console.log(`Concurrent duplicate detected via unique constraint for hash: ${fileHash}`);
+
+                // Query the concurrently created active document record
+                const { data: concurrentDocs } = await supabase
+                    .from("documents")
+                    .select("*")
+                    .eq("file_hash", fileHash)
+                    .eq("organization_id", organization_id)
+                    .neq("status", "DUPLICATE_WARNING")
+                    .limit(1)
+
+                const exDoc = (concurrentDocs && concurrentDocs.length > 0) ? concurrentDocs[0] : null;
+
+                // Insert duplicate warning record copying its values
+                const { data: dupData, error: dupError } = await supabase
+                    .from("documents")
+                    .insert({
+                        image_url: publicUrl,
+                        file_hash: fileHash,
+                        status: "DUPLICATE_WARNING",
+                        organization_id,
+                        vendor_name: exDoc?.vendor_name || null,
+                        vendor_id: exDoc?.vendor_id || null,
+                        amount: exDoc?.amount || null,
+                        document_date: exDoc?.document_date || null,
+                        document_type: exDoc?.document_type || null,
+                        invoice_number: exDoc?.invoice_number || null,
+                        alternative_id: exDoc?.alternative_id || null,
+                        transaction_time: exDoc?.transaction_time || null,
+                        payment_last4: exDoc?.payment_last4 || null,
+                        subtotal: exDoc?.subtotal || null,
+                        tax_amount: exDoc?.tax_amount || null,
+                        vendor_branch_or_location: exDoc?.vendor_branch_or_location || null,
+                        confidence_score: exDoc?.confidence_score || null,
+                        splits: exDoc?.splits || null,
+                        line_items: exDoc?.line_items || null
+                    })
+                    .select()
+                    .single()
+
+                if (dupError) {
+                    console.error("Database insert error for duplicate fallback:", dupError)
+                    throw new Error(`Database record creation failed: ${dupError.message}`)
+                }
+
+                revalidatePath("/ledger")
+                revalidatePath("/")
+                return dupData;
+            }
+
+            console.error("Database insert error:", docError)
+            throw new Error(`Database record creation failed: ${docError.message}`)
+        }
+
+        // 5. Proceed to Gemini API Extraction for the active document record
+        try {
+            await extractDocumentData(docData.id, mimeType, base64Data)
         } catch (e: any) {
             console.error("Extraction failed:", e)
-            // We don't throw here so the file is still saved, but it requires manual review
         }
 
         revalidatePath("/ledger")

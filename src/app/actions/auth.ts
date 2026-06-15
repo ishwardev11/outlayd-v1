@@ -30,12 +30,22 @@ export async function signUpAction(formData: FormData) {
     if (invite) {
         // User has a pending invite and was already pre-created in auth.users by inviteUserByEmail.
         // We find their user id and update password / metadata via the admin client.
-        const { data: { users }, error: listError } = await adminClient.auth.admin.listUsers();
-        if (listError) {
-            console.error("Failed to list users during invited signup check:", listError);
+        const { data: userId, error: rpcError } = await adminClient.rpc('get_user_id_by_email', {
+            email_address: email
+        });
+        if (rpcError) {
+            console.error("Failed to fetch user ID by email during invited signup check:", rpcError);
         }
         
-        const existingUser = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        let existingUser = null;
+        if (userId) {
+            const { data: userData, error: getUserError } = await adminClient.auth.admin.getUserById(userId);
+            if (getUserError) {
+                console.error("Failed to fetch user by ID during invited signup check:", getUserError);
+            } else {
+                existingUser = userData?.user;
+            }
+        }
 
         if (existingUser) {
             // Update password, name, and organization metadata on their auth profile
@@ -90,6 +100,7 @@ export async function signUpAction(formData: FormData) {
             cookieStore.set('dev_org_name', '', { maxAge: 0, path: '/' });
             cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
             cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
+            cookieStore.set('active_org_id', invite.organization_id, { path: '/' });
 
             redirect("/dashboard");
         }
@@ -161,6 +172,7 @@ export async function signInAction(formData: FormData) {
     cookieStore.set('dev_org_name', '', { maxAge: 0, path: '/' });
     cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
     cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
+    cookieStore.set('active_org_id', '', { maxAge: 0, path: '/' });
 
     const orgId = await getOrganizationId();
     if (!orgId) {
@@ -180,6 +192,7 @@ export async function signOutAction() {
     cookieStore.set('dev_org_name', '', { maxAge: 0, path: '/' });
     cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
     cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
+    cookieStore.set('active_org_id', '', { maxAge: 0, path: '/' });
 
     redirect("/");
 }

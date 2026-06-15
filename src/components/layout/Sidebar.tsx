@@ -44,6 +44,10 @@ export function Sidebar() {
             return devOrgId;
         }
 
+        const activeOrgCookie = cookies.find((row) => row.trim().startsWith("active_org_id="));
+        const activeOrgId = activeOrgCookie ? activeOrgCookie.split("=")[1] : null;
+        if (activeOrgId) return activeOrgId;
+
         return user?.user_metadata?.organization_id;
     };
 

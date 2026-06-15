@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, UserPlus, Mail, ShieldAlert } from "lucide-react"
 import {
     Dialog,
-    DialogClose,
     DialogContent,
     DialogDescription,
     DialogFooter,
@@ -20,21 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal"
 import { useRole } from "@/components/RoleProvider"
-
-interface TeamMember {
-    id: string;
-    full_name: string | null;
-    email: string;
-    role: string;
-    created_at: string;
-}
-
-interface OrgSettings {
-    id: string;
-    name: string;
-    subscription_tier?: string;
-    subscription_status?: string;
-}
+import { OrgSettings, TeamMember } from "./SettingsLayout"
 
 export function TeamManagementTab({ initialTeam, orgSettings }: { initialTeam: TeamMember[], orgSettings: OrgSettings | null }) {
     const [isInviting, setIsInviting] = useState(false)
@@ -86,9 +71,10 @@ export function TeamManagementTab({ initialTeam, orgSettings }: { initialTeam: T
                 setFullName("")
                 setRole("Editor")
             }
-        } catch (error: any) {
-            console.error(error)
-            alert(error.message || "Failed to invite team member. They might already be invited.")
+        } catch (error: unknown) {
+            const err = error as Error;
+            console.error(err)
+            alert(err.message || "Failed to invite team member. They might already be invited.")
         } finally {
             setIsInviting(false)
         }

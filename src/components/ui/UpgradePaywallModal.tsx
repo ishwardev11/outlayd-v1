@@ -50,7 +50,14 @@ export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upl
         try {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
-            const orgId = user?.user_metadata?.organization_id || null;
+            const getActiveOrgId = (u: any) => {
+                if (typeof document === "undefined") return u?.user_metadata?.organization_id;
+                const cookies = document.cookie.split("; ");
+                const activeOrgCookie = cookies.find((row) => row.trim().startsWith("active_org_id="));
+                if (activeOrgCookie) return activeOrgCookie.split("=")[1];
+                return u?.user_metadata?.organization_id;
+            };
+            const orgId = getActiveOrgId(user) || null;
 
             const response = await fetch('/api/create-checkout-session', {
                 method: 'POST',

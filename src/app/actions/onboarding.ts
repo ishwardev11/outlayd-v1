@@ -48,18 +48,14 @@ export async function completeOnboardingSetup(data: OnboardingData) {
 
         const organization_id = org.id;
 
-        // 3. Link user to organization via user_metadata IMMEDIATELY
-        // This is strictly required before inserting categories/funds/roles to pass RLS checks
+        // 3. Link user to organization via cookie immediately
         if (user) {
-            const { error: updateError } = await supabase.auth.updateUser({
-                data: { organization_id }
-            });
-
-            if (updateError) {
-                console.error("Error updating user metadata:", updateError);
-                throw new Error("Failed to link user to organization");
-            }
+            const cookieStore = await cookies();
+            cookieStore.set('active_org_id', organization_id, { path: '/' });
         }
+
+        // Re-create the Supabase client to ensure the x-active-org-id header is included in outgoing database queries
+        const activeSupabase = await createClient();
 
         // 4. Assign user roles (current user as Admin only)
         // MUST be inserted before categories/funds seeding so get_user_org_id() can resolve the organization
@@ -67,7 +63,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
             { organization_id, email: userEmail, role: "Admin", full_name: userFullName }
         ];
 
-        const { error: rolesError } = await supabase.from("user_roles").insert(rolesToInsert);
+        const { error: rolesError } = await activeSupabase.from("user_roles").insert(rolesToInsert);
         if (rolesError) {
             console.error("Error creating user roles:", rolesError);
             throw new Error(`Failed to assign user role: ${rolesError.message}`);
@@ -114,7 +110,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
                 name,
                 organization_id
             }));
-            const { error: catError } = await supabase
+            const { error: catError } = await activeSupabase
                 .from("categories")
                 .upsert(categoriesToInsert, { onConflict: "name,organization_id", ignoreDuplicates: true });
             if (catError) {
@@ -128,7 +124,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
                 name,
                 organization_id
             }));
-            const { error: fundError } = await supabase
+            const { error: fundError } = await activeSupabase
                 .from("funds")
                 .upsert(fundsToInsert, { onConflict: "name,organization_id", ignoreDuplicates: true });
             if (fundError) {

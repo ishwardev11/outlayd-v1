@@ -576,15 +576,19 @@ export async function acceptInvite(password: string, fullName: string) {
         return { success: false, error: "PASSWORD_UPDATE_FAILED", message: authUpdateError.message }
     }
 
-    // 4. Update the user metadata with organization_id via Admin client
+    // 4. Update the user metadata via Admin client (keep onboarding_completed, but avoid overwriting organization_id)
     const { error: metadataError } = await adminClient.auth.admin.updateUserById(
         user.id,
-        { user_metadata: { organization_id, onboarding_completed: true } }
+        { user_metadata: { onboarding_completed: true } }
     )
 
     if (metadataError) {
         console.error("Failed to update organization metadata on user auth:", metadataError)
     }
+
+    // Set active workspace cookie client-side
+    const cookieStore = await cookies()
+    cookieStore.set('active_org_id', organization_id, { path: '/' })
 
     // 5. Insert active role mapped to user_roles
     const { error: roleInsertError } = await adminClient

@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Save } from "lucide-react"
 import { useRole } from "@/components/RoleProvider"
 
-export function OrganizationProfileTab({ orgSettings }: { orgSettings: any }) {
+import { OrgSettings } from "./SettingsLayout"
+
+export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettings | null }) {
     const { isViewer } = useRole()
     const [isSaving, setIsSaving] = useState(false)
     const [formData, setFormData] = useState({

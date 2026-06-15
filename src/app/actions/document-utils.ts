@@ -21,23 +21,43 @@ export async function getOrganizationId() {
     if (!user) return null;
 
     try {
-        if (user.user_metadata?.organization_id) {
-            return user.user_metadata.organization_id;
-        }
+        const cookieStore = await cookies();
+        const activeOrgId = cookieStore.get('active_org_id')?.value;
 
-        // Secure fallback: Query user_roles table based on email
-        // We use the admin client here to bypass RLS because the user's browser session JWT
-        // might be stale immediately after they accept an invitation or sign up.
         const { createAdminClient } = await import("@/utils/supabase/admin")
         const adminClient = createAdminClient()
-        const { data: roleData } = await adminClient
+
+        // 1. If activeOrgId cookie exists, verify the user is a member of this organization
+        if (activeOrgId) {
+            const { data: roleData } = await adminClient
+                .from('user_roles')
+                .select('organization_id')
+                .eq('email', user.email)
+                .eq('organization_id', activeOrgId)
+                .maybeSingle();
+
+            if (roleData?.organization_id) {
+                return roleData.organization_id;
+            }
+        }
+
+        // 2. Fallback: Query first organization they belong to in user_roles
+        const { data: userRoles } = await adminClient
             .from('user_roles')
             .select('organization_id')
             .eq('email', user.email)
-            .maybeSingle();
+            .order('created_at', { ascending: true })
+            .limit(1);
 
-        if (roleData?.organization_id) {
-            return roleData.organization_id;
+        if (userRoles && userRoles.length > 0) {
+            const firstOrgId = userRoles[0].organization_id;
+            cookieStore.set('active_org_id', firstOrgId, { path: '/' });
+            return firstOrgId;
+        }
+
+        // 3. Fallback: Query metadata organization_id
+        if (user.user_metadata?.organization_id) {
+            return user.user_metadata.organization_id;
         }
 
         if (!user.email) {
