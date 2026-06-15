@@ -527,7 +527,7 @@ export function Footer() {
                             <ul className="space-y-3 text-sm text-slate-400">
                                 <li><Link href="/#services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Features</Link></li>
                                 <li><Link href="/#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</Link></li>
-                                <li><a href="mailto:founder@outlayd.com" className="hover:text-white transition-colors">Contact</a></li>
+                                <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
                             </ul>
                         </div>
 
