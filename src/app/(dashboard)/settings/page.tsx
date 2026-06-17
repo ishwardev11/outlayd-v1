@@ -1,5 +1,6 @@
 import { getOrganizationSettings, getSettingsFunds, getSettingsCategories, getTeamMembers } from "@/app/actions/settings"
 import { SettingsLayout } from "@/components/settings/SettingsLayout"
+import { createClient } from "@/utils/supabase/server"
 
 export const dynamic = "force-dynamic"
 
@@ -8,6 +9,10 @@ export default async function SettingsPage() {
     const funds = await getSettingsFunds()
     const categories = await getSettingsCategories()
     const team = await getTeamMembers()
+
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const currentUserEmail = user?.email || null
 
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-6">
@@ -21,6 +26,7 @@ export default async function SettingsPage() {
                 initialFunds={funds}
                 initialCategories={categories}
                 initialTeam={team}
+                currentUserEmail={currentUserEmail}
             />
         </div>
     )

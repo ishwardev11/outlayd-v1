@@ -21,7 +21,15 @@ import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal"
 import { useRole } from "@/components/RoleProvider"
 import { OrgSettings, TeamMember } from "./SettingsLayout"
 
-export function TeamManagementTab({ initialTeam, orgSettings }: { initialTeam: TeamMember[], orgSettings: OrgSettings | null }) {
+export function TeamManagementTab({ 
+    initialTeam, 
+    orgSettings,
+    currentUserEmail
+}: { 
+    initialTeam: TeamMember[], 
+    orgSettings: OrgSettings | null,
+    currentUserEmail: string | null
+}) {
     const [isInviting, setIsInviting] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isPaywallOpen, setIsPaywallOpen] = useState(false)
@@ -181,41 +189,59 @@ export function TeamManagementTab({ initialTeam, orgSettings }: { initialTeam: T
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                        {initialTeam.map(member => (
-                            <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                                <td className="px-4 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold uppercase shrink-0">
-                                            {member.full_name ? member.full_name.charAt(0) : member.email.charAt(0)}
+                        {initialTeam.map(member => {
+                            const isCurrentUser = member.email.toLowerCase() === currentUserEmail?.toLowerCase();
+                            const showYouBadge = initialTeam.length >= 2 && isCurrentUser;
+
+                            return (
+                                <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                    <td className="px-4 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold uppercase shrink-0">
+                                                {member.full_name ? member.full_name.charAt(0) : member.email.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-slate-900 dark:text-white flex items-center">
+                                                    {member.full_name || 'Pending Invite'}
+                                                    {showYouBadge && (
+                                                        <span className="text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full ml-2 inline-flex items-center font-normal">
+                                                            (You)
+                                                        </span>
+                                                    )}
+                                                </p>
+                                                <p className="text-slate-500 dark:text-slate-400 text-xs">{member.email}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-medium text-slate-900 dark:text-white">{member.full_name || 'Pending Invite'}</p>
-                                            <p className="text-slate-500 dark:text-slate-400 text-xs">{member.email}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-4">
-                                    <Badge variant="outline" className={getRoleColor(member.role)}>
-                                        {member.role}
-                                    </Badge>
-                                </td>
-                                <td className="px-4 py-4 text-slate-500 dark:text-slate-400">
-                                    {new Date(member.created_at).toLocaleDateString()}
-                                </td>
-                                <td className="px-4 py-4 text-right">
-                                    {!isViewer && (
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="text-slate-400 dark:text-slate-400 dark:hover:text-red-400 hover:text-red-600"
-                                            onClick={() => setMemberToRevoke(member)}
-                                        >
-                                            Revoke
-                                        </Button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <Badge variant="outline" className={getRoleColor(member.role)}>
+                                            {member.role}
+                                        </Badge>
+                                    </td>
+                                    <td className="px-4 py-4 text-slate-500 dark:text-slate-400">
+                                        {new Date(member.created_at).toLocaleDateString()}
+                                    </td>
+                                    <td className="px-4 py-4 text-right">
+                                        {isCurrentUser ? (
+                                            <span className="text-slate-400 dark:text-slate-500 text-xs font-medium pr-3 select-none">
+                                                Current
+                                            </span>
+                                        ) : (
+                                            !isViewer && (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="text-slate-400 dark:text-slate-400 dark:hover:text-red-400 hover:text-red-600"
+                                                    onClick={() => setMemberToRevoke(member)}
+                                                >
+                                                    Revoke
+                                                </Button>
+                                            )
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        })}
                         {initialTeam.length === 0 && (
                             <tr>
                                 <td colSpan={4} className="px-4 py-12 text-center text-slate-500">

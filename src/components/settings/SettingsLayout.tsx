@@ -44,6 +44,7 @@ interface SettingsLayoutProps {
     initialFunds: Fund[];
     initialCategories: Category[];
     initialTeam: TeamMember[];
+    currentUserEmail: string | null;
 }
 
 const TABS = [
@@ -54,7 +55,7 @@ const TABS = [
     { id: 'billing', label: 'Billing & Subscription', icon: CreditCard },
 ]
 
-export function SettingsLayout({ orgSettings, initialFunds, initialCategories, initialTeam }: SettingsLayoutProps) {
+export function SettingsLayout({ orgSettings, initialFunds, initialCategories, initialTeam, currentUserEmail }: SettingsLayoutProps) {
     const [activeTab, setActiveTab] = useState('general')
 
     return (
@@ -91,7 +92,11 @@ export function SettingsLayout({ orgSettings, initialFunds, initialCategories, i
                         <FinancialCustomizationTab initialFunds={initialFunds} initialCategories={initialCategories} />
                     )}
                     {activeTab === 'team' && (
-                        <TeamManagementTab initialTeam={initialTeam} orgSettings={orgSettings} />
+                        <TeamManagementTab 
+                            initialTeam={initialTeam} 
+                            orgSettings={orgSettings} 
+                            currentUserEmail={currentUserEmail}
+                        />
                     )}
                     {activeTab === 'billing' && (
                         <BillingSettingsTab orgSettings={orgSettings} />
