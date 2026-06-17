@@ -68,9 +68,9 @@ export default function AcceptInvitePage() {
                     } else if (event === "INITIAL_SESSION" && !searchParams.get("code")) {
                         // If there is an access_token or error in the hash fragment,
                         // wait for Supabase client to parse it and trigger SIGNED_IN or error redirection
-                        const hasHashToken = typeof window !== "undefined" && 
+                        const hasHashToken = typeof window !== "undefined" &&
                             (window.location.hash.includes("access_token=") || window.location.hash.includes("error="));
-                        
+
                         if (!hasHashToken) {
                             setErrorMsg("No active invitation session found. Please click the secure invitation link in your email.")
                             setIsVerifyingUser(false)
@@ -236,80 +236,80 @@ export default function AcceptInvitePage() {
                                     </div>
                                 )}
 
-                                {userEmail && (
-                                    <form onSubmit={handleSubmit} className="space-y-4">
-                                        {/* Read-Only Email Display */}
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    {/* Read-Only Email Display - Only renders if userEmail exists */}
+                                    {userEmail && (
                                         <div className="space-y-1 bg-slate-950/50 p-4 rounded-xl border border-slate-850">
                                             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Your Email Address</span>
                                             <p className="text-white text-sm font-medium">{userEmail}</p>
                                         </div>
+                                    )}
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor="fullName" className="text-slate-300 text-xs font-medium">Full Name</Label>
-                                            <div className="relative">
-                                                <User className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
-                                                <Input
-                                                    id="fullName"
-                                                    placeholder="Jane Doe"
-                                                    className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
-                                                    value={fullName}
-                                                    onChange={(e) => setFullName(e.target.value)}
-                                                    required
-                                                    disabled={isLoading}
-                                                />
-                                            </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="fullName" className="text-slate-300 text-xs font-medium">Full Name</Label>
+                                        <div className="relative">
+                                            <User className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
+                                            <Input
+                                                id="fullName"
+                                                placeholder="Jane Doe"
+                                                className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
+                                                value={fullName}
+                                                onChange={(e) => setFullName(e.target.value)}
+                                                required
+                                                disabled={isLoading}
+                                            />
                                         </div>
+                                    </div>
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor="password" className="text-slate-300 text-xs font-medium">Password</Label>
-                                            <div className="relative">
-                                                <Lock className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
-                                                <Input
-                                                    id="password"
-                                                    type="password"
-                                                    placeholder="••••••••"
-                                                    className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
-                                                    value={password}
-                                                    onChange={(e) => setPassword(e.target.value)}
-                                                    required
-                                                    disabled={isLoading}
-                                                />
-                                            </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="password" className="text-slate-300 text-xs font-medium">Password</Label>
+                                        <div className="relative">
+                                            <Lock className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
+                                            <Input
+                                                id="password"
+                                                type="password"
+                                                placeholder="••••••••"
+                                                className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                required
+                                                disabled={isLoading}
+                                            />
                                         </div>
+                                    </div>
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor="confirmPassword" className="text-slate-300 text-xs font-medium">Confirm Password</Label>
-                                            <div className="relative">
-                                                <Lock className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
-                                                <Input
-                                                    id="confirmPassword"
-                                                    type="password"
-                                                    placeholder="••••••••"
-                                                    className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
-                                                    value={confirmPassword}
-                                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                                    required
-                                                    disabled={isLoading}
-                                                />
-                                            </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="confirmPassword" className="text-slate-300 text-xs font-medium">Confirm Password</Label>
+                                        <div className="relative">
+                                            <Lock className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
+                                            <Input
+                                                id="confirmPassword"
+                                                type="password"
+                                                placeholder="••••••••"
+                                                className="pl-10 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm"
+                                                value={confirmPassword}
+                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                                required
+                                                disabled={isLoading}
+                                            />
                                         </div>
+                                    </div>
 
-                                        <Button
-                                            type="submit"
-                                            disabled={isLoading}
-                                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition-all shadow-md active:scale-[0.98] mt-4 flex items-center justify-center cursor-pointer"
-                                        >
-                                            {isLoading ? (
-                                                <>
-                                                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                                    Joining workspace...
-                                                </>
-                                            ) : (
-                                                "Join Workspace"
-                                            )}
-                                        </Button>
-                                    </form>
-                                )}
+                                    <Button
+                                        type="submit"
+                                        disabled={isLoading}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition-all shadow-md active:scale-[0.98] mt-4 flex items-center justify-center cursor-pointer"
+                                    >
+                                        {isLoading ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                                Joining workspace...
+                                            </>
+                                        ) : (
+                                            "Join Workspace"
+                                        )}
+                                    </Button>
+                                </form>
                             </>
                         )}
                     </>
