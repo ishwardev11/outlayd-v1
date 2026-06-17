@@ -465,7 +465,10 @@ export async function inviteTeamMember(email: string, full_name: string, role: s
 }
 
 export async function revokeTeamMember(memberId: string) {
-    await checkWriteAccess();
+    const role = await getCurrentUserRole();
+    if (role !== 'Admin') {
+        throw new Error("Unauthorized: Only Admins can revoke team member access.");
+    }
     const supabase = await createClient()
     const { data: { user: currentUser } } = await supabase.auth.getUser()
 

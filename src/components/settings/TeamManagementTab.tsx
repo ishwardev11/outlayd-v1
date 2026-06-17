@@ -33,7 +33,7 @@ export function TeamManagementTab({
     const [isInviting, setIsInviting] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isPaywallOpen, setIsPaywallOpen] = useState(false)
-    const { isViewer } = useRole()
+    const { isViewer, isAdmin } = useRole()
     const [email, setEmail] = useState("")
     const [fullName, setFullName] = useState("")
     const [role, setRole] = useState("Editor")
@@ -227,7 +227,7 @@ export function TeamManagementTab({
                                                 Current
                                             </span>
                                         ) : (
-                                            !isViewer && (
+                                            isAdmin ? (
                                                 <Button 
                                                     variant="ghost" 
                                                     size="sm" 
@@ -236,6 +236,10 @@ export function TeamManagementTab({
                                                 >
                                                     Revoke
                                                 </Button>
+                                            ) : (
+                                                <span className="text-slate-400 dark:text-slate-500 text-xs font-medium pr-3 select-none">
+                                                    —
+                                                </span>
                                             )
                                         )}
                                     </td>
