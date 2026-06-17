@@ -33,7 +33,11 @@ export function TeamManagementTab({
     const [isInviting, setIsInviting] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isPaywallOpen, setIsPaywallOpen] = useState(false)
-    const { isViewer, isAdmin } = useRole()
+    const { role: contextRole } = useRole()
+    const currentUserMember = initialTeam.find(m => m.email.toLowerCase() === currentUserEmail?.toLowerCase())
+    const currentUserRole = currentUserMember?.role || contextRole
+    const isAdmin = currentUserRole === 'Admin'
+    const isViewer = currentUserRole === 'Viewer'
     const [email, setEmail] = useState("")
     const [fullName, setFullName] = useState("")
     const [role, setRole] = useState("Editor")
