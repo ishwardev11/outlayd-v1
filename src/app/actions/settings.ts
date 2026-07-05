@@ -24,6 +24,10 @@ export async function getOrganizationSettings() {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
+    if (!organization_id) {
+        return null
+    }
+
     // Local dev fallback
     if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
         const cookieStore = await cookies();
@@ -252,6 +256,10 @@ export async function deleteSettingCategory(id: string) {
 export async function getTeamMembers() {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
+
+    if (!organization_id) {
+        return []
+    }
 
     // 1. Fetch active members
     const { data: activeMembers, error: activeError } = await supabase
@@ -650,6 +658,138 @@ export async function verifyCheckoutSession(sessionId: string) {
     
     return { success: false };
 }
+
+export async function deleteOrganizationAccount() {
+    const role = await checkWriteAccess();
+    if (role !== 'Admin') {
+        throw new Error("Unauthorized: Only Admins can delete the organization account.");
+    }
+    const supabase = await createClient();
+    const organization_id = await getOrganizationId();
+
+    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
+        const cookieStore = await cookies();
+        cookieStore.set('dev_org_id', '', { maxAge: 0, path: '/' });
+        cookieStore.set('dev_org_name', '', { maxAge: 0, path: '/' });
+        cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
+        cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
+        cookieStore.set('dev_template_choice', '', { maxAge: 0, path: '/' });
+        cookieStore.set('active_org_id', '', { maxAge: 0, path: '/' });
+        cookieStore.set('dev_org_status', '', { maxAge: 0, path: '/' });
+        cookieStore.set('dev_org_cancelled', '', { maxAge: 0, path: '/' });
+        cookieStore.set('dev_org_end_date', '', { maxAge: 0, path: '/' });
+        return { success: true };
+    }
+
+    const adminClient = createAdminClient();
+    const { data: org, error: orgError } = await adminClient
+        .from('organizations')
+        .select('stripe_customer_id, subscription_status, subscription_tier')
+        .eq('id', organization_id)
+        .single();
+
+    if (orgError) {
+        console.error("Failed to fetch organization for deletion:", orgError);
+        throw new Error("Failed to delete organization: data fetch failed");
+    }
+
+    // 1. Cancel Stripe subscriptions if on growth/pro plan
+    const isGrowth = org?.subscription_tier === 'growth' || org?.subscription_status === 'pro';
+    const stripeCustomerId = org?.stripe_customer_id;
+
+    if (isGrowth && stripeCustomerId && process.env.STRIPE_SECRET_KEY) {
+        try {
+            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+                apiVersion: '2026-02-25.clover' as any,
+            });
+            const subscriptions = await stripe.subscriptions.list({
+                customer: stripeCustomerId,
+                status: 'active',
+            });
+            for (const sub of subscriptions.data) {
+                await stripe.subscriptions.cancel(sub.id);
+                console.log(`Cancelled Stripe subscription ${sub.id}`);
+            }
+        } catch (stripeError) {
+            console.error("Stripe subscription cancellation failed during account deletion:", stripeError);
+        }
+    }
+
+    // 2. Fetch all team members in user_roles for this organization
+    const { data: members, error: membersError } = await adminClient
+        .from("user_roles")
+        .select("email")
+        .eq("organization_id", organization_id);
+
+    if (membersError) {
+        console.error("Failed to fetch team members for deletion:", membersError);
+    } else if (members) {
+        // Delete users from Supabase Auth
+        for (const member of members) {
+            try {
+                const { data: userId, error: rpcError } = await adminClient.rpc('get_user_id_by_email', {
+                    email_address: member.email
+                });
+                if (rpcError) {
+                    console.error(`Failed to get user ID for email ${member.email}:`, rpcError);
+                    continue;
+                }
+                if (userId) {
+                    const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(userId);
+                    if (deleteAuthError) {
+                        console.error(`Failed to delete Auth User ${member.email}:`, deleteAuthError);
+                    } else {
+                        console.log(`Deleted Auth User ${member.email}`);
+                    }
+                }
+            } catch (err) {
+                console.error(`Error deleting user ${member.email}:`, err);
+            }
+        }
+    }
+
+    // 3. Sequentially delete all data associated with the organization to satisfy FK constraints
+    const tablesToDelete = [
+        "quotes",
+        "procurement_projects",
+        "documents",
+        "vendors",
+        "funds",
+        "categories",
+        "workspace_invites",
+        "user_profiles",
+        "user_roles"
+    ];
+
+    for (const table of tablesToDelete) {
+        const { error } = await adminClient
+            .from(table)
+            .delete()
+            .eq("organization_id", organization_id);
+        if (error) {
+            console.error(`Failed to delete data from table ${table}:`, error);
+            throw new Error(`Failed to delete organization data in table ${table}: ${error.message}`);
+        }
+    }
+
+    // 4. Finally delete the organization record itself
+    const { error: deleteOrgError } = await adminClient
+        .from("organizations")
+        .delete()
+        .eq("id", organization_id);
+
+    if (deleteOrgError) {
+        console.error("Failed to delete organization record:", deleteOrgError);
+        throw new Error(`Failed to delete organization: ${deleteOrgError.message}`);
+    }
+
+    // 5. Clear active organization cookie
+    const cookieStore = await cookies();
+    cookieStore.set('active_org_id', '', { maxAge: 0, path: '/' });
+
+    return { success: true };
+}
+
 
 
 

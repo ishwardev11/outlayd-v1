@@ -9,7 +9,7 @@ export async function getOrganizationId() {
     if (process.env.NODE_ENV === 'development') {
         const cookieStore = await cookies();
         const devOrgId = cookieStore.get('dev_org_id')?.value;
-        if (devOrgId) {
+        if (devOrgId && devOrgId !== 'null' && devOrgId !== 'undefined' && devOrgId !== '') {
             if (devOrgId === '11111111-1111-1111-1111-111111111111') return '00000000-0000-0000-0000-000000000000';
             return devOrgId;
         }
@@ -23,12 +23,13 @@ export async function getOrganizationId() {
     try {
         const cookieStore = await cookies();
         const activeOrgId = cookieStore.get('active_org_id')?.value;
+        const isValidActiveOrg = activeOrgId && activeOrgId !== 'null' && activeOrgId !== 'undefined' && activeOrgId !== '';
 
         const { createAdminClient } = await import("@/utils/supabase/admin")
         const adminClient = createAdminClient()
 
         // 1. If activeOrgId cookie exists, verify the user is a member of this organization
-        if (activeOrgId) {
+        if (isValidActiveOrg) {
             const { data: roleData } = await adminClient
                 .from('user_roles')
                 .select('organization_id')
