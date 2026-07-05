@@ -149,7 +149,7 @@ export default function WizardForm() {
                                         required
                                         value={formData.orgName}
                                         onChange={(e) => updateFormData("orgName", e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400"
                                         placeholder="e.g. Hope Foundation"
                                     />
                                 </div>
