@@ -155,7 +155,7 @@ export default async function Home() {
 
         {/* Right Column (30%): The Action Hub */}
         <div className="lg:col-span-1 space-y-6 flex flex-col">
-          <div className="h-48 shrink-0">
+          <div className="h-52 shrink-0">
             <QuickUpload />
           </div>
           <div className="flex-1">
