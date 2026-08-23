@@ -18,12 +18,12 @@ const COPY: Record<PaywallContext, { heading: string; subtext: string }> = {
     upload_limit: {
         heading: "You've reached your free limit!",
         subtext:
-            "Your organization has successfully processed 5 free documents. To keep automating your ledger and generating audit-ready reports, upgrade to our Pro Tier.",
+            "Your organization has successfully processed 5 free documents. To keep automating your ledger and generating audit-ready reports, upgrade to our Growth Tier.",
     },
     procurement: {
-        heading: "Procurement is a Pro Feature",
+        heading: "Procurement is a Growth Feature",
         subtext:
-            "The full Procurement pipeline — RFP management, vendor bidding, and AI-powered quote evaluation — is exclusive to Outlayd Pro. Upgrade to unlock it today.",
+            "The full Procurement pipeline — RFP management, vendor bidding, and AI-powered quote evaluation — is exclusive to Outlayd Growth. Upgrade to unlock it today.",
     },
     team_limit: {
         heading: "Collaborate with your whole team",
@@ -138,7 +138,7 @@ export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upl
                                 : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/10"
                         }`}
                     >
-                        {isLoading ? "Redirecting..." : "Upgrade to Pro — $20/mo"}
+                        {isLoading ? "Redirecting..." : "Upgrade to Growth — RM89/mo"}
                     </button>
                     <button
                         onClick={onClose}

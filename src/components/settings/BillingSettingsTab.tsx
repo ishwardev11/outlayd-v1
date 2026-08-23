@@ -88,7 +88,7 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: OrgSettings |
                         <div>
                             <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Current Plan</p>
                             <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
-                                {isPro ? "Pro Tier" : "Free Tier"}
+                                {isPro ? "Growth Tier" : "Free Tier"}
                             </h3>
                         </div>
                         {isPro && (
@@ -120,7 +120,7 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: OrgSettings |
                                 {isLoading ? (
                                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
                                 ) : (
-                                    <><Sparkles className="w-4 h-4 mr-2" /> Upgrade to Pro - $20/mo</>
+                                    <><Sparkles className="w-4 h-4 mr-2" /> Upgrade to Growth - RM89/mo</>
                                 )}
                             </Button>
                             {!isAdmin && (
@@ -130,7 +130,7 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: OrgSettings |
                     ) : (
                         <>
                             <p className="text-slate-600 dark:text-slate-300 mb-6">
-                                You have unlimited access to all Pro features.
+                                You have unlimited access to all Growth features.
                             </p>
                             <Button
                                 onClick={handleManageSubscription}
@@ -156,7 +156,7 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: OrgSettings |
                 {!isPro && (
                     <div className="bg-indigo-50 dark:bg-indigo-950/30 p-6 rounded-xl border border-indigo-100 dark:border-indigo-900">
                         <h3 className="font-semibold text-indigo-900 dark:text-indigo-300 mb-4">
-                            Pro Tier Includes:
+                            Growth Tier Includes:
                         </h3>
                         <ul className="space-y-3">
                             <li className="flex items-start">

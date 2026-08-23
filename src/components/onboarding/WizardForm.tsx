@@ -30,10 +30,9 @@ export default function WizardForm() {
 
     const [formData, setFormData] = useState<FormData>({
         orgName: "",
-        baseCurrency: "USD",
+        baseCurrency: "MYR",
         fiscalYearStart: "1",
         templateChoice: "",
-        // invites: [{ email: "", role: "Viewer" }, { email: "", role: "Viewer" }],
     });
 
     const updateFormData = <K extends keyof FormData>(field: K, value: FormData[K]) => {
@@ -157,12 +156,13 @@ export default function WizardForm() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label htmlFor="currency-select" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Base Currency</label>
-                                        <select
+                                         <select
                                             id="currency-select"
                                             value={formData.baseCurrency}
                                             onChange={(e) => updateFormData("baseCurrency", e.target.value)}
                                             className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 dark:text-white"
                                         >
+                                            <option value="MYR">MYR (RM)</option>
                                             <option value="USD">USD ($)</option>
                                             <option value="EUR">EUR (€)</option>
                                             <option value="GBP">GBP (£)</option>
