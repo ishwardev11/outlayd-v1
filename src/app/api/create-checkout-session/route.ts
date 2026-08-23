@@ -29,11 +29,13 @@ export async function POST(req: Request) {
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'http://localhost:3000';
 
+        const priceId = body.priceId || process.env.STRIPE_PRICE_ID || 'price_1U7VEFAoi98hcDUgpZpbiLVO';
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [
                 {
-                    price: 'price_1TErcuAoi98hcDUgCdxGVFX3', // Outlayd Pro recurring price
+                    price: priceId, // Outlayd Growth MYR recurring price (RM89/mo)
                     quantity: 1,
                 },
             ],

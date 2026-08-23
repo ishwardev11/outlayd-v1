@@ -170,7 +170,7 @@ export function NewProjectForm() {
                         type="submit"
                         disabled={isSubmitting || !title || !budget || !deadline || isViewer}
                         title={isViewer ? "Viewers cannot create projects" : ""}
-                        className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white min-w-[240px] shadow-sm transition-all"
+                        className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white min-w-60 shadow-sm transition-all"
                     >
                         {isSubmitting ? (
                             "Creating Project..."

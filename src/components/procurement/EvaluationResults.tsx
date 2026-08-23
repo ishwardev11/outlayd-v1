@@ -85,7 +85,7 @@ export function EvaluationResults({ project, quotes }: { project: any, quotes: a
                         <tr>
                             <th className="p-4 font-semibold w-48 border-r border-gray-200 dark:border-slate-800">Constraint</th>
                             {evaluatedQuotes.map(quote => (
-                                <th key={quote.id} className={`p-4 font-semibold min-w-[250px] ${quote.ai_recommendation_status === 'Recommended' ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-300' : ''}`}>
+                                <th key={quote.id} className={`p-4 font-semibold min-w-62.5 ${quote.ai_recommendation_status === 'Recommended' ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-300' : ''}`}>
                                     <div className="flex items-center justify-between">
                                         {quote.vendor_name}
                                         {quote.ai_recommendation_status === 'Recommended' && (

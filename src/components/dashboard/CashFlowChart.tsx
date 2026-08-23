@@ -24,7 +24,7 @@ export function CashFlowChart({ data, hasPendingDocuments }: { data: { displayDa
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="h-[250px] w-full mt-4">
+                <div className="h-62.5 w-full mt-4">
                     {total === 0 ? (
                         <div className="h-full w-full flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-300 bg-slate-50/50 dark:bg-slate-900/50 rounded-lg border border-dashed border-slate-200 dark:border-slate-800">
                             <div className="mb-4 h-14 w-14 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-850 shadow-sm">
@@ -33,7 +33,7 @@ export function CashFlowChart({ data, hasPendingDocuments }: { data: { displayDa
                             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
                                 {hasPendingDocuments ? "You have pending documents." : "No expenditures recorded in the last 14 days."}
                             </h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-[200px]">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-50">
                                 {hasPendingDocuments
                                     ? "Approve them in the Action Queue to update this chart."
                                     : "Your cash flow chart will populate here once transactions are processed."}

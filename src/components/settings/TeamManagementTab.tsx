@@ -129,7 +129,7 @@ export function TeamManagementTab({
                             Invite Member
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
+                    <DialogContent className="sm:max-w-106.25">
                         <DialogHeader>
                             <DialogTitle>Invite Team Member</DialogTitle>
                         </DialogHeader>
@@ -270,7 +270,7 @@ export function TeamManagementTab({
 
             {/* Revoke Member Confirmation Modal */}
             <Dialog open={!!memberToRevoke} onOpenChange={(open) => { if (!open) setMemberToRevoke(null) }}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-106.25">
                     <DialogHeader>
                         <DialogTitle className="text-slate-900 dark:text-white">Revoke Team Member Access?</DialogTitle>
                         <DialogDescription className="text-slate-500 dark:text-slate-400 mt-2">

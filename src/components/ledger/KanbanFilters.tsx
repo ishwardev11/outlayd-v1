@@ -30,7 +30,7 @@ export function KanbanFilters({ counts, selectedStatus, onStatusChange }: Kanban
                         key={filter.id}
                         onClick={() => onStatusChange(filter.id)}
                         className={cn(
-                            "min-w-[150px] transition-all duration-200 ease-in-out cursor-pointer rounded-xl active:scale-[0.98]",
+                            "min-w-37.5 transition-all duration-200 ease-in-out cursor-pointer rounded-xl active:scale-[0.98]",
                             isActive 
                                 ? "border-2 border-indigo-600 dark:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-md"
                                 : "bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 shadow-sm hover:border-indigo-300 dark:hover:border-slate-700 hover:shadow-md"

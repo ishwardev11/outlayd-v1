@@ -9,7 +9,7 @@ export function QuoteDetailDialog({ bid, children }: { bid: Bid, children: React
             <DialogTrigger asChild>
                 {children}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-125 max-h-[85vh] overflow-y-auto">
                 <DialogHeader className="mb-4">
                     <DialogTitle className="text-xl">{bid.vendorName}</DialogTitle>
                     <DialogDescription>

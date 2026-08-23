@@ -283,7 +283,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                     />
                                 )
                             ) : (
-                                <div className="w-full h-full max-w-sm max-h-[600px] bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
+                                <div className="w-full h-full max-w-sm max-h-150 bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
                                     <div className="w-32 h-4 bg-slate-200 dark:bg-slate-800 rounded mb-8"></div>
                                     <div className="w-64 h-2 bg-slate-200 dark:bg-slate-800 rounded mb-4"></div>
                                     <div className="w-48 h-2 bg-slate-200 dark:bg-slate-800 rounded mb-4"></div>
@@ -422,7 +422,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                 </div>
 
                                 <div className="space-y-0 relative">
-                                    <div className="grid grid-cols-[60px_1fr_100px_100px_32px] gap-2 py-[10px] border-y border-[#e2e8f0] dark:border-slate-800 text-[13px] font-semibold text-[#94a3b8] dark:text-slate-400 mb-2 items-center">
+                                    <div className="grid grid-cols-[60px_1fr_100px_100px_32px] gap-2 py-2.5 border-y border-[#e2e8f0] dark:border-slate-800 text-[13px] font-semibold text-[#94a3b8] dark:text-slate-400 mb-2 items-center">
                                         <div className="text-center">Qty</div>
                                         <div>Description</div>
                                         <div className="text-right">Unit $</div>
@@ -442,7 +442,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                         newItems[idx].total = newItems[idx].quantity * newItems[idx].unit_price;
                                                         setLineItems(newItems);
                                                     }}
-                                                    className="bg-transparent border border-transparent rounded-[6px] h-[36px] px-1 text-[14px] text-center text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
+                                                    className="bg-transparent border border-transparent rounded-[6px] h-9 px-1 text-[14px] text-center text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
                                                     placeholder="0"
                                                 />
                                                 <input
@@ -452,7 +452,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                         newItems[idx].description = e.target.value;
                                                         setLineItems(newItems);
                                                     }}
-                                                    className="bg-transparent border border-transparent rounded-[6px] h-[36px] px-2 text-[14px] text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
+                                                    className="bg-transparent border border-transparent rounded-[6px] h-9 px-2 text-[14px] text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
                                                     placeholder="Item description"
                                                 />
                                                 <input
@@ -464,7 +464,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                         newItems[idx].total = newItems[idx].quantity * newItems[idx].unit_price;
                                                         setLineItems(newItems);
                                                     }}
-                                                    className="bg-transparent border border-transparent rounded-[6px] h-[36px] px-1 text-[14px] text-right text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
+                                                    className="bg-transparent border border-transparent rounded-[6px] h-9 px-1 text-[14px] text-right text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
                                                     placeholder="0.00"
                                                 />
                                                 <div className="font-medium text-[#1e293b] dark:text-slate-300 text-[14px] text-right pr-2">
@@ -475,7 +475,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                     className="text-[#cbd5e1] dark:text-slate-600 hover:text-rose-500 dark:hover:text-rose-400 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100"
                                                     title="Remove item"
                                                 >
-                                                    <Trash2 className="w-[16px] h-[16px]" strokeWidth={2} />
+                                                    <Trash2 className="w-4 h-4" strokeWidth={2} />
                                                 </button>
                                             </div>
                                         ))}
@@ -488,7 +488,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                     )}
 
                                     <div className="flex flex-col items-end pt-5 mt-4 border-t border-[#f1f5f9] dark:border-slate-800 gap-2">
-                                        <div className="grid grid-cols-[1fr_100px] gap-2 items-center w-[250px]">
+                                        <div className="grid grid-cols-[1fr_100px] gap-2 items-center w-64">
                                             <div className="text-[14px] font-semibold text-[#0f172a] dark:text-slate-200 text-right">Total:</div>
                                             <div className="text-[15px] font-semibold text-[#0f172a] dark:text-slate-200 text-right pr-8">
                                                 ${(lineItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

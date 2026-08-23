@@ -415,7 +415,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                     </div>
                 </div>
 
-                <div className="flex flex-col md:items-end p-4 bg-muted/30 rounded-lg border border-border min-w-[200px]">
+                <div className="flex flex-col md:items-end p-4 bg-muted/30 rounded-lg border border-border min-w-50">
                     <span className="text-sm font-medium text-muted-foreground mb-1">Budget Ceiling</span>
                     <span className="text-3xl font-bold text-primary">
                         ${Number(project.budget_ceiling).toLocaleString()}
@@ -512,7 +512,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                 Add Quote Manually
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
+                        <DialogContent className="sm:max-w-106.25">
                             <DialogHeader>
                                 <DialogTitle>Add Manual Quote</DialogTitle>
                                 <DialogDescription className="sr-only">Fill out the details to manually add a quote to this project.</DialogDescription>
@@ -727,7 +727,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                     <BrainCircuit className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
                                 </div>
                                 <p className="text-sm font-medium text-foreground mb-1">No bids evaluated yet</p>
-                                <p className="text-xs text-muted-foreground max-w-[220px] leading-relaxed">
+                                <p className="text-xs text-muted-foreground max-w-55 leading-relaxed">
                                     Click &ldquo;Run AI Evaluation&rdquo; on an uploaded quote to analyze it against your <span className="font-medium text-primary">${Number(project.budget_ceiling).toLocaleString()}</span> budget ceiling.
                                 </p>
                             </div>
@@ -787,7 +787,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                     <Trophy className="w-6 h-6 text-muted-foreground" />
                                 </div>
                                 <p className="text-sm font-medium text-foreground mb-1">No bid awarded yet</p>
-                                <p className="text-xs text-muted-foreground max-w-[220px] leading-relaxed">
+                                <p className="text-xs text-muted-foreground max-w-55 leading-relaxed">
                                     Once the AI evaluation is complete, review the recommendations and award the winning bid here.
                                 </p>
                             </div>
@@ -801,7 +801,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-                <DialogContent className="sm:max-w-[400px]">
+                <DialogContent className="sm:max-w-100">
                     <DialogHeader>
                         <DialogTitle className="text-red-600 dark:text-red-400 flex items-center gap-2">
                             <Trash2 className="w-5 h-5" />
@@ -825,7 +825,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
 
             {/* Edit Quote Dialog */}
             <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-106.25">
                     <DialogHeader>
                         <DialogTitle>Edit Quote</DialogTitle>
                         <DialogDescription className="sr-only">Update the vendor name, total amount, and payment terms for this quote.</DialogDescription>
