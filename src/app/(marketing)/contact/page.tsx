@@ -154,7 +154,7 @@ export default function ContactPage() {
                                                 id="message"
                                                 placeholder="How can we help your business?"
                                                 rows={4}
-                                                className="pl-10 pt-2.5 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm min-h-[100px]"
+                                                className="pl-10 pt-2.5 bg-slate-950/50 border-slate-850 text-white placeholder-slate-600 focus-visible:ring-indigo-500 focus-visible:ring-offset-0 focus:border-indigo-500 text-sm min-h-25"
                                                 value={message}
                                                 onChange={(e) => setMessage(e.target.value)}
                                                 required
