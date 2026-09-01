@@ -121,7 +121,7 @@ export default function WizardForm() {
             </div>
 
             {/* Form Content */}
-            <div className="bg-white dark:bg-slate-950 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800/80 p-8 min-h-[400px] relative overflow-hidden backdrop-blur-md">
+            <div className="bg-white dark:bg-slate-950 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800/80 p-8 min-h-100 relative overflow-hidden backdrop-blur-md">
                 <AnimatePresence mode="wait" custom={direction}>
                     {step === 1 && (
                         <motion.div
@@ -277,7 +277,7 @@ export default function WizardForm() {
                                     id="wizard-complete-btn"
                                     onClick={handleSubmit}
                                     disabled={!formData.templateChoice || isSubmitting}
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[240px] cursor-pointer transition-all duration-200 active:scale-[0.98]"
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-60 cursor-pointer transition-all duration-200 active:scale-[0.98]"
                                 >
                                     {isSubmitting ? (
                                         <div className="flex items-center">

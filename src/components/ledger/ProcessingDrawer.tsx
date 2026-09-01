@@ -264,7 +264,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                     {/* Left Pane - Document Viewer */}
                     <div className="border-r border-b md:border-b-0 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 flex flex-col h-[40vh] md:h-full">
                         <div className="p-4 border-b dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium text-slate-500 dark:text-slate-400 flex justify-between">
-                            <span className="truncate mr-4">Original Document: {document.image_url}</span>
+                            <span className="truncate mr-4">Original Document</span>
                             <span className="shrink-0">1 of 1 pages</span>
                         </div>
                         <div className="flex-1 flex items-center justify-center p-8 overflow-hidden">
