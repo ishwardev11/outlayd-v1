@@ -15,7 +15,6 @@ export function ReportsClient({ documents }: { documents: any[] }) {
     const router = useRouter();
     const pathname = usePathname();
 
-    const urlDateRange = searchParams.get("period");
     const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
     const [selectedMonth, setSelectedMonth] = useState<string>("all");
     const [selectedFund, setSelectedFund] = useState<string>("all");
@@ -153,7 +152,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                     <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Year</span>
                         <Select value={selectedYear} onValueChange={setSelectedYear}>
-                            <SelectTrigger className="w-[110px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white">
+                            <SelectTrigger className="w-27.5 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white">
                                 <SelectValue placeholder="Year" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
@@ -168,7 +167,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                     <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Month</span>
                         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                            <SelectTrigger className="w-[130px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white">
+                            <SelectTrigger className="w-32.5 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white">
                                 <SelectValue placeholder="Month" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
@@ -183,7 +182,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                     <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Fund</span>
                         <Select value={selectedFund} onValueChange={setSelectedFund}>
-                            <SelectTrigger className="w-[140px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white">
+                            <SelectTrigger className="w-35 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white">
                                 <SelectValue placeholder="Fund" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
@@ -198,7 +197,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                     <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Status</span>
                         <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                            <SelectTrigger className="w-[150px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white">
+                            <SelectTrigger className="w-37.5 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">

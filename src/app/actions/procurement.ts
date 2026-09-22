@@ -19,7 +19,7 @@ async function requireProTier(): Promise<void> {
 
     const { data: org, error } = await supabase
         .from("organizations")
-        .select("subscription_status")
+        .select("subscription_status, subscription_tier")
         .eq("id", organization_id)
         .single()
 
@@ -28,7 +28,8 @@ async function requireProTier(): Promise<void> {
         throw new Error("Failed to verify subscription status")
     }
 
-    if (org?.subscription_status !== "pro") {
+    const isPro = org?.subscription_status === "pro" || org?.subscription_tier === "growth";
+    if (!isPro) {
         const err: any = new Error(
             "This feature requires a Outlayd Pro subscription. Please upgrade to access Procurement."
         )

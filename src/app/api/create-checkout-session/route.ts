@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getOrganizationId } from '@/app/actions/document-utils';
+import { getOrganizationId, getCurrentUserRole } from '@/app/actions/document-utils';
+import { createAdminClient } from '@/utils/supabase/admin';
 
 export async function POST(req: Request) {
     try {
@@ -9,29 +10,46 @@ export async function POST(req: Request) {
             apiVersion: '2026-02-25.clover',
         });
 
-        const body = await req.json();
-
-        // Prioritize server-side lookup for security (prevents IDOR)
+        // 1. Authenticate user organization
         const authenticatedOrgId = await getOrganizationId();
-        
-        // If an orgId was passed in the body, verify it matches the user's secret session
-        const bodyOrgId = body.orgId;
-        
-        if (bodyOrgId && authenticatedOrgId && bodyOrgId !== authenticatedOrgId) {
-             return NextResponse.json({ error: 'Unauthorized organization access' }, { status: 403 });
+        if (!authenticatedOrgId) {
+            return NextResponse.json({ error: 'Unauthorized: Please log in first.' }, { status: 401 });
         }
 
-        const orgId = authenticatedOrgId || bodyOrgId;
-
-        if (!orgId) {
-            return NextResponse.json({ error: 'Organization ID is required. Please log in.' }, { status: 401 });
+        // 2. Validate role - only Admins can initiate subscription billing
+        const role = await getCurrentUserRole();
+        if (role !== 'Admin') {
+            return NextResponse.json({ error: 'Forbidden: Only Admins can manage billing subscriptions.' }, { status: 403 });
         }
 
+        const body = await req.json().catch(() => ({}));
+
+        // 3. IDOR check: if body contains orgId, ensure it matches session
+        if (body.orgId && body.orgId !== authenticatedOrgId) {
+            return NextResponse.json({ error: 'Unauthorized organization access' }, { status: 403 });
+        }
+
+        const orgId = authenticatedOrgId;
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'http://localhost:3000';
-
         const priceId = body.priceId || process.env.STRIPE_PRICE_ID || 'price_1U7VEFAoi98hcDUgpZpbiLVO';
 
-        const session = await stripe.checkout.sessions.create({
+        // Check if organization already has an existing Stripe customer ID
+        let existingCustomerId: string | undefined;
+        try {
+            const adminClient = createAdminClient();
+            const { data: org } = await adminClient
+                .from('organizations')
+                .select('stripe_customer_id')
+                .eq('id', orgId)
+                .single();
+            if (org?.stripe_customer_id) {
+                existingCustomerId = org.stripe_customer_id;
+            }
+        } catch (e) {
+            console.warn('Could not check existing customer ID:', e);
+        }
+
+        const sessionParams: Stripe.Checkout.SessionCreateParams = {
             payment_method_types: ['card'],
             line_items: [
                 {
@@ -50,7 +68,17 @@ export async function POST(req: Request) {
             },
             success_url: `${baseUrl}/dashboard?upgrade=success&session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${baseUrl}/dashboard`,
-        });
+        };
+
+        if (existingCustomerId) {
+            sessionParams.customer = existingCustomerId;
+            sessionParams.customer_update = {
+                name: 'auto',
+                address: 'auto',
+            };
+        }
+
+        const session = await stripe.checkout.sessions.create(sessionParams);
 
         return NextResponse.json({ url: session.url });
     } catch (err: any) {

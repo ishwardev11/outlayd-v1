@@ -530,22 +530,6 @@ export async function revokeTeamMember(memberId: string) {
         }
     }
 
-    // 3. Delete the corresponding user from auth.users using the admin client
-    if (deletedEmail) {
-        const { data: { users }, error: listError } = await adminClient.auth.admin.listUsers()
-        if (listError) {
-            console.error("Failed to list users during revocation:", listError)
-        } else {
-            const targetUser = users?.find(u => u.email?.toLowerCase() === deletedEmail!.toLowerCase())
-            if (targetUser) {
-                const { error: deleteUserError } = await adminClient.auth.admin.deleteUser(targetUser.id)
-                if (deleteUserError) {
-                    console.error("Failed to delete user from Supabase Auth:", deleteUserError)
-                }
-            }
-        }
-    }
-
     revalidatePath("/settings")
     return { success: true }
 }
@@ -640,12 +624,25 @@ export async function verifyCheckoutSession(sessionId: string) {
         const session = await stripe.checkout.sessions.retrieve(sessionId);
 
         if (session.payment_status === 'paid' && session.metadata?.organization_id === organization_id) {
+            const customerId = typeof session.customer === 'string' ? session.customer : (session.customer as any)?.id || null;
             const { error } = await supabase
-                .rpc('upgrade_org_to_pro', { org_id: organization_id });
+                .rpc('upgrade_org_to_pro', { 
+                    org_id: organization_id,
+                    p_tier: 'growth',
+                    p_customer_id: customerId
+                });
 
             if (error) {
-                console.error('Error upgrading org from client verify:', error);
-                return { success: false };
+                console.error('Error upgrading org from client verify via RPC:', error);
+                // Fallback: direct update via admin client
+                const adminClient = createAdminClient();
+                await adminClient.from('organizations').update({
+                    subscription_status: 'pro',
+                    subscription_tier: 'growth',
+                    stripe_customer_id: customerId || undefined,
+                    cancel_at_period_end: false,
+                    subscription_end_date: null
+                }).eq('id', organization_id);
             }
 
             revalidatePath("/", "layout")

@@ -54,16 +54,15 @@ export async function completeOnboardingSetup(data: OnboardingData) {
             cookieStore.set('active_org_id', organization_id, { path: '/' });
         }
 
-        // Re-create the Supabase client to ensure the x-active-org-id header is included in outgoing database queries
-        const activeSupabase = await createClient();
-
         // 4. Assign user roles (current user as Admin only)
-        // MUST be inserted before categories/funds seeding so get_user_org_id() can resolve the organization
+        // Use admin client to reliably bypass RLS chicken-and-egg condition during first-time tenant creation
+        const { createAdminClient } = await import("@/utils/supabase/admin");
+        const adminClient = createAdminClient();
         const rolesToInsert = [
             { organization_id, email: userEmail, role: "Admin", full_name: userFullName }
         ];
 
-        const { error: rolesError } = await activeSupabase.from("user_roles").insert(rolesToInsert);
+        const { error: rolesError } = await adminClient.from("user_roles").insert(rolesToInsert);
         if (rolesError) {
             console.error("Error creating user roles:", rolesError);
             throw new Error(`Failed to assign user role: ${rolesError.message}`);
@@ -110,7 +109,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
                 name,
                 organization_id
             }));
-            const { error: catError } = await activeSupabase
+            const { error: catError } = await adminClient
                 .from("categories")
                 .upsert(categoriesToInsert, { onConflict: "name,organization_id", ignoreDuplicates: true });
             if (catError) {
@@ -124,7 +123,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
                 name,
                 organization_id
             }));
-            const { error: fundError } = await activeSupabase
+            const { error: fundError } = await adminClient
                 .from("funds")
                 .upsert(fundsToInsert, { onConflict: "name,organization_id", ignoreDuplicates: true });
             if (fundError) {

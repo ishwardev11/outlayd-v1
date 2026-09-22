@@ -52,7 +52,11 @@ export async function getOrganizationId() {
 
         if (userRoles && userRoles.length > 0) {
             const firstOrgId = userRoles[0].organization_id;
-            cookieStore.set('active_org_id', firstOrgId, { path: '/' });
+            try {
+                cookieStore.set('active_org_id', firstOrgId, { path: '/' });
+            } catch {
+                // Ignore cookie setting errors when called during Server Component rendering
+            }
             return firstOrgId;
         }
 

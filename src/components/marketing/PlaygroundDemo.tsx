@@ -129,7 +129,7 @@ export function PlaygroundDemo() {
                     ))}
                 </div>
 
-                <div className="relative border border-slate-800/80 bg-slate-950/80 rounded-2xl p-6 min-h-[300px] flex flex-col justify-between overflow-hidden shadow-inner">
+                <div className="relative border border-slate-800/80 bg-slate-950/80 rounded-2xl p-6 min-h-75 flex flex-col justify-between overflow-hidden shadow-inner">
                     {scanState === "scanning" && (
                         <div className="absolute left-0 w-full h-1 bg-linear-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#34d399] z-20 animate-laser-scan" />
                     )}
@@ -215,11 +215,11 @@ export function PlaygroundDemo() {
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px] font-mono">
                                     <div>
                                         <span className="text-[9px] uppercase font-bold text-slate-500 block">Vendor</span>
-                                        <span className="text-slate-300 block truncate min-h-[16px]">{typedData.vendor || "—"}</span>
+                                        <span className="text-slate-300 block truncate min-h-4">{typedData.vendor || "—"}</span>
                                     </div>
                                     <div>
                                         <span className="text-[9px] uppercase font-bold text-slate-500 block">Date</span>
-                                        <span className="text-slate-300 block truncate min-h-[16px]">{typedData.date || "—"}</span>
+                                        <span className="text-slate-300 block truncate min-h-4">{typedData.date || "—"}</span>
                                     </div>
                                     <div>
                                         <span className="text-[9px] uppercase font-bold text-slate-500 block">Category</span>
@@ -229,7 +229,7 @@ export function PlaygroundDemo() {
                                     </div>
                                     <div className="text-right">
                                         <span className="text-[9px] uppercase font-bold text-slate-500 block">Amount</span>
-                                        <span className="text-emerald-400 font-bold block min-h-[16px]">{typedData.amount || "—"}</span>
+                                        <span className="text-emerald-400 font-bold block min-h-4">{typedData.amount || "—"}</span>
                                     </div>
                                 </div>
                             </div>

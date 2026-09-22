@@ -15,11 +15,12 @@ export default async function ProcurementPage() {
     // --- Pro-tier gate ---
     const { data: org } = await supabase
         .from("organizations")
-        .select("subscription_status")
+        .select("subscription_status, subscription_tier")
         .eq("id", organization_id)
         .single()
 
-    if (org?.subscription_status !== "pro") {
+    const isPro = org?.subscription_status === "pro" || org?.subscription_tier === "growth";
+    if (!isPro) {
         redirect("/dashboard")
     }
     // -------------------

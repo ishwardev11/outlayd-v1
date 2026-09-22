@@ -78,14 +78,15 @@ export function Sidebar() {
 
                 const { data: org, error } = await supabase
                     .from("organizations")
-                    .select("subscription_status")
+                    .select("subscription_status, subscription_tier")
                     .eq("id", orgId)
                     .single();
 
                 if (error) throw error;
-                setIsPro(org?.subscription_status === "pro");
+                const isOrgPro = org?.subscription_status === "pro" || org?.subscription_tier === "growth";
+                setIsPro(isOrgPro);
                 
-                if (org?.subscription_status === "pro" && typeof window !== "undefined") {
+                if (isOrgPro && typeof window !== "undefined") {
                     sessionStorage.setItem("optimistic_is_pro", "true");
                 }
             } catch (err) {
@@ -219,9 +220,14 @@ export function Sidebar() {
                             ))}
                         </div>
                         <div className="p-4 border-t border-slate-200 dark:border-slate-800/80">
-                            <button id="contact-support-btn" type="button" className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-all duration-200 active:scale-[0.98] cursor-pointer">
+                            <Link
+                                href="/contact"
+                                onClick={() => setIsHelpOpen(false)}
+                                id="contact-support-btn"
+                                className="block w-full text-center py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                            >
                                 Contact Support
-                            </button>
+                            </Link>
                         </div>
                     </div>
                 </div>

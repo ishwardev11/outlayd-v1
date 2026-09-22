@@ -1,6 +1,6 @@
 "use server"
 
-import crypto from "crypto"
+import crypto from "node:crypto"
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 
@@ -178,11 +178,22 @@ export async function updateVendor(id: string, updates: any) {
 export async function mergeVendors(primaryId: string, secondaryId: string) {
     await checkWriteAccess();
     const supabase = await createClient()
+    // 0. Fetch primary vendor name to keep documents in sync
+    const { data: primaryVendor } = await supabase
+        .from("vendors")
+        .select("name")
+        .eq("id", primaryId)
+        .single()
 
-    // 1. Reassign documents from secondary -> primary
+    // 1. Reassign documents from secondary -> primary and sync vendor_name
+    const updatePayload: Record<string, any> = { vendor_id: primaryId }
+    if (primaryVendor?.name) {
+        updatePayload.vendor_name = primaryVendor.name
+    }
+
     const { error: updateError } = await supabase
         .from("documents")
-        .update({ vendor_id: primaryId })
+        .update(updatePayload)
         .eq("vendor_id", secondaryId)
 
     if (updateError) {

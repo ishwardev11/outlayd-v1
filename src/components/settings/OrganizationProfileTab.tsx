@@ -190,7 +190,7 @@ export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettin
                                                         <li>Permanently delete the user accounts of all team members.</li>
                                                     </ul>
                                                     <p className="mt-4">
-                                                        Please type the organization name <span className="font-semibold text-slate-900 dark:text-white">"{orgSettings?.name}"</span> to confirm.
+                                                        Please type the organization name <span className="font-semibold text-slate-900 dark:text-white">&quot;{orgSettings?.name}&quot;</span> to confirm.
                                                     </p>
                                                 </div>
                                             </DialogDescription>
