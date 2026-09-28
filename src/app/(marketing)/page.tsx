@@ -17,7 +17,7 @@ import {
     Triangle,
     Atom
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PlaygroundDemo } from "@/components/marketing/PlaygroundDemo";
 
 // Animation Variants
@@ -282,6 +282,16 @@ function BenefitsSection() {
 }
 
 function HowItWorksSection() {
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.defaultMuted = true;
+            videoRef.current.muted = true;
+            videoRef.current.play().catch(() => {});
+        }
+    }, []);
+
     const steps = [
         {
             num: "01",
@@ -303,9 +313,26 @@ function HowItWorksSection() {
     return (
         <section id="how-it-works" className="py-24 px-4 bg-slate-900/50 border-y border-white/5">
             <div className="container mx-auto max-w-5xl">
-                <div className="text-center mb-16">
+                <div className="text-center mb-12 sm:mb-16">
                     <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">How it works?</h2>
-                    <p className="text-slate-400 text-lg">From receipt to reconciliation in three simple steps.</p>
+                    <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+                        See how you can go from raw invoice PDF to a clean spend ledger in under 2 minutes.
+                    </p>
+                </div>
+
+                {/* Video Player */}
+                <div className="max-w-4xl mx-auto mb-16 sm:mb-20">
+                    <video
+                        ref={videoRef}
+                        src="/demo.mp4"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        controls
+                        preload="auto"
+                        className="w-full"
+                    />
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-8 relative">
