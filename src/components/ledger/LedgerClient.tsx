@@ -44,14 +44,17 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
             // Status Filter
             if (selectedStatus !== 'all' && doc.status !== selectedStatus) return false;
 
-            // Omnibar Filter (Vendor, Amount, Line Items if available)
+            // Omnibar Filter (Vendor, Invoice #, Amount, Line Items if available)
             if (searchQuery) {
-                const query = searchQuery.toLowerCase();
+                const query = searchQuery.toLowerCase().trim();
+                const cleanQuery = query.replace(/^#/, '').trim();
                 const vendorMatch = doc.vendor_name?.toLowerCase().includes(query);
+                const invoiceMatch = doc.invoice_number?.toLowerCase().includes(query) ||
+                    (cleanQuery ? doc.invoice_number?.toLowerCase().includes(cleanQuery) : false);
                 const amountMatch = doc.amount?.toString().includes(query);
                 const lineItemsMatch = JSON.stringify(doc.line_items || []).toLowerCase().includes(query);
 
-                if (!vendorMatch && !amountMatch && !lineItemsMatch) return false;
+                if (!vendorMatch && !invoiceMatch && !amountMatch && !lineItemsMatch) return false;
             }
 
             // Fund Filter
@@ -161,7 +164,7 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
                 <div className="relative flex-1 w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input
-                        placeholder="Search vendor, amount, or line items..."
+                        placeholder="Search vendor, invoice #, amount, or line items..."
                         className="pl-9 w-full bg-white dark:bg-slate-900 border-slate-250 dark:border-slate-850 text-slate-900 dark:text-white placeholder:text-slate-450 dark:placeholder:slate-500 focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:border-indigo-500 transition-all rounded-lg"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}

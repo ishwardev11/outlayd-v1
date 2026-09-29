@@ -141,10 +141,10 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                             className={`cursor-pointer transition-colors duration-150 border-b border-gray-200 dark:border-slate-700 group relative ${selectedDocs.includes(doc.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/30' : 'bg-white dark:bg-slate-800 hover:bg-indigo-50/40 dark:hover:bg-slate-700/50'}`}
                             onClick={() => onRowClick(doc.id)}
                         >
-                            <TableCell className="text-center" onClick={(e) => { e.stopPropagation(); onToggleSelect(doc.id); }}>
+                            <TableCell className="text-center py-2.5" onClick={(e) => { e.stopPropagation(); onToggleSelect(doc.id); }}>
                                 <Checkbox checked={selectedDocs.includes(doc.id)} />
                             </TableCell>
-                            <TableCell className="text-sm text-gray-900 dark:text-white">
+                            <TableCell className="text-sm text-gray-900 dark:text-white py-2.5">
                                 <div className="flex items-center gap-2">
                                     {doc.image_url && onPreviewImage && (
                                         <Button
@@ -163,22 +163,42 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                     <span>{doc.document_date || "—"}</span>
                                 </div>
                             </TableCell>
-                            <TableCell className="font-medium text-gray-900 dark:text-white">
-                                {doc.vendor_name ? doc.vendor_name :
-                                    doc.status === "extracting" ? (
-                                        <span className="text-gray-400 animate-pulse flex items-center gap-2">
-                                            <Loader2 className="h-3 w-3 animate-spin" />
-                                            Extracting...
+                            <TableCell className="py-2.5">
+                                {doc.status === "extracting" ? (
+                                    <span className="text-gray-400 dark:text-slate-400 animate-pulse flex items-center gap-2 text-sm font-medium">
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-500" />
+                                        Extracting...
+                                    </span>
+                                ) : (
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="font-semibold text-gray-900 dark:text-white truncate text-sm">
+                                            {doc.vendor_name || "—"}
                                         </span>
-                                    ) : "—"}
+                                        {doc.invoice_number && doc.invoice_number.trim() ? (
+                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono tracking-tight truncate">
+                                                {doc.invoice_number.trim().startsWith("#") || doc.invoice_number.trim().toLowerCase().startsWith("inv")
+                                                    ? doc.invoice_number.trim()
+                                                    : `#${doc.invoice_number.trim()}`}
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs text-slate-400/60 dark:text-slate-500/60 font-mono tracking-tight">
+                                                No Ref #
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
                             </TableCell>
-                            <TableCell className="text-sm text-gray-900 dark:text-white">{doc.amount ? `$${doc.amount.toFixed(2)}` : "—"}</TableCell>
-                            <TableCell>
+                            <TableCell className="text-sm font-medium text-gray-900 dark:text-white py-2.5">
+                                {doc.amount !== null && doc.amount !== undefined && !isNaN(Number(doc.amount))
+                                    ? `$${Number(doc.amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : "—"}
+                            </TableCell>
+                            <TableCell className="py-2.5">
                                 <Badge variant="outline" className="font-normal text-xs text-gray-500 dark:text-slate-300 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
                                     {doc.funds?.name || "Uncategorized"}
                                 </Badge>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-2.5">
                                 <div className="flex items-center gap-2">
                                     <Badge variant={
                                         doc.status === "needs_review" ? "outline" :
@@ -200,7 +220,7 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                     )}
                                 </div>
                             </TableCell>
-                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                            <TableCell className="text-right py-2.5" onClick={(e) => e.stopPropagation()}>
                                 <Button
                                     id={`delete-btn-${doc.id}`}
                                     variant="ghost"

@@ -50,6 +50,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         if (document) {
             setFormData({
                 vendor_name: document.vendor_name || "",
+                invoice_number: document.invoice_number || "",
                 document_date: document.document_date || "",
                 amount: document.amount || 0,
                 document_type: document.document_type || "receipt",
@@ -313,6 +314,20 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                         />
                                     </div>
                                     <div className="space-y-2">
+                                        <Label htmlFor="invoice_number" className="dark:text-slate-300">Invoice / Ref #</Label>
+                                        <Input
+                                            id="invoice_number"
+                                            placeholder="e.g. US-001 or #1024"
+                                            className="font-mono text-sm dark:bg-slate-950 dark:border-slate-800"
+                                            value={formData.invoice_number || ""}
+                                            onChange={e => setFormData({ ...formData, invoice_number: e.target.value })}
+                                            disabled={isViewer}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
                                         <Label htmlFor="date" className="dark:text-slate-300">Date</Label>
                                         <Input
                                             id="date"
@@ -322,9 +337,6 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                             disabled={isViewer}
                                         />
                                     </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="amount" className="dark:text-slate-300">Total Amount</Label>
                                         <Input
@@ -335,22 +347,23 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                             disabled={isViewer}
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="type" className="dark:text-slate-300">Document Type</Label>
-                                        <Select
-                                            value={formData.document_type}
-                                            onValueChange={v => setFormData({ ...formData, document_type: v })}
-                                            disabled={isViewer}
-                                        >
-                                            <SelectTrigger className="dark:bg-slate-950 dark:border-slate-800">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="receipt">Receipt (Paid)</SelectItem>
-                                                <SelectItem value="invoice">Invoice (Unpaid)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="type" className="dark:text-slate-300">Document Type</Label>
+                                    <Select
+                                        value={formData.document_type}
+                                        onValueChange={v => setFormData({ ...formData, document_type: v })}
+                                        disabled={isViewer}
+                                    >
+                                        <SelectTrigger className="dark:bg-slate-950 dark:border-slate-800">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="receipt">Receipt (Paid)</SelectItem>
+                                            <SelectItem value="invoice">Invoice (Unpaid)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
 
