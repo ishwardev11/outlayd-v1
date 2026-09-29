@@ -70,6 +70,7 @@ export async function POST(req: Request) {
                 },
             ],
             mode: 'subscription',
+            allow_promotion_codes: true,
             metadata: {
                 organization_id: orgId,
                 tier: tier,
