@@ -33,8 +33,12 @@ export async function completeOnboardingSetup(data: OnboardingData) {
     const userFullName = user?.user_metadata?.full_name || "Admin";
 
     try {
+        // Initialize admin client to reliably bypass RLS chicken-and-egg condition during first-time tenant creation
+        const { createAdminClient } = await import("@/utils/supabase/admin");
+        const adminClient = createAdminClient();
+
         // 2. Create Organization
-        const { data: org, error: orgError } = await supabase
+        const { data: org, error: orgError } = await adminClient
             .from("organizations")
             .insert({
                 name: data.orgName,
@@ -48,16 +52,22 @@ export async function completeOnboardingSetup(data: OnboardingData) {
 
         const organization_id = org.id;
 
-        // 3. Link user to organization via cookie immediately
+        // 3. Link user to organization via cookie and metadata immediately
         if (user) {
             const cookieStore = await cookies();
             cookieStore.set('active_org_id', organization_id, { path: '/' });
+
+            // Sync organization_id into user metadata for fallback lookups
+            await adminClient.auth.admin.updateUserById(user.id, {
+                user_metadata: {
+                    ...user.user_metadata,
+                    organization_id: organization_id,
+                    onboarding_completed: true,
+                }
+            });
         }
 
         // 4. Assign user roles (current user as Admin only)
-        // Use admin client to reliably bypass RLS chicken-and-egg condition during first-time tenant creation
-        const { createAdminClient } = await import("@/utils/supabase/admin");
-        const adminClient = createAdminClient();
         const rolesToInsert = [
             { organization_id, email: userEmail, role: "Admin", full_name: userFullName }
         ];
