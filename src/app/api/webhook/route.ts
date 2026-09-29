@@ -55,7 +55,8 @@ export async function POST(req: Request) {
                 const supabase = createClient(supabaseUrl, supabaseKey);
 
                 // 1. Upgrade status
-                await supabase.rpc('upgrade_org_to_pro', { org_id: organizationId });
+                const tier = session.metadata?.tier || 'growth';
+                await supabase.rpc('upgrade_org_to_pro', { org_id: organizationId, p_tier: tier });
 
                 // 2. Persist Customer ID and reset any cancellation flags
                 if (stripeCustomerId) {
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
                         .from('organizations')
                         .update({ 
                             stripe_customer_id: stripeCustomerId,
-                            subscription_tier: 'growth',
+                            subscription_tier: tier,
                             cancel_at_period_end: false,
                             subscription_end_date: null
                         })

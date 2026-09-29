@@ -625,10 +625,11 @@ export async function verifyCheckoutSession(sessionId: string) {
 
         if (session.payment_status === 'paid' && session.metadata?.organization_id === organization_id) {
             const customerId = typeof session.customer === 'string' ? session.customer : (session.customer as any)?.id || null;
+            const tier = session.metadata?.tier || 'growth';
             const { error } = await supabase
                 .rpc('upgrade_org_to_pro', { 
                     org_id: organization_id,
-                    p_tier: 'growth',
+                    p_tier: tier,
                     p_customer_id: customerId
                 });
 
@@ -638,7 +639,7 @@ export async function verifyCheckoutSession(sessionId: string) {
                 const adminClient = createAdminClient();
                 await adminClient.from('organizations').update({
                     subscription_status: 'pro',
-                    subscription_tier: 'growth',
+                    subscription_tier: tier,
                     stripe_customer_id: customerId || undefined,
                     cancel_at_period_end: false,
                     subscription_end_date: null

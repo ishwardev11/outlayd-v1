@@ -31,7 +31,19 @@ export async function POST(req: Request) {
 
         const orgId = authenticatedOrgId;
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'http://localhost:3000';
-        const priceId = body.priceId || process.env.STRIPE_PRICE_ID || 'price_1U7VEFAoi98hcDUgpZpbiLVO';
+        
+        const tier = body.tier || (body.plan === 'nonprofit' ? 'nonprofit' : 'growth');
+        const defaultGrowthPrice = 'price_1UI92mAoi98hcDUg4w1jF3td';
+        const defaultNonprofitPrice = 'price_1UI92mAoi98hcDUgi4oMQ9NK';
+
+        let priceId = body.priceId;
+        if (!priceId) {
+            if (tier === 'nonprofit') {
+                priceId = process.env.STRIPE_PRICE_ID_NONPROFIT || defaultNonprofitPrice;
+            } else {
+                priceId = process.env.STRIPE_PRICE_ID || process.env.STRIPE_PRICE_ID_GROWTH || defaultGrowthPrice;
+            }
+        }
 
         // Check if organization already has an existing Stripe customer ID
         let existingCustomerId: string | undefined;
@@ -53,17 +65,19 @@ export async function POST(req: Request) {
             payment_method_types: ['card'],
             line_items: [
                 {
-                    price: priceId, // Outlayd Growth MYR recurring price (RM89/mo)
+                    price: priceId,
                     quantity: 1,
                 },
             ],
             mode: 'subscription',
             metadata: {
                 organization_id: orgId,
+                tier: tier,
             },
             subscription_data: {
                 metadata: {
                     organization_id: orgId,
+                    tier: tier,
                 },
             },
             success_url: `${baseUrl}/dashboard?upgrade=success&session_id={CHECKOUT_SESSION_ID}`,
