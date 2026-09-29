@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         }
 
         // Free tier — not entitled to portal access
-        const isPro = org?.subscription_status === 'pro' || org?.subscription_tier === 'growth';
+        const isPro = org?.subscription_status === 'pro' || org?.subscription_tier === 'growth' || org?.subscription_tier === 'nonprofit';
         if (!isPro) {
             return NextResponse.json(
                 { error: 'The Customer Portal is only available on paid plans.' },
@@ -124,8 +124,32 @@ export async function POST(req: Request) {
 
         if (!stripeCustomerId) {
             return NextResponse.json(
-                { error: 'No billing account found. Please contact support.' },
+                { error: 'No billing account found. Please upgrade to a paid plan first.' },
                 { status: 404 }
+            );
+        }
+
+        // Verify customer exists in current Stripe environment (prevents test-mode IDs from crashing live portal)
+        try {
+            const customer = await stripe.customers.retrieve(stripeCustomerId);
+            if (customer.deleted) {
+                throw new Error('Customer was deleted in Stripe');
+            }
+        } catch (custErr: any) {
+            console.warn(`Customer ${stripeCustomerId} not valid in current Stripe environment:`, custErr.message);
+            // Stale test customer ID in live mode or deleted customer: clean up organization record
+            await adminClient
+                .from('organizations')
+                .update({ 
+                    stripe_customer_id: null,
+                    subscription_status: 'free',
+                    subscription_tier: 'free'
+                })
+                .eq('id', orgId);
+
+            return NextResponse.json(
+                { error: 'Your billing record was from the previous test environment. Your plan has been reset so you can upgrade with a live subscription.' },
+                { status: 400 }
             );
         }
 

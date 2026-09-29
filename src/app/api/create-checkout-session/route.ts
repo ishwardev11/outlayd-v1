@@ -85,11 +85,23 @@ export async function POST(req: Request) {
         };
 
         if (existingCustomerId) {
-            sessionParams.customer = existingCustomerId;
-            sessionParams.customer_update = {
-                name: 'auto',
-                address: 'auto',
-            };
+            try {
+                const cust = await stripe.customers.retrieve(existingCustomerId);
+                if (!cust.deleted) {
+                    sessionParams.customer = existingCustomerId;
+                    sessionParams.customer_update = {
+                        name: 'auto',
+                        address: 'auto',
+                    };
+                } else {
+                    const adminClient = createAdminClient();
+                    await adminClient.from('organizations').update({ stripe_customer_id: null }).eq('id', orgId);
+                }
+            } catch (err) {
+                console.warn(`Customer ${existingCustomerId} not valid in current Stripe environment; resetting:`, err);
+                const adminClient = createAdminClient();
+                await adminClient.from('organizations').update({ stripe_customer_id: null }).eq('id', orgId);
+            }
         }
 
         const session = await stripe.checkout.sessions.create(sessionParams);

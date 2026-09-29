@@ -59,11 +59,9 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: OrgSettings |
             const err = error as Error;
             console.error('Portal error:', err);
             
-            const fallbackUrl = process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL_URL;
-            if (fallbackUrl && confirm("Could not generate an automated session. Would you like to go to the Stripe Customer Billing Portal page to log in directly?")) {
-                window.open(fallbackUrl, "_blank");
-            } else {
-                alert(err.message || 'Failed to open billing portal. Please try again.');
+            alert(err.message || 'Failed to open billing portal. Please try again.');
+            if (err.message && err.message.toLowerCase().includes('reset')) {
+                window.location.reload();
             }
             setIsPortalLoading(false);
         }
