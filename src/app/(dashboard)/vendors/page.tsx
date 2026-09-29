@@ -22,9 +22,36 @@ export default async function VendorsPage() {
             lastActivity = sortedDocs[0].document_date || "—";
         }
 
+        // Calculate most frequent category from past documents for smart suggestion
+        const categoryCounts = new Map<string, number>();
+        for (const doc of vendorDocs) {
+            if (doc.category_id) {
+                categoryCounts.set(doc.category_id, (categoryCounts.get(doc.category_id) || 0) + 1);
+            }
+            if (doc.splits && Array.isArray(doc.splits)) {
+                for (const split of doc.splits) {
+                    if (split.category_id) {
+                        categoryCounts.set(split.category_id, (categoryCounts.get(split.category_id) || 0) + 1);
+                    }
+                }
+            }
+        }
+
+        let suggestedCategoryId: string | null = null;
+        let maxCount = 0;
+        for (const [catId, count] of categoryCounts.entries()) {
+            if (count > maxCount) {
+                maxCount = count;
+                suggestedCategoryId = catId;
+            }
+        }
+
         return {
             id: v.id,
             name: v.name,
+            default_category_id: v.default_category_id || null,
+            suggestedCategoryId,
+            suggestedCategoryName: suggestedCategoryId ? categoriesMap.get(suggestedCategoryId) || null : null,
             totalPaid,
             totalUnpaid,
             docCount: vendorDocs.length,
@@ -42,7 +69,7 @@ export default async function VendorsPage() {
                 </div>
             </div>
 
-            <VendorsClient vendorsList={vendorsList} />
+            <VendorsClient vendorsList={vendorsList} categories={categories} />
         </div>
     );
 }
