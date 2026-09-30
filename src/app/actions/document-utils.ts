@@ -101,31 +101,48 @@ export async function getCurrentUserRole() {
         const cookieStore = await cookies();
         const devRole = cookieStore.get('dev_user_role')?.value;
         if (devRole) return devRole;
-        // If not explicitly set in dev, assume Admin to allow access
-        return 'Admin';
     }
 
     // 2. Standard Session Auth
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user || !user.email) return null;
+    if (!user || !user.email) {
+        if (process.env.NODE_ENV === 'development') return 'Admin';
+        return null;
+    }
 
     try {
         const { createAdminClient } = await import("@/utils/supabase/admin")
         const adminClient = createAdminClient()
-        const { data: roleData } = await adminClient
+
+        const cookieStore = await cookies();
+        const activeOrgId = cookieStore.get('active_org_id')?.value;
+
+        let query = adminClient
             .from('user_roles')
             .select('role')
-            .eq('email', user.email)
-            .maybeSingle();
+            .eq('email', user.email);
+
+        if (activeOrgId && activeOrgId !== 'null' && activeOrgId !== 'undefined' && activeOrgId !== '') {
+            query = query.eq('organization_id', activeOrgId);
+        }
+
+        const { data: roleData } = await query.maybeSingle();
 
         if (roleData?.role) {
             return roleData.role;
         }
 
+        if (process.env.NODE_ENV === 'development') {
+            return 'Admin';
+        }
+
         return null;
     } catch (e: any) {
         console.error("Error in getCurrentUserRole:", e);
+        if (process.env.NODE_ENV === 'development') {
+            return 'Admin';
+        }
         return null;
     }
 }

@@ -81,6 +81,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
     };
 
     const handleMergeClick = () => {
+        if (isViewer) return;
         if (selectedVendors.length === 2) {
             setPrimaryVendorId(selectedVendors[0]); // default
             setMergeModalOpen(true);
@@ -88,7 +89,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
     };
 
     const executeMerge = async () => {
-        if (!primaryVendorId || selectedVendors.length !== 2) return;
+        if (!primaryVendorId || selectedVendors.length !== 2 || isViewer) return;
         setIsMerging(true);
 
         const secondaryVendorId = selectedVendors.find(id => id !== primaryVendorId);
@@ -106,12 +107,13 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
 
     const handleDeleteClick = (e: React.MouseEvent, id: string, name: string) => {
         e.stopPropagation();
+        if (isViewer) return;
         setVendorToDelete({ id, name });
         setDeleteModalOpen(true);
     };
 
     const confirmDelete = async () => {
-        if (!vendorToDelete) return;
+        if (!vendorToDelete || isViewer) return;
         setIsDeleting(true);
         try {
             await deleteVendor(vendorToDelete.id);
@@ -179,7 +181,13 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                     <div className="flex items-center gap-3">
                         <span className="text-sm text-gray-500 font-medium">{selectedVendors.length} selected</span>
                         {selectedVendors.length === 2 && (
-                            <Button onClick={handleMergeClick} size="sm" className="bg-indigo-600 hover:bg-indigo-700 animate-in fade-in zoom-in duration-200">
+                            <Button
+                                onClick={handleMergeClick}
+                                size="sm"
+                                disabled={isViewer}
+                                title={isViewer ? "Viewers cannot merge vendors" : ""}
+                                className="bg-indigo-600 hover:bg-indigo-700 animate-in fade-in zoom-in duration-200"
+                            >
                                 <Merge className="w-4 h-4 mr-2" />
                                 Merge Duplicates
                             </Button>
@@ -240,7 +248,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                                             onValueChange={(val) => handleCategoryChange(vendor.id, val)}
                                             disabled={isViewer || updatingVendorId === vendor.id}
                                         >
-                                            <SelectTrigger className={`h-8 text-xs font-medium rounded-lg transition-all border w-[190px] max-w-[210px] ${
+                                            <SelectTrigger className={`h-8 text-xs font-medium rounded-lg transition-all border w-47.5 max-w-52.5 ${
                                                 vendor.default_category_id
                                                     ? "bg-indigo-50/80 border-indigo-200 text-indigo-700 dark:bg-indigo-950/40 dark:border-indigo-800/80 dark:text-indigo-300 font-semibold"
                                                     : vendor.suggestedCategoryName
@@ -269,7 +277,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                                                     </SelectValue>
                                                 )}
                                             </SelectTrigger>
-                                            <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl shadow-xl min-w-[210px]">
+                                            <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl shadow-xl min-w-52.5">
                                                 <SelectItem value="none" className="text-xs text-slate-400 dark:text-slate-500 cursor-pointer">
                                                     — None (No Default)
                                                 </SelectItem>
@@ -313,6 +321,8 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                                             size="icon"
                                             className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50/20 transition-colors"
                                             onClick={(e) => handleDeleteClick(e, vendor.id, vendor.name)}
+                                            disabled={isViewer}
+                                            title={isViewer ? "Viewers cannot delete vendors" : ""}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>

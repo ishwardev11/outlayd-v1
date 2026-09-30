@@ -1,11 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
 
 export function CashFlowChart({ data, hasPendingDocuments }: { data: { displayDate: string; amount: number; }[], hasPendingDocuments?: boolean }) {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     const total = useMemo(() => data.reduce((sum, d) => sum + d.amount, 0), [data]);
 
     return (
@@ -24,7 +29,7 @@ export function CashFlowChart({ data, hasPendingDocuments }: { data: { displayDa
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="h-62.5 w-full mt-4">
+                <div className="h-62.5 w-full min-w-0 mt-4">
                     {total === 0 ? (
                         <div className="h-full w-full flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-300 bg-slate-50/50 dark:bg-slate-900/50 rounded-lg border border-dashed border-slate-200 dark:border-slate-800">
                             <div className="mb-4 h-14 w-14 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-850 shadow-sm">
@@ -39,8 +44,10 @@ export function CashFlowChart({ data, hasPendingDocuments }: { data: { displayDa
                                     : "Your cash flow chart will populate here once transactions are processed."}
                             </p>
                         </div>
+                    ) : !mounted ? (
+                        <div className="h-full w-full min-h-62.5 animate-pulse bg-slate-50 dark:bg-slate-900/50 rounded-lg" />
                     ) : (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
                             <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">

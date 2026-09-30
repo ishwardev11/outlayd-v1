@@ -5,12 +5,15 @@ import { Button } from "@/components/ui/button"
 import { Plus, Target, ArrowRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { getOrganizationId } from "@/app/actions/ledger"
+import { getCurrentUserRole } from "@/app/actions/document-utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DeleteProjectButton } from "@/components/procurement/DeleteProjectButton"
 
 export default async function ProcurementPage() {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
+    const role = await getCurrentUserRole()
+    const isViewer = role === 'Viewer'
 
     // --- Pro-tier gate ---
     const { data: org } = await supabase
@@ -38,8 +41,12 @@ export default async function ProcurementPage() {
                     <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Procurement</h1>
                     <p className="text-gray-500 mt-2 dark:text-slate-400">Manage Requests for Proposals (RFPs) and active quote evaluations.</p>
                 </div>
-                <Link href="/procurement/new">
-                    <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm flex items-center gap-2">
+                <Link href="/procurement/new" className={isViewer ? "pointer-events-none" : ""}>
+                    <Button
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm flex items-center gap-2"
+                        disabled={isViewer}
+                        title={isViewer ? "Viewers cannot create projects" : ""}
+                    >
                         <Plus className="w-4 h-4" />
                         New Project
                     </Button>
@@ -96,8 +103,13 @@ export default async function ProcurementPage() {
                         <Target className="w-12 h-12 text-gray-300 dark:text-slate-500 mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No active procurement projects</h3>
                         <p className="text-gray-500 dark:text-slate-400 max-w-sm mx-auto mb-6">Create a new project to start collecting vendor bids and quotes.</p>
-                        <Link href="/procurement/new">
-                            <Button variant="outline" className="border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:bg-slate-700 dark:text-indigo-300 dark:hover:bg-slate-600 dark:border-slate-600">
+                        <Link href="/procurement/new" className={isViewer ? "pointer-events-none" : ""}>
+                            <Button
+                                variant="outline"
+                                className="border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:bg-slate-700 dark:text-indigo-300 dark:hover:bg-slate-600 dark:border-slate-600"
+                                disabled={isViewer}
+                                title={isViewer ? "Viewers cannot create projects" : ""}
+                            >
                                 Create your first project
                             </Button>
                         </Link>

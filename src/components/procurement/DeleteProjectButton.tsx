@@ -15,6 +15,8 @@ export function DeleteProjectButton({ projectId }: { projectId: string }) {
         e.preventDefault()
         e.stopPropagation()
 
+        if (isViewer) return
+
         if (confirm("Are you sure you want to delete this procurement project? All associated quotes will also be deleted.")) {
             setIsDeleting(true)
             try {

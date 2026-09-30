@@ -139,7 +139,7 @@ export default async function Home() {
       <div className="grid lg:grid-cols-3 gap-8">
 
         {/* Left Column (70%) */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 space-y-8 min-w-0">
           <CashFlowChart data={last14Days} hasPendingDocuments={needsReviewCount > 0} />
 
           <div className="pt-2">
