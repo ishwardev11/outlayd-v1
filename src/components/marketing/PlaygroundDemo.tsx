@@ -26,9 +26,9 @@ export function PlaygroundDemo() {
             vendor: "Amazon Web Services",
             date: "May 28, 2026",
             category: "Hosting",
-            amount: "$142.50",
+            amount: "RM142.50",
             confidence: "99.8%",
-            lines: ["EC2 Compute Instances - $98.00", "S3 Storage Allocation - $24.50", "Route53 DNS Hosting - $20.00"]
+            lines: ["EC2 Compute Instances - RM98.00", "S3 Storage Allocation - RM24.50", "Route53 DNS Hosting - RM20.00"]
         },
         {
             id: "uber",
@@ -38,9 +38,9 @@ export function PlaygroundDemo() {
             vendor: "Uber Technologies",
             date: "May 30, 2026",
             category: "Travel",
-            amount: "$42.50",
+            amount: "RM42.50",
             confidence: "99.2%",
-            lines: ["Business Ride (SF Office) - $35.00", "Service Fee & Tips - $7.50"]
+            lines: ["Business Ride (SF Office) - RM35.00", "Service Fee & Tips - RM7.50"]
         },
         {
             id: "slack",
@@ -50,9 +50,9 @@ export function PlaygroundDemo() {
             vendor: "Slack Technologies",
             date: "Jun 01, 2026",
             category: "Software",
-            amount: "$220.00",
+            amount: "RM220.00",
             confidence: "99.6%",
-            lines: ["Slack Pro Subscription (22 seats) - $220.00"]
+            lines: ["Slack Pro Subscription (22 seats) - RM220.00"]
         }
     ];
 
@@ -245,7 +245,7 @@ export function PlaygroundDemo() {
                                 <div><span className="block text-slate-400">GitHub Inc.</span></div>
                                 <div><span>May 25, 2026</span></div>
                                 <div><span className="bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded text-[9px] font-bold text-slate-400">Software</span></div>
-                                <div className="text-right"><span className="text-slate-300 font-semibold">$840.00</span></div>
+                                <div className="text-right"><span className="text-slate-300 font-semibold">RM840.00</span></div>
                             </div>
                         </div>
 
@@ -259,7 +259,7 @@ export function PlaygroundDemo() {
                                 <div><span className="block text-slate-400">Starbucks #4810</span></div>
                                 <div><span>May 24, 2026</span></div>
                                 <div><span className="bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded text-[9px] font-bold text-slate-400">Meals</span></div>
-                                <div className="text-right"><span className="text-slate-300 font-semibold">$18.40</span></div>
+                                <div className="text-right"><span className="text-slate-300 font-semibold">RM18.40</span></div>
                             </div>
                         </div>
                     </div>

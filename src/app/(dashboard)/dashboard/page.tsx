@@ -1,5 +1,6 @@
 import { getDocuments } from "@/app/actions/ledger";
-import { getOrganizationId } from "@/app/actions/document-utils";
+import { getOrganizationId, getOrganizationCurrency } from "@/app/actions/document-utils";
+import { getCurrencyDetails } from "@/utils/currency";
 import { redirect } from "next/navigation";
 import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
 import { ActionQueueClient } from "@/components/dashboard/ActionQueueClient";
@@ -15,6 +16,9 @@ export default async function Home() {
   if (!orgId) {
     redirect("/onboarding");
   }
+
+  const orgCurrency = await getOrganizationCurrency();
+  const { symbol } = getCurrencyDetails(orgCurrency);
 
   const documents = await getDocuments();
   const today = new Date();
@@ -96,7 +100,7 @@ export default async function Home() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">
-              ${awaitingPaymentTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {symbol}{awaitingPaymentTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
@@ -124,11 +128,11 @@ export default async function Home() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">
-              ${paidThisMonthTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {symbol}{paidThisMonthTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             {needsReviewAmountTotal > 0 && (
               <p className="text-xs text-slate-400 mt-1 font-medium">
-                + ${needsReviewAmountTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pending approval
+                + {symbol}{needsReviewAmountTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pending approval
               </p>
             )}
           </CardContent>

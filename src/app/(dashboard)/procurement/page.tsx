@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Plus, Target, ArrowRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { getOrganizationId } from "@/app/actions/ledger"
-import { getCurrentUserRole } from "@/app/actions/document-utils"
+import { getCurrentUserRole, getOrganizationCurrency } from "@/app/actions/document-utils"
+import { getCurrencyDetails } from "@/utils/currency"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DeleteProjectButton } from "@/components/procurement/DeleteProjectButton"
 
@@ -14,6 +15,8 @@ export default async function ProcurementPage() {
     const organization_id = await getOrganizationId()
     const role = await getCurrentUserRole()
     const isViewer = role === 'Viewer'
+    const currency = await getOrganizationCurrency()
+    const { symbol } = getCurrencyDetails(currency)
 
     // --- Pro-tier gate ---
     const { data: org } = await supabase
@@ -79,7 +82,7 @@ export default async function ProcurementPage() {
                                     <div className="flex items-center gap-6 mt-2">
                                         <div>
                                             <p className="text-xs text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider">Budget Ceiling</p>
-                                            <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">${Number(project.budget_ceiling).toLocaleString()}</p>
+                                            <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">{symbol}{Number(project.budget_ceiling).toLocaleString()}</p>
                                         </div>
                                         <div>
                                             <p className="text-xs text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider">Deadline</p>

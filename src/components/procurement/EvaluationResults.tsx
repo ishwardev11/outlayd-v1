@@ -5,8 +5,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Download, CheckCircle2 } from "lucide-react"
 import jsPDF from "jspdf"
+import { useCurrency } from "@/components/CurrencyProvider"
 
 export function EvaluationResults({ project, quotes }: { project: any, quotes: any[] }) {
+    const { symbol } = useCurrency();
     // Only show evaluated quotes
     const evaluatedQuotes = quotes.filter(q => q.ai_recommendation_status)
 
@@ -27,7 +29,7 @@ export function EvaluationResults({ project, quotes }: { project: any, quotes: a
         doc.text(`Project: ${project.title}`, 20, 35)
         doc.setFontSize(11)
         doc.setFont("helvetica", "normal")
-        doc.text(`Budget Ceiling: $${Number(project.budget_ceiling).toLocaleString()}`, 20, 43)
+        doc.text(`Budget Ceiling: ${symbol}${Number(project.budget_ceiling).toLocaleString()}`, 20, 43)
         doc.text(`Required Deadline: ${new Date(project.required_deadline).toLocaleDateString()}`, 20, 50)
 
         let yPos = 65
@@ -46,7 +48,7 @@ export function EvaluationResults({ project, quotes }: { project: any, quotes: a
 
             doc.setFontSize(11)
             doc.setFont("helvetica", "normal")
-            doc.text(`Total Amount: $${Number(quote.total_amount).toLocaleString()}`, 25, yPos)
+            doc.text(`Total Amount: ${symbol}${Number(quote.total_amount).toLocaleString()}`, 25, yPos)
             yPos += 7
             doc.text(`Payment Terms: ${quote.payment_terms}`, 25, yPos)
             yPos += 7
@@ -102,7 +104,7 @@ export function EvaluationResults({ project, quotes }: { project: any, quotes: a
                             {evaluatedQuotes.map(quote => (
                                 <td key={`amount-${quote.id}`} className={`p-4 font-medium ${quote.ai_recommendation_status === 'Recommended' ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : ''}`}>
                                     <span className={Number(quote.total_amount) > Number(project.budget_ceiling) ? 'text-red-500 dark:text-red-400 font-bold' : ''}>
-                                        ${Number(quote.total_amount).toLocaleString()}
+                                        {symbol}{Number(quote.total_amount).toLocaleString()}
                                     </span>
                                 </td>
                             ))}

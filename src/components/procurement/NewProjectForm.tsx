@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Calendar, X, Plus, Target, CheckCircle2 } from "lucide-react";
+import { Calendar, X, Plus, Target, CheckCircle2 } from "lucide-react";
 import { createProcurementProject } from "@/app/actions/procurement";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/components/RoleProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 
 export function NewProjectForm() {
     const router = useRouter();
@@ -20,6 +21,7 @@ export function NewProjectForm() {
     const [requirements, setRequirements] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { isViewer } = useRole();
+    const { symbol } = useCurrency();
 
     const handleAddRequirement = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter") {
@@ -88,9 +90,9 @@ export function NewProjectForm() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Budget Ceiling */}
                         <div className="space-y-2">
-                            <Label htmlFor="budget" className="text-sm font-medium text-slate-700 dark:text-slate-300">Budget Ceiling</Label>
-                            <div className="relative">
-                                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                            <Label htmlFor="budget" className="text-sm font-medium text-slate-700 dark:text-slate-300">Budget Ceiling ({symbol})</Label>
+                            <div className="relative flex items-center">
+                                <span className="absolute left-3 text-xs font-bold text-slate-400 dark:text-slate-500 select-none">{symbol}</span>
                                 <Input
                                     id="budget"
                                     type="number"
@@ -100,7 +102,7 @@ export function NewProjectForm() {
                                     value={budget}
                                     onChange={(e) => setBudget(e.target.value)}
                                     required
-                                    className="pl-9 bg-white dark:bg-slate-950 dark:border-slate-800 dark:placeholder:text-slate-500 dark:text-white"
+                                    className="pl-11 bg-white dark:bg-slate-950 dark:border-slate-800 dark:placeholder:text-slate-500 dark:text-white"
                                 />
                             </div>
                         </div>

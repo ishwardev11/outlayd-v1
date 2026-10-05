@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { updateDocument, createFund, createCategory, deleteDocument } from "@/app/actions/ledger";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useRole } from "@/components/RoleProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 
 interface Split {
     id: string; // temporary UI id
@@ -45,6 +46,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
     const [splits, setSplits] = useState<Split[]>([]);
     const [lineItems, setLineItems] = useState<any[]>([]);
     const { isViewer } = useRole();
+    const { symbol } = useCurrency();
 
     useEffect(() => {
         if (document) {
@@ -101,7 +103,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
             validationErrors.push("Total Amount must be a valid positive number.");
         }
         if (!isValidAmount) {
-            validationErrors.push(`Split amounts ($${totalSplitAmount.toFixed(2)}) do not match the total ($${Number(formData.amount || 0).toFixed(2)}).`);
+            validationErrors.push(`Split amounts (${symbol}${totalSplitAmount.toFixed(2)}) do not match the total (${symbol}${Number(formData.amount || 0).toFixed(2)}).`);
         }
 
         // Validate each split has a fund and category selected
@@ -371,7 +373,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Split Categorization</h3>
                                     <span className={`text-xs font-mono font-semibold ${isValidAmount ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-500 dark:text-rose-400'}`}>
-                                        Allocated: ${totalSplitAmount.toFixed(2)} / ${Number(formData.amount || 0).toFixed(2)}
+                                        Allocated: {symbol}{totalSplitAmount.toFixed(2)} / {symbol}{Number(formData.amount || 0).toFixed(2)}
                                     </span>
                                 </div>
 
@@ -438,7 +440,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                     <div className="grid grid-cols-[60px_1fr_100px_100px_32px] gap-2 py-2.5 border-y border-[#e2e8f0] dark:border-slate-800 text-[13px] font-semibold text-[#94a3b8] dark:text-slate-400 mb-2 items-center">
                                         <div className="text-center">Qty</div>
                                         <div>Description</div>
-                                        <div className="text-right">Unit $</div>
+                                        <div className="text-right">Unit {symbol}</div>
                                         <div className="text-right">Total</div>
                                         <div></div>
                                     </div>
@@ -504,7 +506,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                         <div className="grid grid-cols-[1fr_100px] gap-2 items-center w-64">
                                             <div className="text-[14px] font-semibold text-[#0f172a] dark:text-slate-200 text-right">Total:</div>
                                             <div className="text-[15px] font-semibold text-[#0f172a] dark:text-slate-200 text-right pr-8">
-                                                ${(lineItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                {symbol}{(lineItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>
                                         </div>
                                     </div>

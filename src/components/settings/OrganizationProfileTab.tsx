@@ -32,7 +32,7 @@ export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettin
     const [formData, setFormData] = useState({
         name: orgSettings?.name || "",
         registration_id: orgSettings?.registration_id || "",
-        base_currency: orgSettings?.base_currency || "USD",
+        base_currency: orgSettings?.base_currency || "MYR",
         fiscal_year_start: orgSettings?.fiscal_year_start?.toString() || "1"
     })
 
@@ -45,6 +45,7 @@ export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettin
                 fiscal_year_start: parseInt(formData.fiscal_year_start)
             })
             alert("Settings saved successfully!")
+            router.refresh()
         } catch (error) {
             console.error(error)
             alert("Failed to save settings")
@@ -111,6 +112,7 @@ export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettin
                                     <SelectValue placeholder="Select currency" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="MYR">MYR (RM)</SelectItem>
                                     <SelectItem value="USD">USD ($)</SelectItem>
                                     <SelectItem value="EUR">EUR (€)</SelectItem>
                                     <SelectItem value="GBP">GBP (£)</SelectItem>

@@ -32,7 +32,7 @@ export async function getOrganizationSettings() {
     if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
         const cookieStore = await cookies();
         const orgName = cookieStore.get('dev_org_name')?.value || "Local Dev Organization";
-        const baseCurrency = cookieStore.get('dev_org_currency')?.value || "USD";
+        const baseCurrency = cookieStore.get('dev_org_currency')?.value || "MYR";
         const fiscalYearStart = parseInt(cookieStore.get('dev_org_fiscal_year')?.value || "1", 10);
         const devStatus = cookieStore.get('dev_org_status')?.value || "pro";
 
@@ -67,13 +67,22 @@ export async function updateOrganizationSettings(updates: any) {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
+    const cookieStore = await cookies();
+    if (updates.base_currency) {
+        cookieStore.set('active_org_currency', updates.base_currency, { path: '/' });
+    }
+
     if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
-        const cookieStore = await cookies();
         if (updates.name) cookieStore.set('dev_org_name', updates.name, { path: '/' });
         if (updates.base_currency) cookieStore.set('dev_org_currency', updates.base_currency, { path: '/' });
         if (updates.fiscal_year_start) cookieStore.set('dev_org_fiscal_year', updates.fiscal_year_start.toString(), { path: '/' });
 
         revalidatePath("/settings")
+        revalidatePath("/dashboard")
+        revalidatePath("/ledger")
+        revalidatePath("/vendors")
+        revalidatePath("/reports")
+        revalidatePath("/procurement")
         return { success: true, data: { ...updates, id: organization_id } };
     }
 
@@ -95,6 +104,11 @@ export async function updateOrganizationSettings(updates: any) {
     }
 
     revalidatePath("/settings")
+    revalidatePath("/dashboard")
+    revalidatePath("/ledger")
+    revalidatePath("/vendors")
+    revalidatePath("/reports")
+    revalidatePath("/procurement")
     return { success: true, data }
 }
 

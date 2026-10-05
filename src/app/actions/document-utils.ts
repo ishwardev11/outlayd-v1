@@ -191,3 +191,45 @@ export async function checkWriteAccess() {
     return role;
 }
 
+export async function getOrganizationCurrency(): Promise<string> {
+    const cookieStore = await cookies();
+
+    // 1. Check cookies (both active org currency and dev override)
+    const activeCurrency = cookieStore.get('active_org_currency')?.value;
+    if (activeCurrency) return activeCurrency;
+
+    if (process.env.NODE_ENV === 'development') {
+        const devCurrency = cookieStore.get('dev_org_currency')?.value;
+        if (devCurrency) return devCurrency;
+    }
+
+    // 2. Query from Supabase organizations table using current orgId
+    try {
+        const orgId = await getOrganizationId();
+        if (orgId) {
+            // Local dev fallback check
+            if (process.env.NODE_ENV === 'development' && orgId === '00000000-0000-0000-0000-000000000000') {
+                const devCurrency = cookieStore.get('dev_org_currency')?.value;
+                if (devCurrency) return devCurrency;
+            }
+
+            const { createAdminClient } = await import("@/utils/supabase/admin");
+            const adminClient = createAdminClient();
+            const { data: org } = await adminClient
+                .from("organizations")
+                .select("base_currency")
+                .eq("id", orgId)
+                .maybeSingle();
+
+            if (org?.base_currency) {
+                return org.base_currency;
+            }
+        }
+    } catch (e) {
+        console.error("Error fetching organization currency:", e);
+    }
+
+    return "MYR";
+}
+
+

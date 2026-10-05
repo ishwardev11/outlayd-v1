@@ -24,6 +24,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
         cookieStore.set('dev_org_id', mockUuid, { path: '/' });
         cookieStore.set('dev_org_name', data.orgName, { path: '/' });
         cookieStore.set('dev_org_currency', data.baseCurrency, { path: '/' });
+        cookieStore.set('active_org_currency', data.baseCurrency, { path: '/' });
         cookieStore.set('dev_org_fiscal_year', data.fiscalYearStart, { path: '/' });
         cookieStore.set('dev_template_choice', data.templateChoice, { path: '/' });
         return { success: true, organization_id: mockUuid };
@@ -56,6 +57,8 @@ export async function completeOnboardingSetup(data: OnboardingData) {
         if (user) {
             const cookieStore = await cookies();
             cookieStore.set('active_org_id', organization_id, { path: '/' });
+            cookieStore.set('active_org_currency', data.baseCurrency, { path: '/' });
+            cookieStore.set('dev_org_currency', data.baseCurrency, { path: '/' });
 
             // Sync organization_id into user metadata for fallback lookups
             await adminClient.auth.admin.updateUserById(user.id, {

@@ -1,9 +1,11 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { FileText, ExternalLink, Calendar, DollarSign, CreditCard } from "lucide-react"
+import { FileText, ExternalLink, Calendar, Banknote, CreditCard } from "lucide-react"
 import { Bid } from "./ProjectDashboard"
+import { useCurrency } from "@/components/CurrencyProvider"
 
 export function QuoteDetailDialog({ bid, children }: { bid: Bid, children: React.ReactNode }) {
+    const { symbol } = useCurrency();
     return (
         <Dialog>
             <DialogTrigger asChild>
@@ -33,8 +35,8 @@ export function QuoteDetailDialog({ bid, children }: { bid: Bid, children: React
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1"><DollarSign className="w-3 h-3"/> Amount</span>
-                            <p className="text-sm font-medium">${bid.totalAmount.toLocaleString()}</p>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="w-3 h-3"/> Amount</span>
+                            <p className="text-sm font-medium">{symbol}{bid.totalAmount.toLocaleString()}</p>
                         </div>
                         <div className="space-y-1">
                             <span className="text-xs text-muted-foreground flex items-center gap-1"><CreditCard className="w-3 h-3"/> Payment Terms</span>

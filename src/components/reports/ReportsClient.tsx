@@ -9,8 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ReportsExportButton } from "@/components/reports/ReportsExportButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { subDays, subMonths, subQuarters, isAfter } from "date-fns";
+import { useCurrency } from "@/components/CurrencyProvider";
 
 export function ReportsClient({ documents }: { documents: any[] }) {
+    const { symbol } = useCurrency();
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
@@ -98,7 +100,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
             const catName = doc.categories?.name || "Uncategorized";
             categoryTotals.set(catName, (categoryTotals.get(catName) || 0) + amount);
 
-            // Large Transactions (>$500)
+            // Large Transactions (>RM500)
             if (amount >= 500) {
                 largeTransactions.push(doc);
             }
@@ -226,7 +228,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-indigo-900 dark:text-indigo-200">
-                            ${totalVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {symbol}{totalVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                         <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80 mt-1">Total approved & paid expenses within selected date range</p>
                     </CardContent>
@@ -257,7 +259,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                                     <div key={fund.name} className="space-y-2">
                                         <div className="flex justify-between text-sm">
                                             <span className="font-medium text-gray-900 dark:text-white">{fund.name}</span>
-                                            <span className="text-gray-500 dark:text-slate-400">${fund.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            <span className="text-gray-500 dark:text-slate-400">{symbol}{fund.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                         <div className="h-2 w-full bg-gray-50 dark:bg-slate-900/50 rounded-full overflow-hidden">
                                             <div
@@ -299,7 +301,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                                             <span className="font-medium text-gray-900 dark:text-white">{cat.name}</span>
                                         </div>
                                         <span className="font-semibold text-gray-900 dark:text-white border-b border-b-slate-300 dark:border-b-slate-600 border-dashed pb-0.5">
-                                            ${cat.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            {symbol}{cat.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </span>
                                     </div>
                                 ))
@@ -314,7 +316,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                 <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-white">
                         <AlertTriangle className="w-5 h-5 text-amber-500 " />
-                        Significant Outflows (&gt;$500)
+                        Significant Outflows (&gt;{symbol}500)
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -346,7 +348,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                                         </TableCell>
                                         <TableCell className="text-gray-500 dark:text-slate-400">{doc.categories?.name || "—"}</TableCell>
                                         <TableCell className="text-right font-bold text-gray-900 dark:text-white">
-                                            ${doc.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            {symbol}{doc.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </TableCell>
                                     </TableRow>
                                 ))}

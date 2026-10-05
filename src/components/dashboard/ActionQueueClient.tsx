@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Eye, Loader2, Info } from "lucide-react";
 import { updateDocument } from "@/app/actions/ledger";
 import { useRole } from "@/components/RoleProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 import {
     Dialog,
     DialogContent,
@@ -18,6 +19,7 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
     const [isMarking, setIsMarking] = useState<string | null>(null);
     const [previewDoc, setPreviewDoc] = useState<any | null>(null);
     const { isViewer } = useRole();
+    const { symbol } = useCurrency();
 
     const handleMarkPaid = async (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
@@ -57,7 +59,7 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
                             </div>
                             <div className="min-w-0">
                                 <p className="text-sm font-medium leading-none text-gray-900 dark:text-white truncate">{item.vendor_name || "Unknown Vendor"}</p>
-                                <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 mt-1 truncate">{item.amount ? `$${item.amount.toFixed(2)}` : "—"}</p>
+                                <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 mt-1 truncate">{item.amount ? `${symbol}${item.amount.toFixed(2)}` : "—"}</p>
                             </div>
                         </div>
 
@@ -116,7 +118,7 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
                                 </div>
                                 <div className="text-right">
                                     <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Amount</p>
-                                    <p className="font-semibold text-slate-900 dark:text-white">${previewDoc.amount?.toFixed(2) || "0.00"}</p>
+                                    <p className="font-semibold text-slate-900 dark:text-white">{symbol}{previewDoc.amount?.toFixed(2) || "0.00"}</p>
                                 </div>
                                 <div>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Date</p>

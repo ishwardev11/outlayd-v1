@@ -1,12 +1,13 @@
 "use server"
 
 import { GoogleGenerativeAI, SchemaType, type GenerationConfig } from "@google/generative-ai"
-import { updateDocument, getOrganizationId } from "./document-utils"
+import { updateDocument, getOrganizationId, getOrganizationCurrency } from "./document-utils"
+import { getCurrencyDetails } from "@/utils/currency"
 import { createClient } from "@/utils/supabase/server"
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
-const EXTRACTION_SYSTEM_PROMPT = `You are an expert Document AI and financial data extractor specialized in unstructured receipts, tax invoices, utility bills, SaaS statements, and purchase orders.
+const getExtractionSystemPrompt = (baseCurrency: string, symbol: string) => `You are an expert Document AI and financial data extractor specialized in unstructured receipts, tax invoices, utility bills, SaaS statements, and purchase orders.
 
 Your task is to extract all key financial, vendor, line item, and tax metadata from the provided document image or text into a strict, validated JSON structure.
 
@@ -42,7 +43,7 @@ Your task is to extract all key financial, vendor, line item, and tax metadata f
 - Never concatenate separate charges into a single string. If itemized discounts apply, calculate the final charge accurately.
 
 5. TOTALS, CURRENCY & TAX:
-- Extract ISO 4217 3-letter currency codes (e.g., "USD", "MYR", "EUR", "GBP", "SGD"). Infer from symbols ($ = USD or local context, £ = GBP, € = EUR, RM = MYR) or vendor headquarters.
+- Extract ISO 4217 3-letter currency codes (e.g., "MYR", "USD", "EUR", "GBP", "SGD"). The organization's base currency is ${baseCurrency} (symbol: ${symbol}). Infer from symbols (${symbol} = ${baseCurrency}, RM = MYR, € = EUR, £ = GBP, $ = ${baseCurrency === 'MYR' ? 'MYR unless explicitly stated as USD' : baseCurrency}) or vendor context. Default to "${baseCurrency}" if not explicitly specified.
 - Extract numbers as raw floats or strings with 2 decimal places (do not include currency symbols, commas, or letters in numeric fields).
 - Accurately isolate subtotal, total tax/VAT/GST amount, discount amount, and final total amount.
 - Self-reconciliation check: verify that (subtotal + tax_amount - discount_amount ≈ total_amount). If an explicit discrepancy exists on the printed document, prioritize the explicit total stated on the document.
@@ -61,6 +62,10 @@ export async function extractDocumentData(
 
     // Update document status to extracting while Gemini processes
     await updateDocument(documentId, { status: "extracting" })
+
+    const orgCurrency = await getOrganizationCurrency();
+    const { symbol } = getCurrencyDetails(orgCurrency);
+    const extractionPrompt = getExtractionSystemPrompt(orgCurrency, symbol);
 
     const generationConfig: GenerationConfig = {
         temperature: 0.1,
@@ -97,7 +102,7 @@ export async function extractDocumentData(
                             type: SchemaType.STRING,
                             description: "Document classification: 'Invoice (Unpaid)', 'Invoice (Paid)', 'Tax Invoice', 'Receipt', 'Credit Note', or 'Purchase Order'"
                         },
-                        currency: { type: SchemaType.STRING, description: "ISO 4217 3-letter currency code (e.g. USD, EUR, GBP, MYR, SGD)" }
+                        currency: { type: SchemaType.STRING, description: `ISO 4217 3-letter currency code (e.g. ${orgCurrency}, USD, EUR, GBP, SGD). Default to ${orgCurrency} if unspecified.` }
                     },
                     required: ["document_type", "currency"]
                 },
@@ -146,7 +151,7 @@ export async function extractDocumentData(
 
                 // Pass system prompt and the document inline for extraction
                 result = await model.generateContent([
-                    EXTRACTION_SYSTEM_PROMPT,
+                    extractionPrompt,
                     {
                         inlineData: {
                             data: base64Data,

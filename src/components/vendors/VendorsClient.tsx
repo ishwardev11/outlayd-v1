@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, FileText, AlertCircle, Search, DollarSign, Building2, Merge, Loader2, Trash2, Sparkles } from "lucide-react";
+import { Users, FileText, AlertCircle, Search, Banknote, Building2, Merge, Loader2, Trash2, Sparkles } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { mergeVendors, deleteVendor, updateVendor } from "@/app/actions/ledger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useRole } from "@/components/RoleProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 import { toast } from "sonner";
 
 export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: any[]; categories?: any[] }) {
@@ -26,6 +27,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
     const [vendorToDelete, setVendorToDelete] = useState<{ id: string, name: string } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const { isViewer } = useRole();
+    const { symbol } = useCurrency();
 
     useEffect(() => {
         setVendors(vendorsList);
@@ -149,7 +151,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                         <AlertCircle className="h-4 w-4 text-amber-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">${totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{symbol}{totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                         <p className="text-xs text-muted-foreground dark:text-slate-400">Needs to be paid</p>
                     </CardContent>
                 </Card>
@@ -157,10 +159,10 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                 <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">Total Paid (All Time)</CardTitle>
-                        <DollarSign className="h-4 w-4 text-indigo-500" />
+                        <Banknote className="h-4 w-4 text-indigo-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">${totalPaidLifelong.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{symbol}{totalPaidLifelong.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                         <p className="text-xs text-muted-foreground dark:text-slate-400">Historical volume</p>
                     </CardContent>
                 </Card>
@@ -301,13 +303,13 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right font-medium text-gray-900 dark:text-white">
-                                        ${vendor.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        {symbol}{vendor.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {vendor.totalUnpaid > 0 ? (
                                             <div className="items-center justify-end font-semibold text-red-600 gap-1.5 bg-red-50 px-2 py-1 rounded-md inline-flex border border-red-100 ">
                                                 <AlertCircle className="w-3.5 h-3.5" />
-                                                ${vendor.totalUnpaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                {symbol}{vendor.totalUnpaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>
                                         ) : (
                                             <span className="text-indigo-600 font-medium text-sm flex items-center justify-end gap-1">
@@ -359,7 +361,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                                 </div>
                                 <div className="text-sm border-t border-gray-200 dark:border-slate-700 pt-2 mt-2 flex justify-between text-gray-500 dark:text-slate-400">
                                     <span>{v.docCount} documents recorded</span>
-                                    <span>${(v.totalPaid + v.totalUnpaid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} volume</span>
+                                    <span>{symbol}{(v.totalPaid + v.totalUnpaid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} volume</span>
                                 </div>
                             </div>
                         ))}

@@ -208,7 +208,7 @@ function BenefitsSection() {
                                         <div className="text-xs text-slate-400">Travel • Grant Fund A</div>
                                     </div>
                                 </div>
-                                <div className="text-emerald-400 font-medium font-mono">$42.50</div>
+                                <div className="text-emerald-400 font-medium font-mono">RM42.50</div>
                             </div>
                         </div>
                     </motion.div>
@@ -261,14 +261,14 @@ function BenefitsSection() {
                                             <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold">OC</div>
                                             <span className="text-sm font-medium">Office Corp</span>
                                         </div>
-                                        <div className="text-amber-400 text-xs font-mono">$1,250.00</div>
+                                        <div className="text-amber-400 text-xs font-mono">RM1,250.00</div>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold">TC</div>
                                             <span className="text-sm font-medium">Tech Center</span>
                                         </div>
-                                        <div className="text-slate-400 text-xs font-mono">$0.00</div>
+                                        <div className="text-slate-400 text-xs font-mono">RM0.00</div>
                                     </div>
                                 </div>
                             </div>
@@ -484,7 +484,7 @@ function WhyOutlaydSection() {
 function FAQSection() {
     const faqs = [
         { q: "How is Outlayd different from tools like Expensify or Zoho Expense?", a: "Unlike enterprise software built for corporate mega-entities, Outlayd is purpose-built for growing SMEs and nonprofits. We focus on local currency support (MYR), grant & restricted fund tracking, and straightforward pricing — eliminating the complex setup and high costs of enterprise tools." },
-        { q: "How exact is the AI receipt extraction?", a: "Our AI extracts data with 99.5% accuracy. It handles multiple currencies, messy handwriting, and complex multi-page invoices with line items." },
+        { q: "How exact is the AI receipt extraction?", a: "Our AI extracts data with high accuracy. It handles multiple currencies, messy handwriting, and complex multi-page invoices with line items." },
         { q: "Can I track expenses by grant or fund for nonprofit reporting?", a: "Yes! Outlayd allows you to tag and filter expenses by specific grant, restricted fund, or department, giving you audit-ready reports for your board and donors in seconds." },
         { q: "How does the vendor directory work?", a: "It auto-tracks every vendor from your uploaded documents, calculating total outstanding balances automatically without manual entry." },
         { q: "What's the cancellation policy?", a: "You can cancel your subscription at any time. We don't believe in long-term lock-in contracts for small businesses and nonprofits." }

@@ -23,6 +23,7 @@ import {
 import { createClient } from "@/utils/supabase/client"
 import { runSingleEvaluation } from "@/app/actions/procurement"
 import { useRole } from "@/components/RoleProvider"
+import { useCurrency } from "@/components/CurrencyProvider"
 
 export type BidStatus = 'uploaded' | 'evaluating' | 'evaluated' | 'awarded' | 'rejected'
 
@@ -75,6 +76,7 @@ function quoteToBid(q: any): Bid {
 export function ProjectDashboard({ project, quotes }: { project: any, quotes: any[] }) {
     const supabase = createClient()
     const { isViewer } = useRole()
+    const { symbol } = useCurrency()
     // ── Project state ──
     const [projectStatus, setProjectStatus] = useState(project.status)
 
@@ -418,7 +420,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                 <div className="flex flex-col md:items-end p-4 bg-muted/30 rounded-lg border border-border min-w-50">
                     <span className="text-sm font-medium text-muted-foreground mb-1">Budget Ceiling</span>
                     <span className="text-3xl font-bold text-primary">
-                        ${Number(project.budget_ceiling).toLocaleString()}
+                        {symbol}{Number(project.budget_ceiling).toLocaleString()}
                     </span>
                     <span className="text-xs text-muted-foreground mt-2">
                         Due: {new Date(project.required_deadline).toLocaleDateString('en-GB', { timeZone: 'UTC' })}
@@ -530,7 +532,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="total_amount" className="dark:text-slate-200">Total Amount ($)</Label>
+                                    <Label htmlFor="total_amount" className="dark:text-slate-200">Total Amount ({symbol})</Label>
                                     <Input
                                         id="total_amount"
                                         type="number"
@@ -690,7 +692,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                         </div>
                                     </div>
                                     <CardDescription className="text-xs font-medium text-gray-900 dark:text-slate-300 mt-1">
-                                        ${bid.totalAmount.toLocaleString()}
+                                        {symbol}{bid.totalAmount.toLocaleString()}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="p-4 pt-2">
@@ -728,7 +730,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                 </div>
                                 <p className="text-sm font-medium text-foreground mb-1">No bids evaluated yet</p>
                                 <p className="text-xs text-muted-foreground max-w-55 leading-relaxed">
-                                    Click &ldquo;Run AI Evaluation&rdquo; on an uploaded quote to analyze it against your <span className="font-medium text-primary">${Number(project.budget_ceiling).toLocaleString()}</span> budget ceiling.
+                                    Click &ldquo;Run AI Evaluation&rdquo; on an uploaded quote to analyze it against your <span className="font-medium text-primary">{symbol}{Number(project.budget_ceiling).toLocaleString()}</span> budget ceiling.
                                 </p>
                             </div>
                         )}
@@ -765,7 +767,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                         <CardTitle className="text-sm font-semibold text-gray-900 dark:text-white">{bid.vendorName}</CardTitle>
                                     </div>
                                     <CardDescription className="text-xs font-medium text-primary mt-1">
-                                        ${bid.totalAmount.toLocaleString()}
+                                        {symbol}{bid.totalAmount.toLocaleString()}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="p-4 pt-2">
@@ -842,7 +844,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="edit_total_amount" className="dark:text-slate-200">Total Amount ($)</Label>
+                            <Label htmlFor="edit_total_amount" className="dark:text-slate-200">Total Amount ({symbol})</Label>
                             <Input
                                 id="edit_total_amount"
                                 type="number"

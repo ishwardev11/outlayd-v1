@@ -17,6 +17,7 @@ import { UploadButton } from "./UploadButton";
 import { processUpload } from "@/app/actions/ledger";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
 import { useRole } from "@/components/RoleProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 
 interface LedgerTableProps {
     documents: any[];
@@ -33,6 +34,7 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
     const [isDragActive, setIsDragActive] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
     const { isViewer } = useRole();
+    const { symbol } = useCurrency();
 
     const handleFile = async (file: File) => {
         setIsUploading(true);
@@ -190,7 +192,7 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                             </TableCell>
                             <TableCell className="text-sm font-medium text-gray-900 dark:text-white py-2.5">
                                 {doc.amount !== null && doc.amount !== undefined && !isNaN(Number(doc.amount))
-                                    ? `$${Number(doc.amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    ? `${symbol}${Number(doc.amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                     : "—"}
                             </TableCell>
                             <TableCell className="py-2.5">
