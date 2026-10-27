@@ -142,8 +142,8 @@ export function ReportsClient({ documents }: { documents: any[] }) {
             </div>
 
             {/* Filter Bar */}
-            <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-2 flex items-center gap-3 sm:gap-4 flex-wrap shadow-sm w-full sm:max-w-fit">
-                <div className="flex items-center gap-2 pl-2 pr-3 sm:pr-4 border-r border-gray-200 dark:border-slate-700">
+            <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-2 flex items-center gap-2 sm:gap-4 flex-wrap shadow-sm w-full overflow-x-auto">
+                <div className="flex items-center gap-2 pl-2 pr-3 sm:pr-4 border-r border-gray-200 dark:border-slate-700 shrink-0">
                     <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-500 dark:text-slate-400">
                         <path d="M14.5 2H0.5L5.5 8V12.5L9.5 14V8L14.5 2Z" stroke="currentColor" strokeLinejoin="round" />
                     </svg>
@@ -151,10 +151,10 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="flex flex-col gap-1.5 flex-1 min-w-[90px] sm:flex-none">
+                    <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Year</span>
                         <Select value={selectedYear} onValueChange={setSelectedYear}>
-                            <SelectTrigger className="w-full sm:w-27.5 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
+                            <SelectTrigger className="w-[90px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
                                 <SelectValue placeholder="Year" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
@@ -166,10 +166,10 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                         </Select>
                     </div>
 
-                    <div className="flex flex-col gap-1.5 flex-1 min-w-[100px] sm:flex-none">
+                    <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Month</span>
                         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                            <SelectTrigger className="w-full sm:w-32.5 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
+                            <SelectTrigger className="w-[110px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
                                 <SelectValue placeholder="Month" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
@@ -181,10 +181,10 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                         </Select>
                     </div>
 
-                    <div className="flex flex-col gap-1.5 flex-1 min-w-[110px] sm:flex-none">
+                    <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Fund</span>
                         <Select value={selectedFund} onValueChange={setSelectedFund}>
-                            <SelectTrigger className="w-full sm:w-35 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
+                            <SelectTrigger className="w-[120px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
                                 <SelectValue placeholder="Fund" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
@@ -196,10 +196,10 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                         </Select>
                     </div>
 
-                    <div className="flex flex-col gap-1.5 flex-1 min-w-[100px] sm:flex-none">
+                    <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Status</span>
                         <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                            <SelectTrigger className="w-full sm:w-[150px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
+                            <SelectTrigger className="w-[130px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">

@@ -101,40 +101,7 @@ export function MobileNav() {
                 </div>
             )}
 
-            {/* Bottom Navigation Bar */}
-            <nav
-                className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800/80 h-16 px-3 flex items-center justify-around shadow-lg"
-                aria-label="Mobile Bottom Navigation"
-                id="mobile-bottom-nav"
-            >
-                {bottomTabs.map((tab) => {
-                    const Icon = tab.icon;
-                    const isActive = pathname === tab.href;
-
-                    return (
-                        <Link
-                            key={tab.href}
-                            href={tab.href}
-                            prefetch
-                            className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all duration-150 active:scale-95 ${
-                                isActive
-                                    ? "text-indigo-600 dark:text-cyan-400 font-semibold"
-                                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                            }`}
-                        >
-                            <div className="relative">
-                                <Icon className="w-5 h-5" />
-                                {isActive && (
-                                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-600 dark:bg-cyan-400 rounded-full" />
-                                )}
-                            </div>
-                            <span className="text-[11px] mt-1 leading-none tracking-tight">
-                                {tab.label}
-                            </span>
-                        </Link>
-                    );
-                })}
-            </nav>
+            {/* Bottom Navigation Bar Removed */}
         </>
     );
 }

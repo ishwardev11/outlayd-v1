@@ -25,7 +25,7 @@ export default async function DashboardLayout({
                     <MobileNav />
 
                     {/* Main Content Area */}
-                    <main className="flex-1 w-full min-w-0 bg-gray-50 dark:bg-slate-950 pb-20 md:pb-0">
+                    <main className="flex-1 w-full min-w-0 bg-gray-50 dark:bg-slate-950 pb-6 md:pb-0">
                         {children}
                     </main>
                 </div>

@@ -141,11 +141,11 @@ export function Navbar() {
 
 function HeroSection() {
     return (
-        <section className="relative pt-12 pb-16 sm:pt-16 sm:pb-20 lg:pt-24 lg:pb-32 overflow-hidden px-3 sm:px-4">
+        <section className="relative pt-10 pb-14 sm:pt-16 sm:pb-20 lg:pt-24 lg:pb-32 overflow-hidden px-3 sm:px-4">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-indigo-900/40 via-slate-950 to-slate-950 -z-10" />
 
             <div className="container mx-auto max-w-6xl">
-                <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+                <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-8 items-center">
                     <motion.div
                         initial="hidden"
                         animate="visible"
