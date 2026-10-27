@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -22,13 +20,7 @@ import { signOutAction } from "@/app/actions/auth";
 import { createClient } from "@/utils/supabase/client";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
 
-interface SidebarProps {
-    className?: string;
-    onNavigate?: () => void;
-    hideLogo?: boolean;
-}
-
-export function Sidebar({ className = "", onNavigate, hideLogo = false }: SidebarProps = {}) {
+export function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
     const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -49,10 +41,6 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                 return "00000000-0000-0000-0000-000000000000";
             return devOrgId;
         }
-
-        const activeOrgCookie = cookies.find((row) => row.trim().startsWith("active_org_id="));
-        const activeOrgId = activeOrgCookie ? activeOrgCookie.split("=")[1] : null;
-        if (activeOrgId) return activeOrgId;
 
         return user?.user_metadata?.organization_id;
     };
@@ -84,15 +72,14 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
 
                 const { data: org, error } = await supabase
                     .from("organizations")
-                    .select("subscription_status, subscription_tier")
+                    .select("subscription_status")
                     .eq("id", orgId)
                     .single();
 
                 if (error) throw error;
-                const isOrgPro = org?.subscription_status === "pro" || org?.subscription_tier === "growth";
-                setIsPro(isOrgPro);
+                setIsPro(org?.subscription_status === "pro");
                 
-                if (isOrgPro && typeof window !== "undefined") {
+                if (org?.subscription_status === "pro" && typeof window !== "undefined") {
                     sessionStorage.setItem("optimistic_is_pro", "true");
                 }
             } catch (err) {
@@ -126,40 +113,34 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
     ];
 
     return (
-        <div className={`w-52 bg-white/85 dark:bg-slate-950/70 border-r border-slate-200 dark:border-slate-800/80 h-screen p-4 flex flex-col text-slate-900 dark:text-slate-100 backdrop-blur-md ${className}`}>
-            {!hideLogo && (
-                <div className="mb-8 tracking-tight flex items-baseline">
-                    <span className="font-extrabold text-2xl bg-linear-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">Outlayd</span>
-                </div>
-            )}
+        <div className="w-52 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 h-screen p-4 flex flex-col text-gray-900 dark:text-gray-100">
+            <div className="mb-8 tracking-tight flex items-baseline">
+                <span className="font-extrabold text-slate-900 dark:text-white text-2xl">Outlayd</span>
+            </div>
 
             <nav className="flex-1 space-y-2">
-                <Link id="sidebar-link-dashboard" href="/dashboard" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/dashboard' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link href="/dashboard" prefetch className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/dashboard' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                     <LayoutDashboard size={20} />
                     <span>Dashboard</span>
                 </Link>
-                <Link id="sidebar-link-ledger" href="/ledger" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/ledger' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link href="/ledger" prefetch className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/ledger' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                     <FileText size={20} />
                     <span>Ledger</span>
                 </Link>
-                <Link id="sidebar-link-vendors" href="/vendors" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/vendors' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link href="/vendors" prefetch className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/vendors' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                     <Users size={20} />
                     <span>Vendors</span>
                 </Link>
-                <Link id="sidebar-link-reports" href="/reports" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/reports' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link href="/reports" prefetch className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/reports' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                     <BarChart3 size={20} />
                     <span>Reports</span>
                 </Link>
 
                 {/* Procurement — gated for free users. Uses a button (not Link) to guarantee no HTML navigation occurs */}
                 <button
-                    id="sidebar-link-procurement"
                     type="button"
-                    onClick={() => {
-                        onNavigate?.();
-                        handleProcurementClick();
-                    }}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer w-full text-left group ${pathname === '/procurement' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}
+                    onClick={handleProcurementClick}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors w-full text-left group ${pathname === '/procurement' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}
                 >
                     <Gavel size={20} />
                     <span className="flex-1">Procurement</span>
@@ -175,19 +156,18 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
 
             <div className="mt-auto flex flex-col gap-2">
                 <button
-                    id="sidebar-link-help"
                     onClick={() => setIsHelpOpen(true)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white w-full text-left"
+                    className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white w-full text-left"
                 >
                     <HelpCircle size={20} />
                     <span>Help &amp; Support</span>
                 </button>
-                <Link id="sidebar-link-settings" href="/settings" onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/settings' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link href="/settings" className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === '/settings' ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-700 dark:text-cyan-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
                     <Settings size={20} />
                     <span>Settings</span>
                 </Link>
                 <form action={signOutAction} className="w-full">
-                    <button id="sidebar-link-signout" type="submit" className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white w-full text-left">
+                    <button type="submit" className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white w-full text-left">
                         <LogOut size={20} />
                         <span>Sign Out</span>
                     </button>
@@ -197,13 +177,13 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
             {/* Help & Support Drawer */}
             {isHelpOpen && (
                 <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="w-80 h-full bg-white/90 dark:bg-slate-950/85 border-l border-slate-200 dark:border-slate-800/80 shadow-2xl flex flex-col animate-in slide-in-from-right-full duration-300 backdrop-blur-md">
-                        <div className="p-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 text-slate-900 dark:text-white">
+                    <div className="w-80 h-full bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 shadow-xl flex flex-col animate-in slide-in-from-right-full duration-300">
+                        <div className="p-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white">
                             <h2 className="font-semibold flex items-center gap-2">
                                 <HelpCircle size={18} className="text-indigo-500" />
                                 Help &amp; Support
                             </h2>
-                            <button id="close-help-btn" type="button" onClick={() => setIsHelpOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer">
+                            <button type="button" onClick={() => setIsHelpOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
                                 <X size={20} />
                             </button>
                         </div>
@@ -211,18 +191,18 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Common questions to help you get started with Outlayd.</p>
 
                             {faqs.map((faq, idx) => (
-                                <div key={idx} className="border border-slate-250 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-sm">
+                                <div key={idx} className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
                                     <button
                                         type="button"
                                         onClick={() => setOpenAccordion(openAccordion === idx ? null : idx)}
-                                        className="w-full text-left px-4 py-3 bg-slate-50/50 dark:bg-slate-900/60 flex items-center justify-between text-slate-900 dark:text-white hover:bg-slate-100/50 dark:hover:bg-slate-900/80 transition-colors cursor-pointer"
+                                        className="w-full text-left px-4 py-3 bg-slate-50 dark:bg-slate-900 flex items-center justify-between"
                                     >
-                                        <span className="text-sm font-medium pr-2">{faq.q}</span>
+                                        <span className="text-sm font-medium text-slate-900 dark:text-white pr-2">{faq.q}</span>
                                         <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform duration-300 ${openAccordion === idx ? 'rotate-180' : ''}`} />
                                     </button>
                                     <div className={`grid transition-all duration-300 ease-in-out ${openAccordion === idx ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                         <div className="overflow-hidden">
-                                            <div className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 bg-white/80 dark:bg-slate-950/40 border-t border-slate-200 dark:border-slate-800/80">
+                                            <div className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
                                                 {faq.a}
                                             </div>
                                         </div>
@@ -230,15 +210,10 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                                 </div>
                             ))}
                         </div>
-                        <div className="p-4 border-t border-slate-200 dark:border-slate-800/80">
-                            <Link
-                                href="/contact"
-                                onClick={() => setIsHelpOpen(false)}
-                                id="contact-support-btn"
-                                className="block w-full text-center py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-all duration-200 active:scale-[0.98] cursor-pointer"
-                            >
+                        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+                            <button type="button" className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md transition-colors">
                                 Contact Support
-                            </Link>
+                            </button>
                         </div>
                     </div>
                 </div>

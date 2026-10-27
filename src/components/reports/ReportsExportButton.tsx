@@ -11,7 +11,6 @@ import {
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { useCurrency } from "@/components/CurrencyProvider";
 
 interface ExportProps {
     filteredDocuments: any[];
@@ -19,7 +18,6 @@ interface ExportProps {
 }
 
 export function ReportsExportButton({ filteredDocuments, dateRange }: ExportProps) {
-    const { symbol } = useCurrency();
     const getReportTitle = () => {
         const mapping: Record<string, string> = {
             "7days": "Last 7 Days",
@@ -47,10 +45,10 @@ export function ReportsExportButton({ filteredDocuments, dateRange }: ExportProp
         const totalAmount = filteredDocuments.reduce((sum, d) => sum + (d.amount || 0), 0);
         doc.setFontSize(14);
         doc.setTextColor(79, 70, 229); // Indigo 600 approximate
-        doc.text(`Total Volume: ${symbol}${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, 48);
+        doc.text(`Total Volume: $${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, 48);
 
         // Outflows Table
-        const headers = [["Vendor / Payee", "Date", "Fund", "Category", `Amount (${symbol})`]];
+        const headers = [["Vendor / Payee", "Date", "Fund", "Category", "Amount"]];
 
         // Sort for the table display: highest amounts first
         const sortedDocs = [...filteredDocuments].sort((a, b) => (b.amount || 0) - (a.amount || 0));
@@ -60,7 +58,7 @@ export function ReportsExportButton({ filteredDocuments, dateRange }: ExportProp
             d.document_date || "—",
             d.funds?.name || "—",
             d.categories?.name || "—",
-            `${symbol}${(d.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            `$${(d.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         ]);
 
         doc.setFontSize(14);
@@ -80,7 +78,7 @@ export function ReportsExportButton({ filteredDocuments, dateRange }: ExportProp
     };
 
     const exportExcel = () => {
-        const headers = ["ID", "Vendor", "Date", "Fund", "Category", `Amount (${symbol})`, "Status"];
+        const headers = ["ID", "Vendor", "Date", "Fund", "Category", "Amount", "Status"];
 
         const rows = filteredDocuments.map(doc => [
             `"${doc.id}"`,

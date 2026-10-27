@@ -3,7 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { getOrganizationId } from "./document-utils";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 
 export async function signUpAction(formData: FormData) {
     const email = formData.get("email")?.toString();
@@ -16,106 +16,10 @@ export async function signUpAction(formData: FormData) {
 
     const supabase = await createClient();
 
-    // Check if there is a pending invite in workspace_invites for this email
-    const { createAdminClient } = await import("@/utils/supabase/admin");
-    const adminClient = createAdminClient();
-    const { data: invite } = await adminClient
-        .from("workspace_invites")
-        .select("*")
-        .eq("email", email)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-    if (invite) {
-        // User has a pending invite and was already pre-created in auth.users by inviteUserByEmail.
-        // We find their user id and update password / metadata via the admin client.
-        const { data: userId, error: rpcError } = await adminClient.rpc('get_user_id_by_email', {
-            email_address: email
-        });
-        if (rpcError) {
-            console.error("Failed to fetch user ID by email during invited signup check:", rpcError);
-        }
-        
-        let existingUser = null;
-        if (userId) {
-            const { data: userData, error: getUserError } = await adminClient.auth.admin.getUserById(userId);
-            if (getUserError) {
-                console.error("Failed to fetch user by ID during invited signup check:", getUserError);
-            } else {
-                existingUser = userData?.user;
-            }
-        }
-
-        if (existingUser) {
-            // Update password, name, and organization metadata on their auth profile
-            const { error: updateError } = await adminClient.auth.admin.updateUserById(existingUser.id, {
-                password: password,
-                email_confirm: true,
-                user_metadata: {
-                    full_name: fullName,
-                    organization_id: invite.organization_id,
-                    onboarding_completed: true
-                }
-            });
-
-            if (updateError) {
-                return { error: "Failed to update account: " + updateError.message };
-            }
-
-            // Insert role into user_roles
-            const { error: roleInsertError } = await adminClient
-                .from("user_roles")
-                .insert({
-                    organization_id: invite.organization_id,
-                    email: email,
-                    role: invite.role,
-                    full_name: fullName
-                });
-
-            if (roleInsertError) {
-                console.error("Failed to map user_roles on signup:", roleInsertError);
-                return { error: "Failed to map user access: " + roleInsertError.message };
-            }
-
-            // Delete pending invite
-            await adminClient
-                .from("workspace_invites")
-                .delete()
-                .eq("id", invite.id);
-
-            // Sign in to establish a session
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-                email,
-                password
-            });
-
-            if (signInError) {
-                return { error: "Account activated, but failed to log in: " + signInError.message };
-            }
-
-            // Clear local dev cookies
-            const cookieStore = await cookies();
-            cookieStore.set('dev_org_id', '', { maxAge: 0, path: '/' });
-            cookieStore.set('dev_org_name', '', { maxAge: 0, path: '/' });
-            cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
-            cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
-            cookieStore.set('active_org_id', invite.organization_id, { path: '/' });
-
-            redirect("/dashboard");
-        }
-    }
-
-    const headersList = await headers();
-    const host = headersList.get("host") || "localhost:3000";
-    const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-    const emailRedirectTo = `${protocol}://${host}/login`;
-
     const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
-            emailRedirectTo,
             data: {
                 full_name: fullName,
             }
@@ -139,12 +43,7 @@ export async function signUpAction(formData: FormData) {
     cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
 
     // Successful signup automatically logs them in as well
-    const orgId = await getOrganizationId();
-    if (orgId) {
-        redirect("/dashboard");
-    } else {
-        redirect("/onboarding");
-    }
+    redirect("/onboarding");
 }
 
 export async function signInAction(formData: FormData) {
@@ -172,7 +71,6 @@ export async function signInAction(formData: FormData) {
     cookieStore.set('dev_org_name', '', { maxAge: 0, path: '/' });
     cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
     cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
-    cookieStore.set('active_org_id', '', { maxAge: 0, path: '/' });
 
     const orgId = await getOrganizationId();
     if (!orgId) {
@@ -192,7 +90,6 @@ export async function signOutAction() {
     cookieStore.set('dev_org_name', '', { maxAge: 0, path: '/' });
     cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
     cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
-    cookieStore.set('active_org_id', '', { maxAge: 0, path: '/' });
 
     redirect("/");
 }

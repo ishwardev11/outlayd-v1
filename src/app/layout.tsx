@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SmoothScrollProvider } from "@/components/SmoothScrollProvider";
 import { Toaster } from "sonner";
-import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,17 +15,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const plusJakarta = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
   title: "Outlayd | Intelligent Expense Management & Procurement",
   description: "An expense tracking and AP automation tool for modern businesses.",
 };
-
-import { AuthHashRedirect } from "@/components/AuthHashRedirect";
 
 export default function RootLayout({
   children,
@@ -35,9 +27,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <Script
-          id="theme-initializer"
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <script
           dangerouslySetInnerHTML={{
             __html: `
               try {
@@ -57,13 +50,8 @@ export default function RootLayout({
             `,
           }}
         />
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} antialiased`}
-      >
         <ThemeProvider defaultTheme="system">
           <SmoothScrollProvider>
-            <AuthHashRedirect />
             {children}
           </SmoothScrollProvider>
         </ThemeProvider>

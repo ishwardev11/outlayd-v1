@@ -1,14 +1,8 @@
 import { NewProjectForm } from "@/components/procurement/NewProjectForm"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import { getCurrentUserRole } from "@/app/actions/document-utils"
-import { redirect } from "next/navigation"
 
-export default async function NewProcurementPage() {
-    const role = await getCurrentUserRole()
-    if (role === 'Viewer') {
-        redirect("/procurement")
-    }
+export default function NewProcurementPage() {
     return (
         <div className="space-y-6">
             <Link

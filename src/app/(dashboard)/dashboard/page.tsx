@@ -1,6 +1,5 @@
 import { getDocuments } from "@/app/actions/ledger";
-import { getOrganizationId, getOrganizationCurrency } from "@/app/actions/document-utils";
-import { getCurrencyDetails } from "@/utils/currency";
+import { getOrganizationId } from "@/app/actions/document-utils";
 import { redirect } from "next/navigation";
 import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
 import { ActionQueueClient } from "@/components/dashboard/ActionQueueClient";
@@ -16,9 +15,6 @@ export default async function Home() {
   if (!orgId) {
     redirect("/onboarding");
   }
-
-  const orgCurrency = await getOrganizationCurrency();
-  const { symbol } = getCurrencyDetails(orgCurrency);
 
   const documents = await getDocuments();
   const today = new Date();
@@ -79,7 +75,7 @@ export default async function Home() {
     .slice(0, 10); // Show top 10
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Dashboard</h1>
         <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">Morning briefing and action queue.</p>
@@ -100,7 +96,7 @@ export default async function Home() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">
-              {symbol}{awaitingPaymentTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${awaitingPaymentTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
@@ -128,11 +124,11 @@ export default async function Home() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900 dark:text-white">
-              {symbol}{paidThisMonthTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${paidThisMonthTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             {needsReviewAmountTotal > 0 && (
               <p className="text-xs text-slate-400 mt-1 font-medium">
-                + {symbol}{needsReviewAmountTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pending approval
+                + ${needsReviewAmountTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pending approval
               </p>
             )}
           </CardContent>
@@ -143,7 +139,7 @@ export default async function Home() {
       <div className="grid lg:grid-cols-3 gap-8">
 
         {/* Left Column (70%) */}
-        <div className="lg:col-span-2 space-y-8 min-w-0">
+        <div className="lg:col-span-2 space-y-8">
           <CashFlowChart data={last14Days} hasPendingDocuments={needsReviewCount > 0} />
 
           <div className="pt-2">
@@ -159,7 +155,7 @@ export default async function Home() {
 
         {/* Right Column (30%): The Action Hub */}
         <div className="lg:col-span-1 space-y-6 flex flex-col">
-          <div className="h-52 shrink-0">
+          <div className="h-48 shrink-0">
             <QuickUpload />
           </div>
           <div className="flex-1">

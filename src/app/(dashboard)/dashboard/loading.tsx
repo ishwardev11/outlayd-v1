@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function Loading() {
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div>
         <Skeleton className="h-9 w-48 mb-2" />
         <Skeleton className="h-6 w-72" />
@@ -25,10 +25,10 @@ export default function Loading() {
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <Skeleton className="h-75 w-full rounded-xl" />
+          <Skeleton className="h-[300px] w-full rounded-xl" />
           <div className="pt-2">
             <Skeleton className="h-7 w-40 mb-4" />
-            <Skeleton className="h-100 w-full rounded-xl" />
+            <Skeleton className="h-[400px] w-full rounded-xl" />
           </div>
         </div>
 
@@ -37,7 +37,7 @@ export default function Loading() {
             <Skeleton className="h-full w-full rounded-xl" />
           </div>
           <div className="flex-1">
-            <Skeleton className="h-125 w-full rounded-xl" />
+            <Skeleton className="h-[500px] w-full rounded-xl" />
           </div>
         </div>
       </div>

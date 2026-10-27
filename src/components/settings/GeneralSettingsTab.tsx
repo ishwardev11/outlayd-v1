@@ -14,7 +14,6 @@ export function GeneralSettingsTab() {
     const [fontSize, setFontSize] = useState("medium")
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setFontSize(localStorage.getItem('app-font-size') || 'medium')
     }, [])
 

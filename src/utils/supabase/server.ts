@@ -3,12 +3,6 @@ import { cookies } from 'next/headers'
 
 export async function createClient() {
     const cookieStore = await cookies()
-    const activeOrgId = cookieStore.get('active_org_id')?.value
-
-    const headers: Record<string, string> = {}
-    if (activeOrgId) {
-        headers['x-active-org-id'] = activeOrgId
-    }
 
     return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,9 +24,6 @@ export async function createClient() {
                     }
                 },
             },
-            global: {
-                headers,
-            }
         }
     )
 }
