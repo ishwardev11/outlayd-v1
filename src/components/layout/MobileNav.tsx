@@ -90,7 +90,7 @@ export function MobileNav() {
                         </div>
 
                         {/* Navigation inside drawer */}
-                        <div className="flex-1 overflow-y-auto">
+                        <div className="flex-1 overflow-hidden">
                             <Sidebar
                                 className="w-full h-full border-r-0 bg-transparent dark:bg-transparent shadow-none"
                                 onNavigate={() => setIsOpen(false)}
