@@ -1,0 +1,24 @@
+[
+  {
+    "id": "a3c2b42b-c074-49c3-b798-4a1782ed87b5",
+    "created_at": "2026-03-01T10:52:24.049671+00:00",
+    "vendor_name": "East Repair Inc.",
+    "amount": 154.06,
+    "document_date": "2019-02-11",
+    "document_type": "invoice",
+    "status": "paid",
+    "fund_id": "15737d86-3846-4bc1-9e98-f3231ec17292",
+    "category_id": "fc2e9567-5a29-4f07-a17b-5d2404c13160",
+    "image_url": "invoice-template-us-neat-750px.png",
+    "is_urgent": false,
+    "confidence_score": 98,
+    "splits": [
+      {
+        "amount": 154.06,
+        "fund_id": "15737d86-3846-4bc1-9e98-f3231ec17292",
+        "category_id": "fc2e9567-5a29-4f07-a17b-5d2404c13160"
+      }
+    ],
+    "vendor_id": null
+  }
+]
