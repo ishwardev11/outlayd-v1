@@ -15,7 +15,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
     const supabase = await createClient();
 
     // 1. Get current user (support local dev fallback)
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
         console.log("Local Dev: Bypassing DB insert for unauthenticated user.");
@@ -24,6 +24,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
         cookieStore.set('dev_org_id', mockUuid, { path: '/' });
         cookieStore.set('dev_org_name', data.orgName, { path: '/' });
         cookieStore.set('dev_org_currency', data.baseCurrency, { path: '/' });
+        cookieStore.set('active_org_currency', data.baseCurrency, { path: '/' });
         cookieStore.set('dev_org_fiscal_year', data.fiscalYearStart, { path: '/' });
         cookieStore.set('dev_template_choice', data.templateChoice, { path: '/' });
         return { success: true, organization_id: mockUuid };
@@ -33,8 +34,12 @@ export async function completeOnboardingSetup(data: OnboardingData) {
     const userFullName = user?.user_metadata?.full_name || "Admin";
 
     try {
+        // Initialize admin client to reliably bypass RLS chicken-and-egg condition during first-time tenant creation
+        const { createAdminClient } = await import("@/utils/supabase/admin");
+        const adminClient = createAdminClient();
+
         // 2. Create Organization
-        const { data: org, error: orgError } = await supabase
+        const { data: org, error: orgError } = await adminClient
             .from("organizations")
             .insert({
                 name: data.orgName,
@@ -48,8 +53,33 @@ export async function completeOnboardingSetup(data: OnboardingData) {
 
         const organization_id = org.id;
 
-        // 3. (REMOVED) Link user via user_metadata - Now handled via user_roles table below
-        // This is no longer needed as RLS now joins with user_roles
+        // 3. Link user to organization via cookie and metadata immediately
+        if (user) {
+            const cookieStore = await cookies();
+            cookieStore.set('active_org_id', organization_id, { path: '/' });
+            cookieStore.set('active_org_currency', data.baseCurrency, { path: '/' });
+            cookieStore.set('dev_org_currency', data.baseCurrency, { path: '/' });
+
+            // Sync organization_id into user metadata for fallback lookups
+            await adminClient.auth.admin.updateUserById(user.id, {
+                user_metadata: {
+                    ...user.user_metadata,
+                    organization_id: organization_id,
+                    onboarding_completed: true,
+                }
+            });
+        }
+
+        // 4. Assign user roles (current user as Admin only)
+        const rolesToInsert = [
+            { organization_id, email: userEmail, role: "Admin", full_name: userFullName }
+        ];
+
+        const { error: rolesError } = await adminClient.from("user_roles").insert(rolesToInsert);
+        if (rolesError) {
+            console.error("Error creating user roles:", rolesError);
+            throw new Error(`Failed to assign user role: ${rolesError.message}`);
+        }
 
 
         // 4. Seed template data with robust switch statement
@@ -92,7 +122,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
                 name,
                 organization_id
             }));
-            const { error: catError } = await supabase
+            const { error: catError } = await adminClient
                 .from("categories")
                 .upsert(categoriesToInsert, { onConflict: "name,organization_id", ignoreDuplicates: true });
             if (catError) {
@@ -106,7 +136,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
                 name,
                 organization_id
             }));
-            const { error: fundError } = await supabase
+            const { error: fundError } = await adminClient
                 .from("funds")
                 .upsert(fundsToInsert, { onConflict: "name,organization_id", ignoreDuplicates: true });
             if (fundError) {
@@ -115,13 +145,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
             }
         }
 
-        // 5. Assign user roles (current user as Admin only)
-        const rolesToInsert = [
-            { organization_id, email: userEmail, role: "Admin", full_name: userFullName }
-        ];
 
-        const { error: rolesError } = await supabase.from("user_roles").insert(rolesToInsert);
-        if (rolesError) console.error("Error creating user roles:", rolesError);
 
         return { success: true, organization_id };
     } catch (error: any) {

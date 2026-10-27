@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Check, Eye, Loader2, Info } from "lucide-react";
 import { updateDocument } from "@/app/actions/ledger";
+import { useRole } from "@/components/RoleProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 import {
     Dialog,
     DialogContent,
@@ -16,6 +18,8 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
     const [queue, setQueue] = useState(initialQueue);
     const [isMarking, setIsMarking] = useState<string | null>(null);
     const [previewDoc, setPreviewDoc] = useState<any | null>(null);
+    const { isViewer } = useRole();
+    const { symbol } = useCurrency();
 
     const handleMarkPaid = async (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
@@ -37,7 +41,7 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
                     <Check className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">All caught up!</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-[250px]">
+                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-62.5">
                     Drag and drop receipts here to keep the momentum going.
                 </p>
             </div>
@@ -55,7 +59,7 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
                             </div>
                             <div className="min-w-0">
                                 <p className="text-sm font-medium leading-none text-gray-900 dark:text-white truncate">{item.vendor_name || "Unknown Vendor"}</p>
-                                <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 mt-1 truncate">{item.amount ? `$${item.amount.toFixed(2)}` : "—"}</p>
+                                <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 mt-1 truncate">{item.amount ? `${symbol}${item.amount.toFixed(2)}` : "—"}</p>
                             </div>
                         </div>
 
@@ -79,16 +83,18 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
                             >
                                 <Eye className="h-4 w-4" />
                             </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-full text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
-                                onClick={(e) => handleMarkPaid(e, item.id)}
-                                disabled={isMarking === item.id}
-                                title="Mark as Paid"
-                            >
-                                {isMarking === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                            </Button>
+                            {!isViewer && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
+                                    onClick={(e) => handleMarkPaid(e, item.id)}
+                                    disabled={isMarking === item.id}
+                                    title="Mark as Paid"
+                                >
+                                    {isMarking === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                </Button>
+                            )}
                         </div>
                     </div>
                 ))}
@@ -112,7 +118,7 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
                                 </div>
                                 <div className="text-right">
                                     <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Amount</p>
-                                    <p className="font-semibold text-slate-900 dark:text-white">${previewDoc.amount?.toFixed(2) || "0.00"}</p>
+                                    <p className="font-semibold text-slate-900 dark:text-white">{symbol}{previewDoc.amount?.toFixed(2) || "0.00"}</p>
                                 </div>
                                 <div>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Date</p>

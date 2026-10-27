@@ -123,7 +123,7 @@ export function QuickUpload() {
     };
 
     return (
-        <Card className="h-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm flex flex-col relative overflow-hidden">
+        <Card className="h-full py-4 gap-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm flex flex-col relative overflow-hidden">
             <input
                 type="file"
                 ref={fileInputRef}
@@ -137,23 +137,23 @@ export function QuickUpload() {
                     <UploadingStatus />
                 </div>
             )}
-            <CardHeader className="pb-3 shrink-0">
+            <CardHeader className="py-0 px-5 shrink-0">
                 <CardTitle className="text-sm font-semibold tracking-tight uppercase text-slate-500 dark:text-slate-400">Quick Upload</CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 pb-4 flex flex-col">
+            <CardContent className="flex-1 pb-2 pt-0 px-5 flex flex-col">
                 <div
-                    className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer 
+                    className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer 
                         ${isDragging ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-400/50 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
                     onDragOver={onDragOver}
                     onDragLeave={onDragLeave}
                     onDrop={onDrop}
                     onClick={() => fileInputRef.current?.click()}
                 >
-                    <div className={`h-12 w-12 rounded-full flex items-center justify-center mb-3 transition-colors ${isDragging ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400' : 'bg-slate-100 text-slate-400 dark:bg-slate-800/80 dark:text-slate-500'}`}>
-                        <UploadCloud className="h-6 w-6" />
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center mb-2 transition-colors ${isDragging ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400' : 'bg-slate-100 text-slate-400 dark:bg-slate-800/80 dark:text-slate-500'}`}>
+                        <UploadCloud className="h-5 w-5" />
                     </div>
                     <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Drop receipt here</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">or click to browse</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">or click to browse</p>
                 </div>
             </CardContent>
 

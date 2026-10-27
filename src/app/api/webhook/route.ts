@@ -55,7 +55,8 @@ export async function POST(req: Request) {
                 const supabase = createClient(supabaseUrl, supabaseKey);
 
                 // 1. Upgrade status
-                await supabase.rpc('upgrade_org_to_pro', { org_id: organizationId });
+                const tier = session.metadata?.tier || 'growth';
+                await supabase.rpc('upgrade_org_to_pro', { org_id: organizationId, p_tier: tier });
 
                 // 2. Persist Customer ID and reset any cancellation flags
                 if (stripeCustomerId) {
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
                         .from('organizations')
                         .update({ 
                             stripe_customer_id: stripeCustomerId,
+                            subscription_tier: tier,
                             cancel_at_period_end: false,
                             subscription_end_date: null
                         })
@@ -99,6 +101,7 @@ export async function POST(req: Request) {
 
             if (organizationId) {
                 const status = (subscription.status === 'active' || subscription.status === 'trialing') ? 'pro' : 'free';
+                const tier = status === 'pro' ? 'growth' : 'free';
                 
                 // Use a permissive type for legacy period resolution
                 const subData = subscription as any;
@@ -107,6 +110,7 @@ export async function POST(req: Request) {
                     .from('organizations')
                     .update({ 
                         subscription_status: status,
+                        subscription_tier: tier,
                         cancel_at_period_end: subData.cancel_at_period_end,
                         subscription_end_date: new Date(subData.current_period_end * 1000).toISOString()
                     })
@@ -145,6 +149,7 @@ export async function POST(req: Request) {
                     .from('organizations')
                     .update({ 
                         subscription_status: 'free',
+                        subscription_tier: 'free',
                         cancel_at_period_end: false,
                         subscription_end_date: null
                     })

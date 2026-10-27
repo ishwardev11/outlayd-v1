@@ -1,17 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, FileText, AlertCircle, Search, DollarSign, Building2, Merge, Loader2, Trash2 } from "lucide-react";
+import { Users, FileText, AlertCircle, Search, Banknote, Building2, Merge, Loader2, Trash2, Sparkles } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { mergeVendors, deleteVendor } from "@/app/actions/ledger";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { mergeVendors, deleteVendor, updateVendor } from "@/app/actions/ledger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useRole } from "@/components/RoleProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
+import { toast } from "sonner";
 
-export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
+export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: any[]; categories?: any[] }) {
+    const [vendors, setVendors] = useState<any[]>(vendorsList);
+    const [updatingVendorId, setUpdatingVendorId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
     const [isMerging, setIsMerging] = useState(false);
@@ -20,15 +26,55 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [vendorToDelete, setVendorToDelete] = useState<{ id: string, name: string } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const { isViewer } = useRole();
+    const { symbol } = useCurrency();
 
-    const filteredVendors = vendorsList.filter(v =>
-        v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (v.topCategory && v.topCategory.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    useEffect(() => {
+        setVendors(vendorsList);
+    }, [vendorsList]);
 
-    const totalVendors = vendorsList.length;
-    const totalOutstanding = vendorsList.reduce((sum, v) => sum + v.totalUnpaid, 0);
-    const totalPaidLifelong = vendorsList.reduce((sum, v) => sum + v.totalPaid, 0);
+    const handleCategoryChange = async (vendorId: string, categoryId: string) => {
+        const targetCategory = categoryId === "none" ? null : categoryId;
+        const previousVendors = [...vendors];
+
+        // Optimistic UI update
+        setVendors(prev => prev.map(v => {
+            if (v.id === vendorId) {
+                const catObj = categories.find(c => c.id === targetCategory);
+                return {
+                    ...v,
+                    default_category_id: targetCategory,
+                    topCategory: catObj ? catObj.name : null
+                };
+            }
+            return v;
+        }));
+
+        setUpdatingVendorId(vendorId);
+        try {
+            await updateVendor(vendorId, { default_category_id: targetCategory });
+            const catName = categories.find(c => c.id === targetCategory)?.name;
+            toast.success(catName ? `Default category set to "${catName}"` : "Default category cleared");
+        } catch (error: any) {
+            console.error("Failed to update vendor default category:", error);
+            toast.error("Failed to update default category");
+            setVendors(previousVendors);
+        } finally {
+            setUpdatingVendorId(null);
+        }
+    };
+
+    const filteredVendors = vendors.filter(v => {
+        const catName = categories.find(c => c.id === v.default_category_id)?.name || v.topCategory || v.suggestedCategoryName || "";
+        return (
+            v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            catName.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    });
+
+    const totalVendors = vendors.length;
+    const totalOutstanding = vendors.reduce((sum, v) => sum + v.totalUnpaid, 0);
+    const totalPaidLifelong = vendors.reduce((sum, v) => sum + v.totalPaid, 0);
 
     const toggleSelect = (id: string) => {
         setSelectedVendors(prev =>
@@ -37,6 +83,7 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
     };
 
     const handleMergeClick = () => {
+        if (isViewer) return;
         if (selectedVendors.length === 2) {
             setPrimaryVendorId(selectedVendors[0]); // default
             setMergeModalOpen(true);
@@ -44,7 +91,7 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
     };
 
     const executeMerge = async () => {
-        if (!primaryVendorId || selectedVendors.length !== 2) return;
+        if (!primaryVendorId || selectedVendors.length !== 2 || isViewer) return;
         setIsMerging(true);
 
         const secondaryVendorId = selectedVendors.find(id => id !== primaryVendorId);
@@ -62,12 +109,13 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
 
     const handleDeleteClick = (e: React.MouseEvent, id: string, name: string) => {
         e.stopPropagation();
+        if (isViewer) return;
         setVendorToDelete({ id, name });
         setDeleteModalOpen(true);
     };
 
     const confirmDelete = async () => {
-        if (!vendorToDelete) return;
+        if (!vendorToDelete || isViewer) return;
         setIsDeleting(true);
         try {
             await deleteVendor(vendorToDelete.id);
@@ -81,7 +129,7 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
         }
     };
 
-    const selectedVendorObjects = selectedVendors.map(id => vendorsList.find(v => v.id === id));
+    const selectedVendorObjects = selectedVendors.map(id => vendors.find(v => v.id === id));
 
     return (
         <div className="space-y-8">
@@ -103,7 +151,7 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
                         <AlertCircle className="h-4 w-4 text-amber-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">${totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{symbol}{totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                         <p className="text-xs text-muted-foreground dark:text-slate-400">Needs to be paid</p>
                     </CardContent>
                 </Card>
@@ -111,16 +159,16 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
                 <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">Total Paid (All Time)</CardTitle>
-                        <DollarSign className="h-4 w-4 text-indigo-500" />
+                        <Banknote className="h-4 w-4 text-indigo-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">${totalPaidLifelong.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{symbol}{totalPaidLifelong.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                         <p className="text-xs text-muted-foreground dark:text-slate-400">Historical volume</p>
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 " />
                     <Input
@@ -135,7 +183,13 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
                     <div className="flex items-center gap-3">
                         <span className="text-sm text-gray-500 font-medium">{selectedVendors.length} selected</span>
                         {selectedVendors.length === 2 && (
-                            <Button onClick={handleMergeClick} size="sm" className="bg-indigo-600 hover:bg-indigo-700 animate-in fade-in zoom-in duration-200">
+                            <Button
+                                onClick={handleMergeClick}
+                                size="sm"
+                                disabled={isViewer}
+                                title={isViewer ? "Viewers cannot merge vendors" : ""}
+                                className="bg-indigo-600 hover:bg-indigo-700 animate-in fade-in zoom-in duration-200"
+                            >
                                 <Merge className="w-4 h-4 mr-2" />
                                 Merge Duplicates
                             </Button>
@@ -158,7 +212,8 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
                 </Card>
             ) : (
                 <Card className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
-                    <Table>
+                    <div className="overflow-x-auto w-full">
+                    <Table className="min-w-[640px]">
                         <TableHeader className="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700">
                             <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="w-12 text-center"></TableHead>
@@ -190,14 +245,57 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell>
-                                        {vendor.topCategory ? (
-                                            <Badge variant="secondary" className="bg-gray-50 text-gray-500 hover:bg-slate-200 border-none dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
-                                                {vendor.topCategory}
-                                            </Badge>
-                                        ) : (
-                                            <span className="text-gray-500 text-sm">—</span>
-                                        )}
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
+                                        <Select
+                                            value={vendor.default_category_id || "none"}
+                                            onValueChange={(val) => handleCategoryChange(vendor.id, val)}
+                                            disabled={isViewer || updatingVendorId === vendor.id}
+                                        >
+                                            <SelectTrigger className={`h-8 text-xs font-medium rounded-lg transition-all border w-47.5 max-w-52.5 ${
+                                                vendor.default_category_id
+                                                    ? "bg-indigo-50/80 border-indigo-200 text-indigo-700 dark:bg-indigo-950/40 dark:border-indigo-800/80 dark:text-indigo-300 font-semibold"
+                                                    : vendor.suggestedCategoryName
+                                                        ? "bg-amber-50/70 border-amber-200/90 text-amber-800 dark:bg-amber-950/30 dark:border-amber-900/60 dark:text-amber-300"
+                                                        : "bg-slate-50 border-slate-200 text-slate-500 dark:bg-slate-900/80 dark:border-slate-700 dark:text-slate-400"
+                                            }`}>
+                                                {updatingVendorId === vendor.id ? (
+                                                    <span className="flex items-center gap-1.5 text-slate-400 text-xs">
+                                                        <Loader2 className="h-3 w-3 animate-spin text-indigo-500 shrink-0" />
+                                                        Saving...
+                                                    </span>
+                                                ) : (
+                                                    <SelectValue>
+                                                        {vendor.default_category_id ? (
+                                                            <span className="truncate">
+                                                                {categories.find((c: any) => c.id === vendor.default_category_id)?.name || vendor.topCategory}
+                                                            </span>
+                                                        ) : vendor.suggestedCategoryName ? (
+                                                            <span className="flex items-center gap-1.5 truncate" title={`Suggested from past invoices: ${vendor.suggestedCategoryName}`}>
+                                                                <span className="text-[10px] uppercase font-bold tracking-wider px-1 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 shrink-0">Auto</span>
+                                                                <span className="truncate text-xs font-normal">{vendor.suggestedCategoryName}</span>
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-400 dark:text-slate-500 font-normal">— Set default</span>
+                                                        )}
+                                                    </SelectValue>
+                                                )}
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl shadow-xl min-w-52.5">
+                                                <SelectItem value="none" className="text-xs text-slate-400 dark:text-slate-500 cursor-pointer">
+                                                    — None (No Default)
+                                                </SelectItem>
+                                                {vendor.suggestedCategoryId && !vendor.default_category_id && (
+                                                    <SelectItem value={vendor.suggestedCategoryId} className="text-xs font-medium text-amber-600 dark:text-amber-400 cursor-pointer">
+                                                        ⚡ Set to &ldquo;{vendor.suggestedCategoryName}&rdquo; (Suggested)
+                                                    </SelectItem>
+                                                )}
+                                                {categories.map((c: any) => (
+                                                    <SelectItem key={c.id} value={c.id} className="text-xs cursor-pointer">
+                                                        {c.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </TableCell>
                                     <TableCell className="text-center">
                                         <div className="inline-flex items-center justify-center bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-full px-2.5 py-0.5 text-xs font-medium text-gray-500 dark:text-slate-400">
@@ -206,13 +304,13 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right font-medium text-gray-900 dark:text-white">
-                                        ${vendor.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        {symbol}{vendor.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {vendor.totalUnpaid > 0 ? (
-                                            <div className="flex items-center justify-end font-semibold text-red-600 gap-1.5 bg-red-50 px-2 py-1 rounded-md inline-flex border border-red-100 ">
+                                            <div className="items-center justify-end font-semibold text-red-600 gap-1.5 bg-red-50 px-2 py-1 rounded-md inline-flex border border-red-100 ">
                                                 <AlertCircle className="w-3.5 h-3.5" />
-                                                ${vendor.totalUnpaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                {symbol}{vendor.totalUnpaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>
                                         ) : (
                                             <span className="text-indigo-600 font-medium text-sm flex items-center justify-end gap-1">
@@ -226,6 +324,8 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
                                             size="icon"
                                             className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50/20 transition-colors"
                                             onClick={(e) => handleDeleteClick(e, vendor.id, vendor.name)}
+                                            disabled={isViewer}
+                                            title={isViewer ? "Viewers cannot delete vendors" : ""}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -234,6 +334,7 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
                             ))}
                         </TableBody>
                     </Table>
+                    </div>
                 </Card>
             )}
 
@@ -262,7 +363,7 @@ export function VendorsClient({ vendorsList }: { vendorsList: any[] }) {
                                 </div>
                                 <div className="text-sm border-t border-gray-200 dark:border-slate-700 pt-2 mt-2 flex justify-between text-gray-500 dark:text-slate-400">
                                     <span>{v.docCount} documents recorded</span>
-                                    <span>${(v.totalPaid + v.totalUnpaid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} volume</span>
+                                    <span>{symbol}{(v.totalPaid + v.totalUnpaid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} volume</span>
                                 </div>
                             </div>
                         ))}

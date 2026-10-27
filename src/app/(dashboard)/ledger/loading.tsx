@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <Skeleton className="h-9 w-48 mb-2" />
@@ -23,7 +23,7 @@ export default function Loading() {
       </div>
 
       <div className="space-y-4">
-        <Skeleton className="h-[600px] w-full rounded-xl" />
+        <Skeleton className="h-150 w-full rounded-xl" />
       </div>
     </div>
   );

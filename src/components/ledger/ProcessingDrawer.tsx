@@ -17,8 +17,10 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { updateDocument, createFund, createCategory } from "@/app/actions/ledger";
+import { updateDocument, createFund, createCategory, deleteDocument } from "@/app/actions/ledger";
 import { Loader2, Plus, Trash2 } from "lucide-react";
+import { useRole } from "@/components/RoleProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 
 interface Split {
     id: string; // temporary UI id
@@ -43,11 +45,14 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
     const [formData, setFormData] = useState<any>({});
     const [splits, setSplits] = useState<Split[]>([]);
     const [lineItems, setLineItems] = useState<any[]>([]);
+    const { isViewer } = useRole();
+    const { symbol } = useCurrency();
 
     useEffect(() => {
         if (document) {
             setFormData({
                 vendor_name: document.vendor_name || "",
+                invoice_number: document.invoice_number || "",
                 document_date: document.document_date || "",
                 amount: document.amount || 0,
                 document_type: document.document_type || "receipt",
@@ -98,7 +103,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
             validationErrors.push("Total Amount must be a valid positive number.");
         }
         if (!isValidAmount) {
-            validationErrors.push(`Split amounts ($${totalSplitAmount.toFixed(2)}) do not match the total ($${Number(formData.amount || 0).toFixed(2)}).`);
+            validationErrors.push(`Split amounts (${symbol}${totalSplitAmount.toFixed(2)}) do not match the total (${symbol}${Number(formData.amount || 0).toFixed(2)}).`);
         }
 
         // Validate each split has a fund and category selected
@@ -225,6 +230,23 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [isOpen, handleSave, isSubmitting]);
 
+    const handleDelete = async () => {
+        if (!document?.id) return;
+        if (window.confirm("Are you sure you want to permanently delete this document?")) {
+            setIsSubmitting(true);
+            try {
+                await deleteDocument(document.id);
+                toast.success("Document deleted successfully");
+                onClose();
+            } catch (error) {
+                console.error(error);
+                toast.error(error instanceof Error ? error.message : "Failed to delete document");
+            } finally {
+                setIsSubmitting(false);
+            }
+        }
+    };
+
     if (!document) return null;
 
     return (
@@ -245,7 +267,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                     {/* Left Pane - Document Viewer */}
                     <div className="border-r border-b md:border-b-0 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 flex flex-col h-[40vh] md:h-full">
                         <div className="p-4 border-b dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium text-slate-500 dark:text-slate-400 flex justify-between">
-                            <span className="truncate mr-4">Original Document: {document.image_url}</span>
+                            <span className="truncate mr-4">Original Document</span>
                             <span className="shrink-0">1 of 1 pages</span>
                         </div>
                         <div className="flex-1 flex items-center justify-center p-8 overflow-hidden">
@@ -264,7 +286,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                     />
                                 )
                             ) : (
-                                <div className="w-full h-full max-w-sm max-h-[600px] bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
+                                <div className="w-full h-full max-w-sm max-h-150 bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
                                     <div className="w-32 h-4 bg-slate-200 dark:bg-slate-800 rounded mb-8"></div>
                                     <div className="w-64 h-2 bg-slate-200 dark:bg-slate-800 rounded mb-4"></div>
                                     <div className="w-48 h-2 bg-slate-200 dark:bg-slate-800 rounded mb-4"></div>
@@ -290,8 +312,23 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                             className="dark:bg-slate-950 dark:border-slate-800"
                                             value={formData.vendor_name}
                                             onChange={e => setFormData({ ...formData, vendor_name: e.target.value })}
+                                            disabled={isViewer}
                                         />
                                     </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="invoice_number" className="dark:text-slate-300">Invoice / Ref #</Label>
+                                        <Input
+                                            id="invoice_number"
+                                            placeholder="e.g. US-001 or #1024"
+                                            className="font-mono text-sm dark:bg-slate-950 dark:border-slate-800"
+                                            value={formData.invoice_number || ""}
+                                            onChange={e => setFormData({ ...formData, invoice_number: e.target.value })}
+                                            disabled={isViewer}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="date" className="dark:text-slate-300">Date</Label>
                                         <Input
@@ -299,11 +336,9 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                             className="dark:bg-slate-950 dark:border-slate-800"
                                             value={formData.document_date}
                                             onChange={e => setFormData({ ...formData, document_date: e.target.value })}
+                                            disabled={isViewer}
                                         />
                                     </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="amount" className="dark:text-slate-300">Total Amount</Label>
                                         <Input
@@ -311,23 +346,26 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                             value={formData.amount}
                                             onChange={e => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
                                             className="text-lg font-semibold dark:bg-slate-950 dark:border-slate-800"
+                                            disabled={isViewer}
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="type" className="dark:text-slate-300">Document Type</Label>
-                                        <Select
-                                            value={formData.document_type}
-                                            onValueChange={v => setFormData({ ...formData, document_type: v })}
-                                        >
-                                            <SelectTrigger className="dark:bg-slate-950 dark:border-slate-800">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="receipt">Receipt (Paid)</SelectItem>
-                                                <SelectItem value="invoice">Invoice (Unpaid)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="type" className="dark:text-slate-300">Document Type</Label>
+                                    <Select
+                                        value={formData.document_type}
+                                        onValueChange={v => setFormData({ ...formData, document_type: v })}
+                                        disabled={isViewer}
+                                    >
+                                        <SelectTrigger className="dark:bg-slate-950 dark:border-slate-800">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="receipt">Receipt (Paid)</SelectItem>
+                                            <SelectItem value="invoice">Invoice (Unpaid)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
 
@@ -335,7 +373,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Split Categorization</h3>
                                     <span className={`text-xs font-mono font-semibold ${isValidAmount ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-500 dark:text-rose-400'}`}>
-                                        Allocated: ${totalSplitAmount.toFixed(2)} / ${Number(formData.amount || 0).toFixed(2)}
+                                        Allocated: {symbol}{totalSplitAmount.toFixed(2)} / {symbol}{Number(formData.amount || 0).toFixed(2)}
                                     </span>
                                 </div>
 
@@ -346,35 +384,35 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         )}
-                                        <div className="grid grid-cols-3 gap-3">
-                                            <div className="space-y-1">
+                                        <div className="grid grid-cols-[1fr_2fr_2fr] gap-4 items-start w-full">
+                                            <div className="space-y-1 w-full min-w-0">
                                                 <Label className="text-xs dark:text-slate-300">Amount</Label>
-                                                <Input className="dark:bg-slate-900 dark:border-slate-800" type="number" value={split.amount} onChange={e => updateSplit(split.id, "amount", e.target.value)} />
+                                                <Input className="w-full dark:bg-slate-900 dark:border-slate-800" type="number" value={split.amount} onChange={e => updateSplit(split.id, "amount", e.target.value)} />
                                             </div>
-                                            <div className="space-y-1">
+                                            <div className="space-y-1 w-full min-w-0">
                                                 <Label className="text-xs dark:text-slate-300">Fund</Label>
                                                 <Select value={split.fund_id || undefined} onValueChange={v => updateSplit(split.id, "fund_id", v)}>
-                                                    <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800"><SelectValue placeholder="Fund..." /></SelectTrigger>
+                                                    <SelectTrigger className="w-full dark:bg-slate-900 dark:border-slate-800 [&>span]:truncate text-left"><SelectValue placeholder="Fund..." /></SelectTrigger>
                                                     <SelectContent>
                                                         {funds.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
                                                         <SelectItem value="custom" className="text-indigo-600 dark:text-indigo-400 font-medium">+ Custom</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 {split.fund_id === "custom" && (
-                                                    <Input className="mt-1 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-900/30" placeholder="New fund name..." value={split.customFundName || ""} onChange={e => updateSplit(split.id, "customFundName", e.target.value)} />
+                                                    <Input className="mt-1 w-full bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-900/30" placeholder="New fund name..." value={split.customFundName || ""} onChange={e => updateSplit(split.id, "customFundName", e.target.value)} />
                                                 )}
                                             </div>
-                                            <div className="space-y-1">
+                                            <div className="space-y-1 w-full min-w-0">
                                                 <Label className="text-xs dark:text-slate-300">Category</Label>
                                                 <Select value={split.category_id || undefined} onValueChange={v => updateSplit(split.id, "category_id", v)}>
-                                                    <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800"><SelectValue placeholder="Category..." /></SelectTrigger>
+                                                    <SelectTrigger className="w-full dark:bg-slate-900 dark:border-slate-800 [&>span]:truncate text-left"><SelectValue placeholder="Category..." /></SelectTrigger>
                                                     <SelectContent>
                                                         {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                                         <SelectItem value="custom" className="text-indigo-600 dark:text-indigo-400 font-medium">+ Custom</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 {split.category_id === "custom" && (
-                                                    <Input className="mt-1 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-900/30" placeholder="New category name..." value={split.customCategoryName || ""} onChange={e => updateSplit(split.id, "customCategoryName", e.target.value)} />
+                                                    <Input className="mt-1 w-full bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-900/30" placeholder="New category name..." value={split.customCategoryName || ""} onChange={e => updateSplit(split.id, "customCategoryName", e.target.value)} />
                                                 )}
                                             </div>
                                         </div>
@@ -388,21 +426,21 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
 
                             <div className="pt-8 mb-4">
                                 <div className="flex items-center justify-between mb-5">
-                                    <h3 className="text-sm font-[600] text-[#0f172a] dark:text-slate-200 tracking-wide uppercase">LINE ITEMS</h3>
+                                    <h3 className="text-sm font-semibold text-[#0f172a] dark:text-slate-200 tracking-wide uppercase">LINE ITEMS</h3>
                                     <button
                                         type="button"
                                         onClick={() => setLineItems([...lineItems, { description: "", quantity: 1, unit_price: 0, total: 0 }])}
-                                        className="text-[#3b27b9] dark:text-[#818cf8] hover:text-[#2d1b96] dark:hover:text-[#6366f1] text-[14px] font-[500] flex items-center"
+                                        className="text-[#3b27b9] dark:text-[#818cf8] hover:text-[#2d1b96] dark:hover:text-[#6366f1] text-[14px] font-medium flex items-center"
                                     >
-                                        <Plus className="w-4 h-4 mr-1 stroke-[2]" /> Add item
+                                        <Plus className="w-4 h-4 mr-1 stroke-2" /> Add item
                                     </button>
                                 </div>
 
                                 <div className="space-y-0 relative">
-                                    <div className="grid grid-cols-[60px_1fr_100px_100px_32px] gap-2 py-[10px] border-y border-[#e2e8f0] dark:border-slate-800 text-[13px] font-[600] text-[#94a3b8] dark:text-slate-400 mb-2 items-center">
+                                    <div className="grid grid-cols-[60px_1fr_100px_100px_32px] gap-2 py-2.5 border-y border-[#e2e8f0] dark:border-slate-800 text-[13px] font-semibold text-[#94a3b8] dark:text-slate-400 mb-2 items-center">
                                         <div className="text-center">Qty</div>
                                         <div>Description</div>
-                                        <div className="text-right">Unit $</div>
+                                        <div className="text-right">Unit {symbol}</div>
                                         <div className="text-right">Total</div>
                                         <div></div>
                                     </div>
@@ -419,7 +457,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                         newItems[idx].total = newItems[idx].quantity * newItems[idx].unit_price;
                                                         setLineItems(newItems);
                                                     }}
-                                                    className="bg-transparent border border-transparent rounded-[6px] h-[36px] px-1 text-[14px] text-center text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
+                                                    className="bg-transparent border border-transparent rounded-[6px] h-9 px-1 text-[14px] text-center text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
                                                     placeholder="0"
                                                 />
                                                 <input
@@ -429,7 +467,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                         newItems[idx].description = e.target.value;
                                                         setLineItems(newItems);
                                                     }}
-                                                    className="bg-transparent border border-transparent rounded-[6px] h-[36px] px-2 text-[14px] text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
+                                                    className="bg-transparent border border-transparent rounded-[6px] h-9 px-2 text-[14px] text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
                                                     placeholder="Item description"
                                                 />
                                                 <input
@@ -441,10 +479,10 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                         newItems[idx].total = newItems[idx].quantity * newItems[idx].unit_price;
                                                         setLineItems(newItems);
                                                     }}
-                                                    className="bg-transparent border border-transparent rounded-[6px] h-[36px] px-1 text-[14px] text-right text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
+                                                    className="bg-transparent border border-transparent rounded-[6px] h-9 px-1 text-[14px] text-right text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
                                                     placeholder="0.00"
                                                 />
-                                                <div className="font-[500] text-[#1e293b] dark:text-slate-300 text-[14px] text-right pr-2">
+                                                <div className="font-medium text-[#1e293b] dark:text-slate-300 text-[14px] text-right pr-2">
                                                     {(Number(item.total) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </div>
                                                 <button
@@ -452,7 +490,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                     className="text-[#cbd5e1] dark:text-slate-600 hover:text-rose-500 dark:hover:text-rose-400 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100"
                                                     title="Remove item"
                                                 >
-                                                    <Trash2 className="w-[16px] h-[16px]" strokeWidth={2} />
+                                                    <Trash2 className="w-4 h-4" strokeWidth={2} />
                                                 </button>
                                             </div>
                                         ))}
@@ -465,10 +503,10 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                     )}
 
                                     <div className="flex flex-col items-end pt-5 mt-4 border-t border-[#f1f5f9] dark:border-slate-800 gap-2">
-                                        <div className="grid grid-cols-[1fr_100px] gap-2 items-center w-[250px]">
-                                            <div className="text-[14px] font-[600] text-[#0f172a] dark:text-slate-200 text-right">Total:</div>
-                                            <div className="text-[15px] font-[600] text-[#0f172a] dark:text-slate-200 text-right pr-8">
-                                                ${(lineItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        <div className="grid grid-cols-[1fr_100px] gap-2 items-center w-64">
+                                            <div className="text-[14px] font-semibold text-[#0f172a] dark:text-slate-200 text-right">Total:</div>
+                                            <div className="text-[15px] font-semibold text-[#0f172a] dark:text-slate-200 text-right pr-8">
+                                                {symbol}{(lineItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>
                                         </div>
                                     </div>
@@ -478,18 +516,32 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                         </div>
 
                         {/* Pinned Action Buttons Footer */}
-                        <div className="p-4 border-t dark:border-slate-800 bg-slate-50 dark:bg-slate-950 shrink-0 flex gap-3 mt-auto">
-                            <Button variant="outline" className="flex-1 bg-white dark:bg-slate-900 dark:border-slate-700" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+                        <div className="p-4 border-t dark:border-slate-800 bg-slate-50 dark:bg-slate-950 shrink-0 flex gap-3 mt-auto justify-between items-center w-full">
                             <Button
-                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white"
-                                onClick={handleSave}
-                                disabled={isSubmitting}
-                                title="Cmd/Ctrl + Enter to Save"
+                                id="drawer-delete-btn"
+                                variant="destructive"
+                                className="bg-red-600 hover:bg-red-700 dark:bg-red-750 dark:hover:bg-red-700 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all px-4"
+                                onClick={handleDelete}
+                                disabled={isSubmitting || isViewer}
+                                title={isViewer ? "Viewers cannot delete documents" : ""}
                             >
-                                {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                                {document.status === "awaiting_payment" ? "Mark as Paid" : "Approve & Next"}
-                                <span className="ml-2 py-0.5 px-1.5 bg-indigo-800 text-indigo-100 rounded text-[10px] font-mono opacity-80 border border-indigo-900 shadow-inner tracking-wider">⌘↵</span>
+                                {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                                Delete Document
                             </Button>
+                            <div className="flex gap-3">
+                                <Button id="drawer-cancel-btn" variant="outline" className="bg-white dark:bg-slate-900 dark:border-slate-700 cursor-pointer rounded-xl active:scale-[0.98] transition-all" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+                                <Button
+                                    id="drawer-save-btn"
+                                    className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all"
+                                    onClick={handleSave}
+                                    disabled={isSubmitting || isViewer}
+                                    title={isViewer ? "Viewers cannot edit documents" : "Cmd/Ctrl + Enter to Save"}
+                                >
+                                    {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                                    {document.status === "awaiting_payment" ? "Mark as Paid" : "Approve & Next"}
+                                    <span className="ml-2 py-0.5 px-1.5 bg-indigo-800 text-indigo-100 rounded text-[10px] font-mono opacity-80 border border-indigo-900 shadow-inner tracking-wider">⌘↵</span>
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>

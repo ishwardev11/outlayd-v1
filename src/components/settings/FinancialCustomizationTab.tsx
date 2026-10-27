@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Plus, Trash2 } from "lucide-react"
+import { useRole } from "@/components/RoleProvider"
+import { Fund, Category } from "./SettingsLayout"
 
-export function FinancialCustomizationTab({ initialFunds, initialCategories }: { initialFunds: any[], initialCategories: any[] }) {
+export function FinancialCustomizationTab({ initialFunds, initialCategories }: { initialFunds: Fund[], initialCategories: Category[] }) {
+    const { isViewer } = useRole()
     const [isSavingFund, setIsSavingFund] = useState(false)
     const [isSavingCategory, setIsSavingCategory] = useState(false)
     const [newFundName, setNewFundName] = useState("")
@@ -80,7 +83,7 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
                             className="bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
                         />
                     </div>
-                    <Button type="submit" disabled={isSavingFund} className="bg-indigo-600 hover:bg-indigo-700">
+                    <Button type="submit" disabled={isSavingFund || isViewer} title={isViewer ? "Viewers cannot add funds" : ""} className="bg-indigo-600 hover:bg-indigo-700">
                         {isSavingFund ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
                         Add Fund
                     </Button>
@@ -105,6 +108,8 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => handleDeleteFund(fund.id, fund.name)}
+                                            disabled={isViewer}
+                                            title={isViewer ? "Viewers cannot delete funds" : ""}
                                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
                                             <Trash2 className="w-4 h-4 mr-2" />
@@ -132,7 +137,7 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
                             className="bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
                         />
                     </div>
-                    <Button type="submit" disabled={isSavingCategory} className="bg-indigo-600 hover:bg-indigo-700">
+                    <Button type="submit" disabled={isSavingCategory || isViewer} title={isViewer ? "Viewers cannot add categories" : ""} className="bg-indigo-600 hover:bg-indigo-700">
                         {isSavingCategory ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
                         Add Category
                     </Button>
@@ -157,6 +162,8 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                                            disabled={isViewer}
+                                            title={isViewer ? "Viewers cannot delete categories" : ""}
                                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
                                             <Trash2 className="w-4 h-4 mr-2" />

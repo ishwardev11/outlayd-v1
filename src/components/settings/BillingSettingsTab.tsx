@@ -4,10 +4,14 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Check, CreditCard, Loader2, Sparkles, ExternalLink } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
+import { useRole } from "@/components/RoleProvider"
 
-export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
+import { OrgSettings } from "./SettingsLayout"
+
+export function BillingSettingsTab({ orgSettings }: { orgSettings: OrgSettings | null }) {
     const [isLoading, setIsLoading] = useState(false)
     const [isPortalLoading, setIsPortalLoading] = useState(false)
+    const { isAdmin } = useRole()
 
     const isPro = orgSettings?.subscription_status === 'pro';
 
@@ -51,9 +55,14 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
             } else {
                 throw new Error(data.error || 'Failed to open billing portal');
             }
-        } catch (error: any) {
-            console.error('Portal error:', error);
-            alert(error.message || 'Failed to open billing portal. Please try again.');
+        } catch (error: unknown) {
+            const err = error as Error;
+            console.error('Portal error:', err);
+            
+            alert(err.message || 'Failed to open billing portal. Please try again.');
+            if (err.message && err.message.toLowerCase().includes('reset')) {
+                window.location.reload();
+            }
             setIsPortalLoading(false);
         }
     };
@@ -77,7 +86,7 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
                         <div>
                             <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Current Plan</p>
                             <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
-                                {isPro ? "Pro Tier" : "Free Tier"}
+                                {isPro ? "Growth Tier" : "Free Tier"}
                             </h3>
                         </div>
                         {isPro && (
@@ -102,26 +111,31 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
                             </p>
                             <Button 
                                 onClick={handleUpgrade}
-                                disabled={isLoading}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                                disabled={isLoading || !isAdmin}
+                                title={!isAdmin ? "Only organization admins can upgrade the plan" : ""}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
                             >
                                 {isLoading ? (
                                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
                                 ) : (
-                                    <><Sparkles className="w-4 h-4 mr-2" /> Upgrade to Pro - $20/mo</>
+                                    <><Sparkles className="w-4 h-4 mr-2" /> Upgrade to Growth - RM89/mo</>
                                 )}
                             </Button>
+                            {!isAdmin && (
+                                <p className="text-xs text-center mt-3 text-slate-400">Only Admins can upgrade.</p>
+                            )}
                         </>
                     ) : (
                         <>
                             <p className="text-slate-600 dark:text-slate-300 mb-6">
-                                You have unlimited access to all Pro features.
+                                You have unlimited access to all Growth features.
                             </p>
                             <Button
                                 onClick={handleManageSubscription}
-                                disabled={isPortalLoading}
+                                disabled={isPortalLoading || !isAdmin}
+                                title={!isAdmin ? "Only organization admins can manage subscriptions" : ""}
                                 variant="outline"
-                                className="w-full border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-300"
+                                className="w-full border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-300 disabled:opacity-50"
                             >
                                 {isPortalLoading ? (
                                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Redirecting...</>
@@ -129,6 +143,9 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
                                     <><ExternalLink className="w-4 h-4 mr-2" />Manage Subscription</>
                                 )}
                             </Button>
+                            {!isAdmin && (
+                                <p className="text-xs text-center mt-3 text-slate-400">Only Admins can manage billing.</p>
+                            )}
                         </>
                     )}
                 </div>
@@ -137,7 +154,7 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: any }) {
                 {!isPro && (
                     <div className="bg-indigo-50 dark:bg-indigo-950/30 p-6 rounded-xl border border-indigo-100 dark:border-indigo-900">
                         <h3 className="font-semibold text-indigo-900 dark:text-indigo-300 mb-4">
-                            Pro Tier Includes:
+                            Growth Tier Includes:
                         </h3>
                         <ul className="space-y-3">
                             <li className="flex items-start">

@@ -28,7 +28,7 @@ export default async function ProcurementDetailPage({ params }: { params: Promis
         .order("created_at", { ascending: false })
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-6 animate-in fade-in">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 animate-in fade-in">
             <Link
                 href="/procurement"
                 className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"

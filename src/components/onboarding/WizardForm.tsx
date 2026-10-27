@@ -30,10 +30,9 @@ export default function WizardForm() {
 
     const [formData, setFormData] = useState<FormData>({
         orgName: "",
-        baseCurrency: "USD",
+        baseCurrency: "MYR",
         fiscalYearStart: "1",
         templateChoice: "",
-        // invites: [{ email: "", role: "Viewer" }, { email: "", role: "Viewer" }],
     });
 
     const updateFormData = <K extends keyof FormData>(field: K, value: FormData[K]) => {
@@ -108,21 +107,21 @@ export default function WizardForm() {
             {/* Progress Indicator */}
             <div className="mb-8">
                 <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-slate-500">Step {step} of 2</span>
-                    <span className="text-sm font-medium text-slate-900">
+                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Step {step} of 2</span>
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">
                         {step === 1 ? "Organization Profile" : "Starter Templates"}
                     </span>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div className="w-full bg-slate-100 dark:bg-slate-900 rounded-full h-2 overflow-hidden">
                     <div
-                        className="bg-indigo-600 h-2 transition-all duration-500 ease-in-out"
+                        className="bg-indigo-600 dark:bg-indigo-500 h-2 transition-all duration-500 ease-in-out"
                         style={{ width: `${(step / 2) * 100}%` }}
                     />
                 </div>
             </div>
 
             {/* Form Content */}
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 min-h-[400px] relative overflow-hidden">
+            <div className="bg-white dark:bg-slate-950 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800/80 p-8 min-h-100 relative overflow-hidden backdrop-blur-md">
                 <AnimatePresence mode="wait" custom={direction}>
                     {step === 1 && (
                         <motion.div
@@ -136,31 +135,34 @@ export default function WizardForm() {
                             className="space-y-6"
                         >
                             <div className="mb-8">
-                                <h2 className="text-2xl font-semibold text-slate-900">Tell us about your organization</h2>
-                                <p className="text-slate-500 mt-1">This will be used for your main profile and reporting.</p>
+                                <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Tell us about your organization</h2>
+                                <p className="text-slate-500 dark:text-slate-400 mt-1">This will be used for your main profile and reporting.</p>
                             </div>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Organization Legal Name *</label>
+                                    <label htmlFor="org-name-input" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Organization Legal Name *</label>
                                     <input
+                                        id="org-name-input"
                                         type="text"
                                         required
                                         value={formData.orgName}
                                         onChange={(e) => updateFormData("orgName", e.target.value)}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-900 placeholder:text-slate-400"
+                                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400"
                                         placeholder="e.g. Hope Foundation"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Base Currency</label>
-                                        <select
+                                        <label htmlFor="currency-select" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Base Currency</label>
+                                         <select
+                                            id="currency-select"
                                             value={formData.baseCurrency}
                                             onChange={(e) => updateFormData("baseCurrency", e.target.value)}
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white text-slate-900"
+                                            className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 dark:text-white"
                                         >
+                                            <option value="MYR">MYR (RM)</option>
                                             <option value="USD">USD ($)</option>
                                             <option value="EUR">EUR (€)</option>
                                             <option value="GBP">GBP (£)</option>
@@ -169,11 +171,12 @@ export default function WizardForm() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Fiscal Year Start Month</label>
+                                        <label htmlFor="fiscal-month-select" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fiscal Year Start Month</label>
                                         <select
+                                            id="fiscal-month-select"
                                             value={formData.fiscalYearStart}
                                             onChange={(e) => updateFormData("fiscalYearStart", e.target.value)}
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white text-slate-900"
+                                            className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 dark:text-white"
                                         >
                                             <option value="1">January</option>
                                             <option value="4">April</option>
@@ -186,9 +189,10 @@ export default function WizardForm() {
 
                             <div className="pt-6 flex justify-end">
                                 <Button
+                                    id="wizard-continue-btn"
                                     onClick={nextStep}
                                     disabled={!formData.orgName.trim()}
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer transition-all duration-200 active:scale-[0.98]"
                                 >
                                     Continue <ArrowRight className="ml-2 w-4 h-4" />
                                 </Button>
@@ -208,68 +212,72 @@ export default function WizardForm() {
                             className="space-y-6"
                         >
                             <div className="mb-8">
-                                <h2 className="text-2xl font-semibold text-slate-900">Choose a Starter Template</h2>
-                                <p className="text-slate-500 mt-1">We&apos;ll configure your default categories and funds based on your choice.</p>
+                                <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Choose a Starter Template</h2>
+                                <p className="text-slate-500 dark:text-slate-400 mt-1">We&apos;ll configure your default categories and funds based on your choice.</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {/* Card 1 */}
                                 <button
+                                    id="template-digital-agency-btn"
                                     onClick={() => updateFormData("templateChoice", "digital_agency")}
-                                    className={`relative p-6 text-left rounded-xl border-2 transition-all ${formData.templateChoice === "digital_agency"
-                                        ? "border-indigo-600 bg-indigo-50 shadow-sm"
-                                        : "border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm"
+                                    className={`relative p-6 text-left rounded-xl border-2 transition-all duration-200 active:scale-[0.98] cursor-pointer ${formData.templateChoice === "digital_agency"
+                                        ? "border-indigo-600 dark:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-md"
+                                        : "border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm"
                                         }`}
                                 >
                                     {formData.templateChoice === "digital_agency" && (
-                                        <CheckCircle2 className="absolute top-4 right-4 text-indigo-600 w-5 h-5" />
+                                        <CheckCircle2 className="absolute top-4 right-4 text-indigo-600 dark:text-indigo-400 w-5 h-5" />
                                     )}
-                                    <Building2 className={`w-8 h-8 mb-4 ${formData.templateChoice === "digital_agency" ? "text-indigo-600" : "text-slate-400"}`} />
-                                    <h3 className="font-semibold text-slate-900 mb-2">Digital Agency & SaaS</h3>
-                                    <p className="text-sm text-slate-500 line-clamp-3">Standard B2B categories for software, marketing, and professional services.</p>
+                                    <Building2 className={`w-8 h-8 mb-4 ${formData.templateChoice === "digital_agency" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`} />
+                                    <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Digital Agency & SaaS</h3>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3">Standard B2B categories for software, marketing, and professional services.</p>
                                 </button>
 
                                 {/* Card 2 */}
                                 <button
+                                    id="template-ecommerce-btn"
                                     onClick={() => updateFormData("templateChoice", "ecommerce")}
-                                    className={`relative p-6 text-left rounded-xl border-2 transition-all ${formData.templateChoice === "ecommerce"
-                                        ? "border-indigo-600 bg-indigo-50 shadow-sm"
-                                        : "border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm"
+                                    className={`relative p-6 text-left rounded-xl border-2 transition-all duration-200 active:scale-[0.98] cursor-pointer ${formData.templateChoice === "ecommerce"
+                                        ? "border-indigo-600 dark:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-md"
+                                        : "border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm"
                                         }`}
                                 >
                                     {formData.templateChoice === "ecommerce" && (
-                                        <CheckCircle2 className="absolute top-4 right-4 text-indigo-600 w-5 h-5" />
+                                        <CheckCircle2 className="absolute top-4 right-4 text-indigo-600 dark:text-indigo-400 w-5 h-5" />
                                     )}
-                                    <Church className={`w-8 h-8 mb-4 ${formData.templateChoice === "ecommerce" ? "text-indigo-600" : "text-slate-400"}`} />
-                                    <h3 className="font-semibold text-slate-900 mb-2">E-Commerce & Retail</h3>
-                                    <p className="text-sm text-slate-500 line-clamp-3">Optimized for inventory, shipping, and merchant fees.</p>
+                                    <Church className={`w-8 h-8 mb-4 ${formData.templateChoice === "ecommerce" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`} />
+                                    <h3 className="font-semibold text-slate-900 dark:text-white mb-2">E-Commerce & Retail</h3>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3">Optimized for inventory, shipping, and merchant fees.</p>
                                 </button>
 
                                 {/* Card 3 */}
                                 <button
+                                    id="template-non-profit-btn"
                                     onClick={() => updateFormData("templateChoice", "non_profit")}
-                                    className={`relative p-6 text-left rounded-xl border-2 transition-all ${formData.templateChoice === "non_profit"
-                                        ? "border-indigo-600 bg-indigo-50 shadow-sm"
-                                        : "border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm"
+                                    className={`relative p-6 text-left rounded-xl border-2 transition-all duration-200 active:scale-[0.98] cursor-pointer ${formData.templateChoice === "non_profit"
+                                        ? "border-indigo-600 dark:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-md"
+                                        : "border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm"
                                         }`}
                                 >
                                     {formData.templateChoice === "non_profit" && (
-                                        <CheckCircle2 className="absolute top-4 right-4 text-indigo-600 w-5 h-5" />
+                                        <CheckCircle2 className="absolute top-4 right-4 text-indigo-600 dark:text-indigo-400 w-5 h-5" />
                                     )}
-                                    <Users className={`w-8 h-8 mb-4 ${formData.templateChoice === "non_profit" ? "text-indigo-600" : "text-slate-400"}`} />
-                                    <h3 className="font-semibold text-slate-900 mb-2">Non-Profit Organization</h3>
-                                    <p className="text-sm text-slate-500 line-clamp-3">Built for compliance with grant tracking and fundraising expenses.</p>
+                                    <Users className={`w-8 h-8 mb-4 ${formData.templateChoice === "non_profit" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`} />
+                                    <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Non-Profit Org</h3>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3">Built for compliance with grant tracking and fundraising expenses.</p>
                                 </button>
                             </div>
 
                             <div className="pt-6 flex justify-between items-center">
-                                <Button variant="ghost" onClick={prevStep} className="text-slate-500 hover:text-slate-900">
+                                <Button id="wizard-back-btn" variant="ghost" onClick={prevStep} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer active:scale-[0.98]">
                                     <ArrowLeft className="mr-2 w-4 h-4" /> Back
                                 </Button>
                                 <Button
+                                    id="wizard-complete-btn"
                                     onClick={handleSubmit}
                                     disabled={!formData.templateChoice || isSubmitting}
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[240px]"
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-60 cursor-pointer transition-all duration-200 active:scale-[0.98]"
                                 >
                                     {isSubmitting ? (
                                         <div className="flex items-center">
@@ -284,10 +292,6 @@ export default function WizardForm() {
                             </div>
                         </motion.div>
                     )}
-
-                    {/* {step === 3 && (
-                        ...
-                    )} */}
                 </AnimatePresence>
             </div>
         </div>

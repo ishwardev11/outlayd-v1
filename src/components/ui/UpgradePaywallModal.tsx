@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { CheckCircle2, LockKeyhole } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
-type PaywallContext = "upload_limit" | "procurement";
+type PaywallContext = "upload_limit" | "procurement" | "team_limit";
 
 interface UpgradePaywallModalProps {
     isOpen: boolean;
@@ -17,19 +18,30 @@ const COPY: Record<PaywallContext, { heading: string; subtext: string }> = {
     upload_limit: {
         heading: "You've reached your free limit!",
         subtext:
-            "Your organization has successfully processed 5 free documents. To keep automating your ledger and generating audit-ready reports, upgrade to our Pro Tier.",
+            "Your organization has successfully processed 5 free documents. To keep automating your ledger and generating audit-ready reports, upgrade to our Growth Tier.",
     },
     procurement: {
-        heading: "Procurement is a Pro Feature",
+        heading: "Procurement is a Growth Feature",
         subtext:
-            "The full Procurement pipeline — RFP management, vendor bidding, and AI-powered quote evaluation — is exclusive to Outlayd Pro. Upgrade to unlock it today.",
+            "The full Procurement pipeline — RFP management, vendor bidding, and AI-powered quote evaluation — is exclusive to Outlayd Growth. Upgrade to unlock it today.",
+    },
+    team_limit: {
+        heading: "Collaborate with your whole team",
+        subtext:
+            "Your Free Tier limit is 1 user. Upgrade to the Growth Tier to unlock up to 5 member seats, real-time collaboration, and custom permissions.",
     },
 };
 
 export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upload_limit" }: UpgradePaywallModalProps) {
     const [isLoading, setIsLoading] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     if (!isOpen) return null;
+    if (!mounted) return null;
 
     const { heading, subtext } = COPY[context];
 
@@ -37,18 +49,15 @@ export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upl
         setIsLoading(true);
         try {
             const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-            let orgId = null;
-
-            if (session?.access_token) {
-                const jwtPayload = JSON.parse(Buffer.from(session.access_token.split('.')[1], 'base64').toString());
-                orgId = jwtPayload.organization_id;
-            }
-
-            if (!orgId) {
-                const { data: { user } } = await supabase.auth.getUser();
-                orgId = user?.user_metadata?.organization_id;
-            }
+            const { data: { user } } = await supabase.auth.getUser();
+            const getActiveOrgId = (u: any) => {
+                if (typeof document === "undefined") return u?.user_metadata?.organization_id;
+                const cookies = document.cookie.split("; ");
+                const activeOrgCookie = cookies.find((row) => row.trim().startsWith("active_org_id="));
+                if (activeOrgCookie) return activeOrgCookie.split("=")[1];
+                return u?.user_metadata?.organization_id;
+            };
+            const orgId = getActiveOrgId(user) || null;
 
             const response = await fetch('/api/create-checkout-session', {
                 method: 'POST',
@@ -71,18 +80,18 @@ export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upl
         }
     };
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
                 onClick={onClose}
             />
 
             {/* Modal Card */}
-            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-8 animate-in zoom-in-95 duration-200">
+            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-8 animate-in zoom-in-95 duration-200">
                 {/* Icon */}
-                <div className="mx-auto w-16 h-16 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mb-6">
+                <div className="mx-auto w-16 h-16 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/20 rounded-full flex items-center justify-center mb-6">
                     <LockKeyhole className="w-8 h-8" />
                 </div>
 
@@ -123,18 +132,23 @@ export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upl
                     <button
                         disabled={isLoading}
                         onClick={onUpgrade || handleCheckout}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl transition-colors shadow-sm disabled:opacity-75 disabled:cursor-not-allowed"
+                        className={`w-full font-semibold py-3 px-4 rounded-xl transition-colors shadow-sm disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer ${
+                            context === "team_limit"
+                                ? "bg-amber-500 hover:bg-amber-600 text-slate-950 dark:bg-amber-500 dark:hover:bg-amber-600 dark:text-slate-950 shadow-amber-500/10"
+                                : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/10"
+                        }`}
                     >
-                        {isLoading ? "Redirecting..." : "Upgrade to Pro — $20/mo"}
+                        {isLoading ? "Redirecting..." : "Upgrade to Growth — RM89/mo"}
                     </button>
                     <button
                         onClick={onClose}
-                        className="w-full bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium py-3 px-4 rounded-xl transition-colors"
+                        className="w-full bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium py-3 px-4 rounded-xl transition-colors cursor-pointer"
                     >
                         Maybe later
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
