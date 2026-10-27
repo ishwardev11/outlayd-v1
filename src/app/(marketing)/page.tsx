@@ -157,20 +157,20 @@ function HeroSection() {
                             Built for SMEs &amp; nonprofits • Early access open
                         </div>
 
-                        <h1 className="text-5xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 ease-out fill-mode-both">
-                            Expense management <br /><span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-cyan-400">built for SMEs and nonprofits.</span>
+                        <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight mb-4 sm:mb-6 leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 ease-out fill-mode-both">
+                            Expense management <br className="hidden sm:block" /><span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-cyan-400">built for SMEs and nonprofits.</span>
                         </h1>
 
-                        <p className="text-lg text-slate-400 mb-8 max-w-xl mx-auto lg:mx-0 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 ease-out fill-mode-both">
+                        <p className="text-base sm:text-lg text-slate-400 mb-6 sm:mb-8 max-w-xl mx-auto lg:mx-0 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 ease-out fill-mode-both">
                             Whether you&apos;re a nonprofit juggling grant reporting and receipts, or a small business tired of spreadsheet chaos — Outlayd uses AI to turn messy paperwork into an audit-ready ledger.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 ease-out fill-mode-both">
-                            <Link href="/signup" id="hero-signup-btn" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-full font-medium transition-all shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] active:scale-95 cursor-pointer">
+                        <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 justify-center lg:justify-start animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 ease-out fill-mode-both w-full sm:w-auto">
+                            <Link href="/signup" id="hero-signup-btn" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full font-medium transition-all shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] active:scale-95 cursor-pointer">
                                 Automate Your Ledger
                                 <ArrowRight className="w-4 h-4" />
                             </Link>
-                            <Link href="/#pricing" id="hero-pricing-btn" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-full font-medium transition-all active:scale-95 cursor-pointer">
+                            <Link href="/#pricing" id="hero-pricing-btn" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 px-6 sm:px-8 py-3 sm:py-4 rounded-full font-medium transition-all active:scale-95 cursor-pointer">
                                 View Pricing
                             </Link>
                         </div>
@@ -195,14 +195,14 @@ function PartnersSection() {
     ];
 
     return (
-        <section className="py-10 border-y border-white/5 bg-white/2">
-            <div className="container mx-auto px-4 text-center">
-                <p className="text-sm font-medium text-slate-400 mb-8 uppercase tracking-widest">Built on modern, reliable infrastructure</p>
-                <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+        <section className="py-6 sm:py-10 border-y border-white/5 bg-white/2">
+            <div className="container mx-auto px-3 sm:px-4 text-center">
+                <p className="text-xs sm:text-sm font-medium text-slate-400 mb-6 sm:mb-8 uppercase tracking-widest">Built on modern, reliable infrastructure</p>
+                <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
                     {techStack.map((tech, i) => (
-                        <div key={i} className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors duration-300">
-                            {tech.icon}
-                            <span className="text-lg font-bold tracking-tighter">{tech.name}</span>
+                        <div key={i} className="flex items-center gap-1.5 sm:gap-2 text-slate-300 hover:text-white transition-colors duration-300">
+                            <div className="w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">{tech.icon}</div>
+                            <span className="text-base sm:text-lg font-bold tracking-tighter">{tech.name}</span>
                         </div>
                     ))}
                 </div>
@@ -213,19 +213,18 @@ function PartnersSection() {
 
 function BenefitsSection() {
     return (
-        <section id="services" className="py-24 px-4">
+        <section id="services" className="py-16 sm:py-24 px-3 sm:px-4">
             <div className="container mx-auto max-w-6xl">
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl lg:text-5xl font-bold tracking-tight mb-4">Tailored for small businesses &amp; nonprofits</h2>
-                    <p className="text-slate-400 text-lg max-w-2xl mx-auto">Focus on your core mission while Outlayd handles receipt scanning, fund tracking, and vendor approvals.</p>
+                <div className="text-center mb-10 sm:mb-16">
+                    <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight mb-3 sm:mb-4">Tailored for small businesses &amp; nonprofits</h2>
+                    <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">Focus on your core mission while Outlayd handles receipt scanning, fund tracking, and vendor approvals.</p>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
                     {/* Bento Box 1 - Large */}
                     <motion.div
                         initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
-                        className="md:col-span-2 bg-linear-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
-                    >
+                        className="md:col-span-2 bg-linear-to-br from-slate-900 to-slate-950 border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 relative overflow-hidden group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
                         <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-110 transition-transform duration-700">
                             <Zap className="w-32 h-32 text-indigo-500" />
                         </div>
@@ -347,17 +346,17 @@ function HowItWorksSection() {
     ];
 
     return (
-        <section id="how-it-works" className="py-24 px-4 bg-slate-900/50 border-y border-white/5">
+        <section id="how-it-works" className="py-16 sm:py-24 px-3 sm:px-4 bg-slate-900/50 border-y border-white/5">
             <div className="container mx-auto max-w-5xl">
-                <div className="text-center mb-12 sm:mb-16">
+                <div className="text-center mb-10 sm:mb-12 lg:mb-16">
                     <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">How it works?</h2>
-                    <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+                    <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">
                         See how you can go from raw invoice PDF to a clean spend ledger in under 2 minutes.
                     </p>
                 </div>
 
                 {/* Video Player */}
-                <div className="max-w-4xl mx-auto mb-16 sm:mb-20">
+                <div className="max-w-4xl mx-auto mb-12 sm:mb-16 lg:mb-20">
                     <video
                         ref={videoRef}
                         src="/demo.mp4"
@@ -367,7 +366,7 @@ function HowItWorksSection() {
                         playsInline
                         controls
                         preload="auto"
-                        className="w-full"
+                        className="w-full rounded-lg sm:rounded-xl"
                     />
                 </div>
 
