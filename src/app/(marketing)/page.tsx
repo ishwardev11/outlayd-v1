@@ -82,13 +82,13 @@ export function Navbar() {
     };
 
     return (
-        <header className="sticky top-4 z-50 mx-auto max-w-6xl w-[calc(100%-2rem)] border border-white/10 bg-slate-950/80 backdrop-blur-md rounded-2xl shadow-lg shadow-black/40">
-            <div className="px-6 h-16 flex items-center justify-between">
+        <header className="sticky top-2 sm:top-4 z-50 mx-auto max-w-6xl w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] border border-white/10 bg-slate-950/80 backdrop-blur-md rounded-2xl shadow-lg shadow-black/40">
+            <div className="px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
                 <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                    <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-                        <Receipt className="h-5 w-5 text-white" />
+                    <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+                        <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
-                    <span className="text-xl font-bold tracking-tight">Outlayd</span>
+                    <span className="text-lg sm:text-xl font-bold tracking-tight">Outlayd</span>
                 </Link>
 
                 <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
@@ -103,7 +103,7 @@ export function Navbar() {
                     <Link href="/login" id="nav-login-btn" className="text-sm font-medium text-slate-300 hover:text-white transition-colors hidden sm:block">
                         Log in
                     </Link>
-                    <Link href="/signup" id="nav-signup-btn" className="bg-white text-slate-950 hover:bg-slate-200 px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer">
+                    <Link href="/signup" id="nav-signup-btn" className="bg-white text-slate-950 hover:bg-slate-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors cursor-pointer">
                         Get Started
                     </Link>
 
@@ -141,7 +141,7 @@ export function Navbar() {
 
 function HeroSection() {
     return (
-        <section className="relative pt-16 pb-20 lg:pt-24 lg:pb-32 overflow-hidden px-4">
+        <section className="relative pt-12 pb-16 sm:pt-16 sm:pb-20 lg:pt-24 lg:pb-32 overflow-hidden px-3 sm:px-4">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-indigo-900/40 via-slate-950 to-slate-950 -z-10" />
 
             <div className="container mx-auto max-w-6xl">

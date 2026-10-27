@@ -142,19 +142,19 @@ export function ReportsClient({ documents }: { documents: any[] }) {
             </div>
 
             {/* Filter Bar */}
-            <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-2 flex items-center gap-4 flex-wrap shadow-sm max-w-fit">
-                <div className="flex items-center gap-2 pl-2 pr-4 border-r border-gray-200 dark:border-slate-700">
+            <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-2 flex items-center gap-3 sm:gap-4 flex-wrap shadow-sm w-full sm:max-w-fit">
+                <div className="flex items-center gap-2 pl-2 pr-3 sm:pr-4 border-r border-gray-200 dark:border-slate-700">
                     <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-500 dark:text-slate-400">
                         <path d="M14.5 2H0.5L5.5 8V12.5L9.5 14V8L14.5 2Z" stroke="currentColor" strokeLinejoin="round" />
                     </svg>
-                    <span className="font-medium text-gray-500 dark:text-slate-400">Filters</span>
+                    <span className="font-medium text-gray-500 dark:text-slate-400 text-sm">Filters</span>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1.5 flex-1 min-w-[90px] sm:flex-none">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Year</span>
                         <Select value={selectedYear} onValueChange={setSelectedYear}>
-                            <SelectTrigger className="w-27.5 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white">
+                            <SelectTrigger className="w-full sm:w-27.5 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
                                 <SelectValue placeholder="Year" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
@@ -166,10 +166,10 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                         </Select>
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1.5 flex-1 min-w-[100px] sm:flex-none">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Month</span>
                         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                            <SelectTrigger className="w-32.5 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white">
+                            <SelectTrigger className="w-full sm:w-32.5 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
                                 <SelectValue placeholder="Month" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
@@ -181,10 +181,10 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                         </Select>
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1.5 flex-1 min-w-[110px] sm:flex-none">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Fund</span>
                         <Select value={selectedFund} onValueChange={setSelectedFund}>
-                            <SelectTrigger className="w-35 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white">
+                            <SelectTrigger className="w-full sm:w-35 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
                                 <SelectValue placeholder="Fund" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
@@ -196,10 +196,10 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                         </Select>
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1.5 flex-1 min-w-[100px] sm:flex-none">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Status</span>
                         <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                            <SelectTrigger className="w-37.5 h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white">
+                            <SelectTrigger className="w-full sm:w-[150px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
@@ -218,7 +218,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
             </div>
 
             {/* Top Level Metric */}
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
                 <Card className="bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/50">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-indigo-800 dark:text-indigo-300">
@@ -235,7 +235,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                 </Card>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
                 {/* Spend by Fund */}
                 <Card className="col-span-1 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
                     <CardHeader>
@@ -314,16 +314,16 @@ export function ReportsClient({ documents }: { documents: any[] }) {
             {/* Large Transactions Table */}
             <Card className="border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
                 <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-white">
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2 text-gray-900 dark:text-white">
                         <AlertTriangle className="w-5 h-5 text-amber-500 " />
                         Significant Outflows (&gt;{symbol}500)
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-0 sm:px-6 overflow-x-auto">
                     {largeTransactions.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-center animate-in fade-in duration-300">
-                            <div className="mb-4 h-14 w-14 rounded-full bg-gray-50 dark:bg-slate-900 flex items-center justify-center border border-gray-200 dark:border-slate-700">
-                                <ListX className="h-6 w-6 text-slate-300 dark:text-slate-600" />
+                        <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center animate-in fade-in duration-300 px-4">
+                            <div className="mb-3 sm:mb-4 h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-gray-50 dark:bg-slate-900 flex items-center justify-center border border-gray-200 dark:border-slate-700">
+                                <ListX className="h-5 w-5 sm:h-6 sm:w-6 text-slate-300 dark:text-slate-600" />
                             </div>
                             <p className="text-sm font-medium text-gray-900 dark:text-slate-400">No large transactions recorded for this period.</p>
                         </div>
