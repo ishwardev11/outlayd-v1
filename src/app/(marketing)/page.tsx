@@ -15,7 +15,9 @@ import {
     Sparkles,
     Database,
     Triangle,
-    Atom
+    Atom,
+    Menu,
+    X
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { PlaygroundDemo } from "@/components/marketing/PlaygroundDemo";
@@ -72,6 +74,13 @@ export default function LandingPage() {
 }
 
 export function Navbar() {
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    const handleMobileNavClick = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
+        setMobileMenuOpen(false);
+        handleSmoothScroll(e, targetId);
+    };
+
     return (
         <header className="sticky top-4 z-50 mx-auto max-w-6xl w-[calc(100%-2rem)] border border-white/10 bg-slate-950/80 backdrop-blur-md rounded-2xl shadow-lg shadow-black/40">
             <div className="px-6 h-16 flex items-center justify-between">
@@ -90,15 +99,42 @@ export function Navbar() {
                     <Link href="/#faq" id="nav-link-faq" onClick={(e) => handleSmoothScroll(e, '#faq')} className="hover:text-white transition-colors">FAQ</Link>
                 </nav>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                     <Link href="/login" id="nav-login-btn" className="text-sm font-medium text-slate-300 hover:text-white transition-colors hidden sm:block">
                         Log in
                     </Link>
                     <Link href="/signup" id="nav-signup-btn" className="bg-white text-slate-950 hover:bg-slate-200 px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer">
                         Get Started
                     </Link>
+
+                    {/* Mobile Hamburger Button */}
+                    <button
+                        type="button"
+                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        className="md:hidden p-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+                        aria-label="Toggle navigation menu"
+                        id="marketing-mobile-menu-btn"
+                    >
+                        {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                    </button>
                 </div>
             </div>
+
+            {/* Mobile Dropdown Menu */}
+            {mobileMenuOpen && (
+                <div className="md:hidden border-t border-white/10 px-6 py-4 flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <Link href="/#services" onClick={(e) => handleMobileNavClick(e, '#services')} className="text-sm font-medium text-slate-300 hover:text-white py-1">Services</Link>
+                    <Link href="/#how-it-works" onClick={(e) => handleMobileNavClick(e, '#how-it-works')} className="text-sm font-medium text-slate-300 hover:text-white py-1">How it works</Link>
+                    <Link href="/#why-outlayd" onClick={(e) => handleMobileNavClick(e, '#why-outlayd')} className="text-sm font-medium text-slate-300 hover:text-white py-1">Why Outlayd</Link>
+                    <Link href="/#pricing" onClick={(e) => handleMobileNavClick(e, '#pricing')} className="text-sm font-medium text-slate-300 hover:text-white py-1">Pricing</Link>
+                    <Link href="/#faq" onClick={(e) => handleMobileNavClick(e, '#faq')} className="text-sm font-medium text-slate-300 hover:text-white py-1">FAQ</Link>
+                    <div className="pt-2 border-t border-white/10 flex flex-col gap-2">
+                        <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-slate-300 hover:text-white py-1">
+                            Log in
+                        </Link>
+                    </div>
+                </div>
+            )}
         </header>
     );
 }
