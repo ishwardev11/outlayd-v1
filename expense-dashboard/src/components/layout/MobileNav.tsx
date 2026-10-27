@@ -3,24 +3,13 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-    Menu,
-    X,
-    LayoutDashboard,
-    FileText,
-    Users,
-    BarChart3
-} from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 
 export function MobileNav() {
-    const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
-
-    // Close drawer on path change
-    useEffect(() => {
-        setIsOpen(false);
-    }, [pathname]);
+    const [openedPath, setOpenedPath] = useState<string | null>(null);
+    const isOpen = openedPath === pathname;
 
     // Prevent body scroll when drawer is open
     useEffect(() => {
@@ -34,13 +23,6 @@ export function MobileNav() {
         };
     }, [isOpen]);
 
-    const bottomTabs = [
-        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { href: "/ledger", label: "Ledger", icon: FileText },
-        { href: "/vendors", label: "Vendors", icon: Users },
-        { href: "/reports", label: "Reports", icon: BarChart3 },
-    ];
-
     return (
         <>
             {/* Top Bar for Mobile */}
@@ -52,7 +34,7 @@ export function MobileNav() {
                 </Link>
                 <button
                     type="button"
-                    onClick={() => setIsOpen(true)}
+                    onClick={() => setOpenedPath(pathname)}
                     className="p-2 -mr-1 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 active:scale-95 transition-all"
                     aria-label="Open Navigation Menu"
                     id="mobile-nav-toggle-btn"
@@ -67,7 +49,7 @@ export function MobileNav() {
                     {/* Backdrop */}
                     <div
                         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => setOpenedPath(null)}
                         aria-hidden="true"
                     />
 
@@ -80,7 +62,7 @@ export function MobileNav() {
                             </span>
                             <button
                                 type="button"
-                                onClick={() => setIsOpen(false)}
+                                onClick={() => setOpenedPath(null)}
                                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
                                 aria-label="Close Navigation Menu"
                                 id="mobile-nav-close-btn"
@@ -93,7 +75,7 @@ export function MobileNav() {
                         <div className="flex-1 overflow-y-auto">
                             <Sidebar
                                 className="w-full h-full border-r-0 bg-transparent dark:bg-transparent shadow-none"
-                                onNavigate={() => setIsOpen(false)}
+                                onNavigate={() => setOpenedPath(null)}
                                 hideLogo={true}
                             />
                         </div>
