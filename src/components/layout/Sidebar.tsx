@@ -126,14 +126,14 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
     ];
 
     return (
-        <div className={`w-52 bg-white/85 dark:bg-slate-950/70 border-r border-slate-200 dark:border-slate-800/80 h-screen p-4 flex flex-col text-slate-900 dark:text-slate-100 backdrop-blur-md overflow-hidden ${className}`}>
+        <div className={`w-52 bg-white/85 dark:bg-slate-950/70 border-r border-slate-200 dark:border-slate-800/80 h-screen p-4 flex flex-col text-slate-900 dark:text-slate-100 backdrop-blur-md ${className}`}>
             {!hideLogo && (
                 <div className="mb-8 tracking-tight flex items-baseline">
                     <span className="font-extrabold text-2xl bg-linear-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">Outlayd</span>
                 </div>
             )}
 
-            <nav className="flex-1 min-h-0 overflow-y-auto space-y-2">
+            <nav className="flex-1 space-y-2">
                 <Link id="sidebar-link-dashboard" href="/dashboard" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/dashboard' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <LayoutDashboard size={20} />
                     <span>Dashboard</span>
@@ -173,7 +173,7 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                 </button>
             </nav>
 
-            <div className="flex-shrink-0 flex flex-col gap-2 pt-2">
+            <div className="mt-auto flex flex-col gap-2">
                 <button
                     id="sidebar-link-help"
                     onClick={() => setIsHelpOpen(true)}
