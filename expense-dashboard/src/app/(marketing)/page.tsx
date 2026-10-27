@@ -145,23 +145,23 @@ function HeroSection() {
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-indigo-900/40 via-slate-950 to-slate-950 -z-10" />
 
             <div className="container mx-auto max-w-6xl w-full">
-                <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-8 items-center">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-8 items-center min-w-0">
                     <motion.div
                         initial="hidden"
                         animate="visible"
                         variants={staggerContainer}
                         className="text-center lg:text-left w-full min-w-0"
                     >
-                        <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] xs:text-xs sm:text-sm font-medium mb-5 sm:mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both max-w-full overflow-hidden">
-                            <span className="flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                            Built for SMEs &amp; nonprofits • Early access open
+                        <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-1.5 sm:gap-2 mx-auto px-2.5 sm:px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] sm:text-sm font-medium mb-5 sm:mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both">
+                            <span className="flex h-2 w-2 shrink-0 rounded-full bg-indigo-500 animate-pulse"></span>
+                            <span className="min-w-0">Built for SMEs &amp; nonprofits • Early access open</span>
                         </div>
 
-                        <h1 className="text-[28px] leading-[1.15] xs:text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight mb-4 sm:mb-6 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 ease-out fill-mode-both break-words">
+                        <h1 className="w-full min-w-0 text-[clamp(1.75rem,7vw,2rem)] leading-[1.15] sm:text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight mb-4 sm:mb-6 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 ease-out fill-mode-both break-words">
                             Expense management <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-cyan-400">built for SMEs and nonprofits.</span>
                         </h1>
 
-                        <p className="text-sm sm:text-base lg:text-lg text-slate-400 mb-6 sm:mb-8 max-w-xl mx-auto lg:mx-0 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 ease-out fill-mode-both break-words">
+                        <p className="w-full min-w-0 text-sm sm:text-base lg:text-lg text-slate-400 mb-6 sm:mb-8 max-w-xl mx-auto lg:mx-0 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 ease-out fill-mode-both break-words">
                             Whether you&apos;re a nonprofit juggling grant reporting and receipts, or a small business tired of spreadsheet chaos — Outlayd uses AI to turn messy paperwork into an audit-ready ledger.
                         </p>
 
@@ -176,7 +176,7 @@ function HeroSection() {
                         </div>
                     </motion.div>
 
-                    <div className="w-full lg:max-w-none">
+                    <div className="w-full min-w-0 lg:max-w-none">
                         <PlaygroundDemo />
                     </div>
                 </div>
