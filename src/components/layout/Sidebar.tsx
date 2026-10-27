@@ -22,7 +22,13 @@ import { signOutAction } from "@/app/actions/auth";
 import { createClient } from "@/utils/supabase/client";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
 
-export function Sidebar() {
+interface SidebarProps {
+    className?: string;
+    onNavigate?: () => void;
+    hideLogo?: boolean;
+}
+
+export function Sidebar({ className = "", onNavigate, hideLogo = false }: SidebarProps = {}) {
     const pathname = usePathname();
     const router = useRouter();
     const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -120,25 +126,27 @@ export function Sidebar() {
     ];
 
     return (
-        <div className="w-52 bg-white/85 dark:bg-slate-950/70 border-r border-slate-200 dark:border-slate-800/80 h-screen p-4 flex flex-col text-slate-900 dark:text-slate-100 backdrop-blur-md">
-            <div className="mb-8 tracking-tight flex items-baseline">
-                <span className="font-extrabold text-2xl bg-linear-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">Outlayd</span>
-            </div>
+        <div className={`w-52 bg-white/85 dark:bg-slate-950/70 border-r border-slate-200 dark:border-slate-800/80 h-screen p-4 flex flex-col text-slate-900 dark:text-slate-100 backdrop-blur-md ${className}`}>
+            {!hideLogo && (
+                <div className="mb-8 tracking-tight flex items-baseline">
+                    <span className="font-extrabold text-2xl bg-linear-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">Outlayd</span>
+                </div>
+            )}
 
             <nav className="flex-1 space-y-2">
-                <Link id="sidebar-link-dashboard" href="/dashboard" prefetch className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/dashboard' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link id="sidebar-link-dashboard" href="/dashboard" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/dashboard' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <LayoutDashboard size={20} />
                     <span>Dashboard</span>
                 </Link>
-                <Link id="sidebar-link-ledger" href="/ledger" prefetch className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/ledger' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link id="sidebar-link-ledger" href="/ledger" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/ledger' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <FileText size={20} />
                     <span>Ledger</span>
                 </Link>
-                <Link id="sidebar-link-vendors" href="/vendors" prefetch className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/vendors' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link id="sidebar-link-vendors" href="/vendors" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/vendors' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <Users size={20} />
                     <span>Vendors</span>
                 </Link>
-                <Link id="sidebar-link-reports" href="/reports" prefetch className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/reports' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link id="sidebar-link-reports" href="/reports" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/reports' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <BarChart3 size={20} />
                     <span>Reports</span>
                 </Link>
@@ -147,7 +155,10 @@ export function Sidebar() {
                 <button
                     id="sidebar-link-procurement"
                     type="button"
-                    onClick={handleProcurementClick}
+                    onClick={() => {
+                        onNavigate?.();
+                        handleProcurementClick();
+                    }}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer w-full text-left group ${pathname === '/procurement' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}
                 >
                     <Gavel size={20} />
@@ -171,7 +182,7 @@ export function Sidebar() {
                     <HelpCircle size={20} />
                     <span>Help &amp; Support</span>
                 </button>
-                <Link id="sidebar-link-settings" href="/settings" className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/settings' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link id="sidebar-link-settings" href="/settings" onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/settings' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <Settings size={20} />
                     <span>Settings</span>
                 </Link>
