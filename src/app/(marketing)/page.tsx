@@ -225,6 +225,7 @@ function BenefitsSection() {
                     <motion.div
                         initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
                         className="md:col-span-2 bg-linear-to-br from-slate-900 to-slate-950 border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 relative overflow-hidden group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
+                    >
                         <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-110 transition-transform duration-700">
                             <Zap className="w-32 h-32 text-indigo-500" />
                         </div>
