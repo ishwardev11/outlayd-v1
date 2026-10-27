@@ -114,7 +114,8 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
 
     return (
         <div className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
-            <Table>
+            <div className="overflow-x-auto w-full">
+            <Table className="min-w-[640px]">
                 <TableHeader className="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700">
                     <TableRow className="hover:bg-transparent border-none">
                         <TableHead className="w-12 text-center text-xs">
@@ -242,6 +243,7 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                     ))}
                 </TableBody>
             </Table>
+            </div>
         </div>
     );
 }

@@ -168,7 +168,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                 </Card>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 " />
                     <Input
@@ -212,7 +212,8 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                 </Card>
             ) : (
                 <Card className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
-                    <Table>
+                    <div className="overflow-x-auto w-full">
+                    <Table className="min-w-[640px]">
                         <TableHeader className="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700">
                             <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="w-12 text-center"></TableHead>
@@ -333,6 +334,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                             ))}
                         </TableBody>
                     </Table>
+                    </div>
                 </Card>
             )}
 
