@@ -59,7 +59,9 @@ export async function getOrganizationId() {
             }
             return firstOrgId;
         }
-
+    if (!user.email) {
+       return null;
+   }
         // Check if there is a pending workspace invite for this user's email
         const { data: invite } = await adminClient
             .from("workspace_invites")

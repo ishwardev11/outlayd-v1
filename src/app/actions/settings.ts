@@ -63,8 +63,7 @@ export async function getOrganizationSettings() {
 }
 
 export async function updateOrganizationSettings(updates: any) {
-    await checkWriteAccess();
-    const role = await checkWriteAccess();
+   const role = await checkWriteAccess();
     if (role !== 'Admin') {
         throw new Error("Unauthorized: Only Admins can change organization settings.");
     }
