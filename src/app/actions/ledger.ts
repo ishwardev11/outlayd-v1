@@ -346,27 +346,24 @@ export async function processUpload(formData: FormData) {
             return docData
         }
 
-        // 3. Upload to Storage
-        const { data: uploadData, error: uploadError } = await supabase
+        // 3. Upload to private storage under this organisation's folder
+        const storagePath = `${organization_id}/${fileName}`
+        const { createAdminClient } = await import("@/utils/supabase/admin")
+        const { error: uploadError } = await createAdminClient()
             .storage
             .from("receipts")
-            .upload(fileName, file)
+            .upload(storagePath, file, { contentType: file.type })
 
         if (uploadError) {
             console.error("Storage upload error:", uploadError)
             throw new Error(`Storage upload failed: ${uploadError.message}`)
         }
 
-        const { data: { publicUrl } } = supabase
-            .storage
-            .from("receipts")
-            .getPublicUrl(fileName)
-
         // 4. Insert active document record
         const { data: docData, error: docError } = await supabase
             .from("documents")
             .insert({
-                image_url: publicUrl,
+                image_url: storagePath,
                 file_hash: fileHash,
                 status: "extracting",
                 organization_id
@@ -394,7 +391,7 @@ export async function processUpload(formData: FormData) {
                 const { data: dupData, error: dupError } = await supabase
                     .from("documents")
                     .insert({
-                        image_url: publicUrl,
+                        image_url: storagePath,
                         file_hash: fileHash,
                         status: "DUPLICATE_WARNING",
                         organization_id,

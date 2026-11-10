@@ -89,9 +89,9 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
     }, [quotes])
 
     // Derived columns
-    const uploadedBids  = useMemo(() => bids.filter(b => b.status === 'uploaded' || b.status === 'evaluating'), [bids])
+    const uploadedBids = useMemo(() => bids.filter(b => b.status === 'uploaded' || b.status === 'evaluating'), [bids])
     const evaluatedBids = useMemo(() => bids.filter(b => b.status === 'evaluated' || b.status === 'rejected'), [bids])
-    const awardedBids   = useMemo(() => bids.filter(b => b.status === 'awarded'), [bids])
+    const awardedBids = useMemo(() => bids.filter(b => b.status === 'awarded'), [bids])
 
     // ── UI state ──
     const [isDragging, setIsDragging] = useState(false)
@@ -152,7 +152,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                 })
                 .select()
                 .single()
-            
+
             if (error) throw error
             setBids(prev => [...prev, quoteToBid(data)])
             setIsManualModalOpen(false)
@@ -169,7 +169,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
         setIsAwardingId(bid.id)
         const previousProjectStatus = projectStatus
         const previousBids = bids
-        
+
         // 1. Optimistic Update
         setProjectStatus('Awarded')
         setBids(prev => prev.map(b => {
@@ -199,7 +199,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
         setEvaluatingBidId(bid.id)
         // Optimistically update status to 'evaluating'
         setBids(prev => prev.map(b => b.id === bid.id ? { ...b, status: 'evaluating' as BidStatus } : b))
-        
+
         try {
             await runSingleEvaluation(bid.id, project.id)
             setBids(prev => prev.map(b => b.id === bid.id ? { ...b, status: 'evaluated' as BidStatus } : b))
@@ -222,7 +222,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
             // The server action handles revalidation, so the quotes prop will update,
             // which triggers the useEffect to update the bids state.
             // But we can do an optimistic update just to show instant feedback:
-            setBids(prev => prev.map(b => 
+            setBids(prev => prev.map(b =>
                 b.status === 'uploaded' ? { ...b, status: 'evaluating' as BidStatus } : b
             ))
         } catch (error) {
@@ -299,34 +299,9 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
     const onUpload = async (file: File) => {
         setIsUploading(true)
         try {
-            const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_")
-            const fileName = `${Date.now()}-${safeName}`
-            
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('receipts')
-                .upload(fileName, file)
-            
-            if (uploadError) throw uploadError
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('receipts')
-                .getPublicUrl(fileName)
-
-            const { data: quoteData, error: quoteError } = await supabase
-                .from('quotes')
-                .insert({
-                    project_id: project.id,
-                    organization_id: project.organization_id,
-                    vendor_name: 'Pending...',
-                    total_amount: 0,
-                    file_url: publicUrl,
-                    file_size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-                    status: 'uploaded'
-                })
-                .select()
-                .single()
-            
-            if (quoteError) throw quoteError
+            const formData = new FormData()
+            formData.append("file", file)
+            const quoteData = await processQuoteUpload(project.id, formData)
 
             // Optimistically add the pending bid
             setBids(prev => [...prev, quoteToBid(quoteData)])
@@ -344,17 +319,17 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                 const extractedData = await extractQuoteData(quoteData.id, project.id, file.type, base64Data)
 
                 // Update the local state with the extracted data
-                setBids(prev => prev.map(b => 
-                    b.id === quoteData.id 
-                        ? { 
-                            ...b, 
+                setBids(prev => prev.map(b =>
+                    b.id === quoteData.id
+                        ? {
+                            ...b,
                             vendorName: extractedData.vendor_name,
                             totalAmount: extractedData.total_amount,
                             paymentTerms: extractedData.payment_terms,
                             aiRecommendationStatus: extractedData.ai_recommendation_status,
                             aiRationale: extractedData.ai_rationale,
                             extractedData: extractedData.extracted_data
-                          } 
+                        }
                         : b
                 ))
             } catch (extractionError) {
@@ -396,11 +371,11 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                     <div className="flex items-center gap-3 mb-2">
                         <Target className="w-6 h-6 text-primary" />
                         <h1 className="text-2xl font-bold text-foreground">{project.title}</h1>
-                        <Badge 
-                            variant="outline" 
+                        <Badge
+                            variant="outline"
                             className={`
-                                ${projectStatus === 'Awarded' 
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                                ${projectStatus === 'Awarded'
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                                     : 'bg-primary/5 text-primary border-primary/20'}
                             `}
                         >
@@ -459,9 +434,9 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                         <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-none text-[10px]">{uploadedBids.length}</Badge>
                     </div>
 
-                    <Button 
-                        onClick={handleEvaluateAll} 
-                        disabled={uploadedBids.length === 0 || isEvaluatingAll || isViewer} 
+                    <Button
+                        onClick={handleEvaluateAll}
+                        disabled={uploadedBids.length === 0 || isEvaluatingAll || isViewer}
                         title={isViewer ? "Viewers cannot evaluate bids" : ""}
                         variant="default"
                         className="w-full shadow-md transition-all group"
@@ -495,13 +470,13 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                     <span className="bg-background border border-border text-foreground hover:bg-muted dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:hover:bg-slate-700 px-4 py-2 rounded-md text-sm font-medium inline-block transition-colors">
                                         Browse Files
                                     </span>
-                                        <input
-                                            type="file"
-                                            className="hidden"
-                                            accept="application/pdf,image/*"
-                                            onChange={handleFileInput}
-                                            disabled={isViewer}
-                                        />
+                                    <input
+                                        type="file"
+                                        className="hidden"
+                                        accept="application/pdf,image/*"
+                                        onChange={handleFileInput}
+                                        disabled={isViewer}
+                                    />
                                 </label>
                             </>
                         )}
@@ -581,46 +556,46 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                             <QuoteDetailDialog key={bid.id} bid={bid}>
                                 <Card className="shadow-sm border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 animate-in fade-in zoom-in duration-300 cursor-pointer hover:border-primary/50 transition-colors">
                                     <CardContent className="p-4 flex flex-col gap-3">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md">
-                                                <FileText className="w-5 h-5" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-semibold text-gray-900 dark:text-white">{bid.vendorName}</p>
-                                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400 mt-1">
-                                                    <span>{bid.fileSize}</span>
-                                                    <span>•</span>
-                                                    <span>{bid.date}</span>
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md">
+                                                    <FileText className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{bid.vendorName}</p>
+                                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400 mt-1">
+                                                        <span>{bid.fileSize}</span>
+                                                        <span>•</span>
+                                                        <span>{bid.date}</span>
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <div className="flex items-center gap-1">
+                                                {bid.status === 'evaluating' && (
+                                                    <Loader2 className="w-4 h-4 text-primary animate-spin mr-2" />
+                                                )}
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title={isViewer ? "Viewers cannot edit" : "Edit"} disabled={isViewer} onClick={(e) => { e.stopPropagation(); openEditModal(bid); }}>
+                                                    <Edit className="w-4 h-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" title={isViewer ? "Viewers cannot delete" : "Delete"} disabled={isViewer} onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: bid.id, name: bid.vendorName }); }}>
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                            {bid.status === 'evaluating' && (
-                                                <Loader2 className="w-4 h-4 text-primary animate-spin mr-2" />
-                                            )}
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title={isViewer ? "Viewers cannot edit" : "Edit"} disabled={isViewer} onClick={(e) => { e.stopPropagation(); openEditModal(bid); }}>
-                                                <Edit className="w-4 h-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" title={isViewer ? "Viewers cannot delete" : "Delete"} disabled={isViewer} onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: bid.id, name: bid.vendorName }); }}>
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                    <Button 
-                                        variant="default"
-                                        className="w-full shadow-sm transition-all group mt-1"
-                                        disabled={bid.status === 'evaluating' || evaluatingBidId === bid.id || isViewer}
-                                        title={isViewer ? "Viewers cannot evaluate" : ""}
-                                        onClick={(e) => { e.stopPropagation(); handleRunEvaluation(bid); }}
-                                    >
-                                        {evaluatingBidId === bid.id || bid.status === 'evaluating' 
-                                            ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                            : <Sparkles className="w-4 h-4 mr-2 group-hover:animate-pulse" />
-                                        }
-                                        {evaluatingBidId === bid.id || bid.status === 'evaluating' ? 'Evaluating...' : 'Run AI Evaluation'}
-                                    </Button>
-                                </CardContent>
+                                        <Button
+                                            variant="default"
+                                            className="w-full shadow-sm transition-all group mt-1"
+                                            disabled={bid.status === 'evaluating' || evaluatingBidId === bid.id || isViewer}
+                                            title={isViewer ? "Viewers cannot evaluate" : ""}
+                                            onClick={(e) => { e.stopPropagation(); handleRunEvaluation(bid); }}
+                                        >
+                                            {evaluatingBidId === bid.id || bid.status === 'evaluating'
+                                                ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                : <Sparkles className="w-4 h-4 mr-2 group-hover:animate-pulse" />
+                                            }
+                                            {evaluatingBidId === bid.id || bid.status === 'evaluating' ? 'Evaluating...' : 'Run AI Evaluation'}
+                                        </Button>
+                                    </CardContent>
                                 </Card>
                             </QuoteDetailDialog>
                         ))}
@@ -668,57 +643,57 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                                         </div>
                                     )}
                                     <CardHeader className={`p-4 pb-2 ${bid.isRecommended ? 'pr-28' : ''}`}>
-                                    <div className="flex justify-between items-start">
-                                        <CardTitle className={`text-sm font-semibold ${bid.status === 'rejected' ? 'text-gray-500 dark:text-slate-400' : 'text-gray-900 dark:text-white'}`}>{bid.vendorName}</CardTitle>
-                                        <div className="flex items-center gap-1">
-                                            {bid.status !== 'rejected' && (
-                                                <>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" title={isViewer ? "Viewers cannot edit" : "Edit"} disabled={isViewer} onClick={(e) => { e.stopPropagation(); openEditModal(bid); }}>
-                                                        <Edit className="w-3.5 h-3.5" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title={isViewer ? "Viewers cannot delete" : "Delete"} disabled={isViewer} onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: bid.id, name: bid.vendorName }); }}>
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </Button>
-                                                </>
-                                            )}
-                                            <Badge variant="outline" className={
-                                                bid.status === 'rejected' ? 'bg-muted text-muted-foreground border-border ml-1' :
-                                                bid.aiRecommendationStatus === 'Recommended' ? 'bg-primary/10 text-primary border-primary/20 ml-1' :
-                                                bid.aiRecommendationStatus === 'Alternative' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 ml-1' :
-                                                'bg-muted/50 text-muted-foreground ml-1'
-                                            }>
-                                                {bid.status === 'rejected' ? 'Not Selected' : bid.aiRecommendationStatus}
-                                            </Badge>
+                                        <div className="flex justify-between items-start">
+                                            <CardTitle className={`text-sm font-semibold ${bid.status === 'rejected' ? 'text-gray-500 dark:text-slate-400' : 'text-gray-900 dark:text-white'}`}>{bid.vendorName}</CardTitle>
+                                            <div className="flex items-center gap-1">
+                                                {bid.status !== 'rejected' && (
+                                                    <>
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" title={isViewer ? "Viewers cannot edit" : "Edit"} disabled={isViewer} onClick={(e) => { e.stopPropagation(); openEditModal(bid); }}>
+                                                            <Edit className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title={isViewer ? "Viewers cannot delete" : "Delete"} disabled={isViewer} onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: bid.id, name: bid.vendorName }); }}>
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                    </>
+                                                )}
+                                                <Badge variant="outline" className={
+                                                    bid.status === 'rejected' ? 'bg-muted text-muted-foreground border-border ml-1' :
+                                                        bid.aiRecommendationStatus === 'Recommended' ? 'bg-primary/10 text-primary border-primary/20 ml-1' :
+                                                            bid.aiRecommendationStatus === 'Alternative' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 ml-1' :
+                                                                'bg-muted/50 text-muted-foreground ml-1'
+                                                }>
+                                                    {bid.status === 'rejected' ? 'Not Selected' : bid.aiRecommendationStatus}
+                                                </Badge>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <CardDescription className="text-xs font-medium text-gray-900 dark:text-slate-300 mt-1">
-                                        {symbol}{bid.totalAmount.toLocaleString()}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="p-4 pt-2">
-                                    {bid.notes && (
-                                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-2 border-t border-gray-200 dark:border-slate-700 pt-2 whitespace-pre-wrap">
-                                            {bid.notes}
-                                        </p>
-                                    )}
-                                    {bid.status === 'evaluated' && (
-                                        <Button
-                                            size="sm"
-                                            variant="default"
-                                            className="w-full mt-4 shadow-sm transition-all"
-                                            onClick={(e) => { e.stopPropagation(); handleAwardBid(bid); }}
-                                            disabled={isAwardingId === bid.id || isViewer}
-                                            title={isViewer ? "Viewers cannot award bids" : ""}
-                                        >
-                                            {isAwardingId === bid.id ? (
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                            ) : (
-                                                <Trophy className="w-4 h-4 mr-2" />
-                                            )}
-                                            Award Bid
-                                        </Button>
-                                    )}
-                                </CardContent>
+                                        <CardDescription className="text-xs font-medium text-gray-900 dark:text-slate-300 mt-1">
+                                            {symbol}{bid.totalAmount.toLocaleString()}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-4 pt-2">
+                                        {bid.notes && (
+                                            <p className="text-xs text-gray-500 dark:text-slate-400 mt-2 border-t border-gray-200 dark:border-slate-700 pt-2 whitespace-pre-wrap">
+                                                {bid.notes}
+                                            </p>
+                                        )}
+                                        {bid.status === 'evaluated' && (
+                                            <Button
+                                                size="sm"
+                                                variant="default"
+                                                className="w-full mt-4 shadow-sm transition-all"
+                                                onClick={(e) => { e.stopPropagation(); handleAwardBid(bid); }}
+                                                disabled={isAwardingId === bid.id || isViewer}
+                                                title={isViewer ? "Viewers cannot award bids" : ""}
+                                            >
+                                                {isAwardingId === bid.id ? (
+                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                ) : (
+                                                    <Trophy className="w-4 h-4 mr-2" />
+                                                )}
+                                                Award Bid
+                                            </Button>
+                                        )}
+                                    </CardContent>
                                 </Card>
                             </QuoteDetailDialog>
                         ))}
@@ -757,28 +732,28 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                             <QuoteDetailDialog key={bid.id} bid={bid}>
                                 <Card className="shadow-md border-primary/20 bg-primary/5 relative overflow-hidden ring-1 ring-primary/10 cursor-pointer hover:border-primary/50 transition-colors">
                                     <div className="absolute top-0 right-0 p-1">
-                                    <Badge className="bg-primary text-primary-foreground border-none text-[10px] uppercase tracking-wider font-bold">
-                                        <Trophy className="w-3 h-3 mr-1" />
-                                        Winning Bid
-                                    </Badge>
-                                </div>
-                                <CardHeader className="p-4 pb-2">
-                                    <div className="flex justify-between items-start pr-20">
-                                        <CardTitle className="text-sm font-semibold text-gray-900 dark:text-white">{bid.vendorName}</CardTitle>
+                                        <Badge className="bg-primary text-primary-foreground border-none text-[10px] uppercase tracking-wider font-bold">
+                                            <Trophy className="w-3 h-3 mr-1" />
+                                            Winning Bid
+                                        </Badge>
                                     </div>
-                                    <CardDescription className="text-xs font-medium text-primary mt-1">
-                                        {symbol}{bid.totalAmount.toLocaleString()}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="p-4 pt-2">
-                                    <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2 italic">
-                                        <span className="font-semibold text-foreground not-italic">AI Rationale:</span> {bid.aiRationale}
-                                    </p>
-                                    <div className="mt-4 flex items-center gap-2 text-[10px] text-primary font-medium bg-primary/10 px-2 py-1 rounded w-fit">
-                                        <CheckCircle2 className="w-3 h-3" />
-                                        RECORD LOCKED • {bid.date}
-                                    </div>
-                                </CardContent>
+                                    <CardHeader className="p-4 pb-2">
+                                        <div className="flex justify-between items-start pr-20">
+                                            <CardTitle className="text-sm font-semibold text-gray-900 dark:text-white">{bid.vendorName}</CardTitle>
+                                        </div>
+                                        <CardDescription className="text-xs font-medium text-primary mt-1">
+                                            {symbol}{bid.totalAmount.toLocaleString()}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-4 pt-2">
+                                        <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2 italic">
+                                            <span className="font-semibold text-foreground not-italic">AI Rationale:</span> {bid.aiRationale}
+                                        </p>
+                                        <div className="mt-4 flex items-center gap-2 text-[10px] text-primary font-medium bg-primary/10 px-2 py-1 rounded w-fit">
+                                            <CheckCircle2 className="w-3 h-3" />
+                                            RECORD LOCKED • {bid.date}
+                                        </div>
+                                    </CardContent>
                                 </Card>
                             </QuoteDetailDialog>
                         ))}

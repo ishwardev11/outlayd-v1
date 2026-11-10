@@ -135,13 +135,13 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
                                     {previewDoc.image_url.toLowerCase().endsWith('.pdf') ? (
                                         <div className="w-full h-32 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md flex flex-col items-center justify-center p-4 text-center">
                                             <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">PDF Document</p>
-                                            <a href={previewDoc.image_url} target="_blank" rel="noopener noreferrer" className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-md transition-colors">
+                                            <a href={`/api/files/document/${previewDoc.id}`} target="_blank" rel="noopener noreferrer" className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-md transition-colors">
                                                 Click here to view PDF
                                             </a>
                                         </div>
                                     ) : (
                                         <div className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden flex items-center justify-center p-2">
-                                            <img src={previewDoc.image_url} alt="Original Document" className="w-full max-h-64 object-contain rounded-md" />
+                                            <img src={`/api/files/document/${previewDoc.id}`} alt="Original Document" className="w-full max-h-64 object-contain rounded-md" />
                                         </div>
                                     )}
                                 </div>

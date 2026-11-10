@@ -23,7 +23,7 @@ export function QuoteDetailDialog({ bid, children }: { bid: Bid, children: React
                     {/* Key Info Grid */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3"/> Upload Date</span>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> Upload Date</span>
                             <p className="text-sm font-medium">{bid.date}</p>
                         </div>
                         <div className="space-y-1">
@@ -35,11 +35,11 @@ export function QuoteDetailDialog({ bid, children }: { bid: Bid, children: React
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="w-3 h-3"/> Amount</span>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="w-3 h-3" /> Amount</span>
                             <p className="text-sm font-medium">{symbol}{bid.totalAmount.toLocaleString()}</p>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1"><CreditCard className="w-3 h-3"/> Payment Terms</span>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1"><CreditCard className="w-3 h-3" /> Payment Terms</span>
                             <p className="text-sm font-medium">{bid.paymentTerms || "—"}</p>
                         </div>
                     </div>
@@ -48,7 +48,7 @@ export function QuoteDetailDialog({ bid, children }: { bid: Bid, children: React
                     {bid.fileUrl && (
                         <div className="space-y-2">
                             <h4 className="text-sm font-medium text-foreground">Source Document</h4>
-                            <a href={bid.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                            <a href={`/api/files/quote/${bid.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors">
                                 <FileText className="w-5 h-5 text-primary" />
                                 <span className="text-sm font-medium text-primary flex-1 truncate">View Quote Document</span>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground" />

@@ -157,6 +157,7 @@ export async function editQuote(quoteId: string, projectId: string, updates: { v
 
 export async function processQuoteUpload(projectId: string, formData: FormData) {
     await requireProTier()
+    await checkWriteAccess()
     const file = formData.get("file") as File
     if (!file) throw new Error("No file uploaded")
 
@@ -190,21 +191,20 @@ export async function processQuoteUpload(projectId: string, formData: FormData) 
         throw new Error("Too many quote uploads. Please wait a minute before uploading more.");
     }
 
-    // 1. Upload to Storage
-    const { data: uploadData, error: uploadError } = await supabase
+    if (!organization_id) throw new Error("No active organization")
+
+    // 1. Upload to private storage under this organisation's folder
+    const storagePath = `${organization_id}/${fileName}`
+    const { createAdminClient } = await import("@/utils/supabase/admin")
+    const { error: uploadError } = await createAdminClient()
         .storage
-        .from("receipts") // Using same bucket for now, or could create a new 'quotes' bucket
-        .upload(fileName, file)
+        .from("receipts")
+        .upload(storagePath, file, { contentType: file.type })
 
     if (uploadError) {
         console.error("Storage upload error:", uploadError)
         throw new Error("Failed to upload file")
     }
-
-    const { data: { publicUrl } } = supabase
-        .storage
-        .from("receipts")
-        .getPublicUrl(fileName)
 
     // 2. Initial DB insertion
     const { data: quoteData, error: quoteError } = await supabase
@@ -215,7 +215,7 @@ export async function processQuoteUpload(projectId: string, formData: FormData) 
             vendor_name: "Pending...",
             total_amount: 0,
             payment_terms: "Pending...",
-            file_url: publicUrl,
+            file_url: storagePath,
             file_size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
             status: 'uploaded',
             ai_recommendation_status: null
@@ -235,7 +235,7 @@ export async function processQuoteUpload(projectId: string, formData: FormData) 
 export async function runSingleEvaluation(quoteId: string, projectId: string) {
     await requireProTier()
     const supabase = await createClient()
-    
+
     // Update status to evaluating
     await supabase.from("quotes").update({ status: 'evaluating' }).eq('id', quoteId)
     revalidatePath(`/procurement/${projectId}`)
@@ -410,22 +410,22 @@ export async function evaluateQuotes(projectId: string) {
         }
     })
 
-function escapeXml(unsafe: any): string {
-    if (unsafe === null || unsafe === undefined) return "";
-    const str = typeof unsafe === 'string' ? unsafe : String(unsafe);
-    return str.replace(/[<>&'"]/g, (c) => {
-        switch (c) {
-            case '<': return '&lt;';
-            case '>': return '&gt;';
-            case '&': return '&amp;';
-            case '\'': return '&apos;';
-            case '"': return '&quot;';
-            default: return c;
-        }
-    });
-}
+    function escapeXml(unsafe: any): string {
+        if (unsafe === null || unsafe === undefined) return "";
+        const str = typeof unsafe === 'string' ? unsafe : String(unsafe);
+        return str.replace(/[<>&'"]/g, (c) => {
+            switch (c) {
+                case '<': return '&lt;';
+                case '>': return '&gt;';
+                case '&': return '&amp;';
+                case '\'': return '&apos;';
+                case '"': return '&quot;';
+                default: return c;
+            }
+        });
+    }
 
-// 4. Construct Prompt
+    // 4. Construct Prompt
     const escapedTitle = escapeXml(project.title);
     const escapedDeadline = escapeXml(project.required_deadline);
     const escapedRequirements = (project.mandatory_requirements || []).map((req: any) => escapeXml(req)).join(", ");
@@ -478,15 +478,15 @@ Return the strict JSON structure.
         const result = await model.generateContent(prompt)
         const text = result.response.text()
         const evaluationResponse = JSON.parse(text)
-        
+
         const { recommendedBidId, recommendationReason, individualEvaluations } = evaluationResponse
 
         // 6. Bulk Update Database
         for (const evaluation of individualEvaluations) {
             const isWinner = evaluation.quote_id === recommendedBidId
-            
+
             const aiNotes = `AI Summary: ${evaluation.summary}\n\nRisks: ${evaluation.flags.length > 0 ? evaluation.flags.join(", ") : "None"}`
-            
+
             await updateQuote(evaluation.quote_id, {
                 status: 'evaluated',
                 is_recommended: isWinner,
@@ -530,7 +530,7 @@ export async function awardBid(quoteId: string, projectId: string) {
         .neq("id", quoteId)
         .eq("organization_id", organization_id)
         .in("status", ["uploaded", "evaluating", "evaluated"])
-    
+
     if (rejectError) {
         console.warn("Failed to reject other bids:", rejectError)
     }

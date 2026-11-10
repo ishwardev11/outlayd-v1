@@ -274,13 +274,13 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                             {document.image_url ? (
                                 document.image_url.toLowerCase().includes('.pdf') ? (
                                     <iframe
-                                        src={`${document.image_url}#toolbar=0`}
+                                        src={`/api/files/document/${document.id}#toolbar=0`}
                                         className="w-full h-full border-0 rounded-md"
                                         title="Document Preview"
                                     />
                                 ) : (
                                     <img
-                                        src={document.image_url}
+                                        src={`/api/files/document/${document.id}`}
                                         alt="Document Preview"
                                         className="max-w-full max-h-full object-contain rounded-md shadow-sm border border-slate-200 dark:border-slate-800"
                                     />
