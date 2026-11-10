@@ -60,15 +60,6 @@ export async function getOrganizationId() {
             return firstOrgId;
         }
 
-        // 3. Fallback: Query metadata organization_id
-        if (user.user_metadata?.organization_id) {
-            return user.user_metadata.organization_id;
-        }
-
-        if (!user.email) {
-            return null;
-        }
-
         // Check if there is a pending workspace invite for this user's email
         const { data: invite } = await adminClient
             .from("workspace_invites")
@@ -127,10 +118,12 @@ export async function getCurrentUserRole() {
             query = query.eq('organization_id', activeOrgId);
         }
 
-        const { data: roleData } = await query.maybeSingle();
+        const { data: roleRows } = await query
+            .order('created_at', { ascending: true })
+            .limit(1);
 
-        if (roleData?.role) {
-            return roleData.role;
+        if (roleRows && roleRows.length > 0 && roleRows[0].role) {
+            return roleRows[0].role;
         }
 
         if (process.env.NODE_ENV === 'development') {
@@ -185,8 +178,8 @@ export async function updateDocument(id: string, updates: any) {
 
 export async function checkWriteAccess() {
     const role = await getCurrentUserRole();
-    if (role === 'Viewer') {
-        throw new Error("Unauthorized: Viewers cannot perform this action.");
+    if (role !== 'Admin' && role !== 'Editor') {
+        throw new Error("Unauthorized: You do not have permission to perform this action.");
     }
     return role;
 }

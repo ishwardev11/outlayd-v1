@@ -64,6 +64,10 @@ export async function getOrganizationSettings() {
 
 export async function updateOrganizationSettings(updates: any) {
     await checkWriteAccess();
+    const role = await checkWriteAccess();
+    if (role !== 'Admin') {
+        throw new Error("Unauthorized: Only Admins can change organization settings.");
+    }
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
@@ -314,6 +318,9 @@ export async function getTeamMembers() {
 
 export async function inviteTeamMember(email: string, full_name: string, role: string) {
     const currentUserRole = await checkWriteAccess();
+    if (currentUserRole !== 'Admin') {
+        throw new Error("Unauthorized: Only Admins can invite team members.");
+    }
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
