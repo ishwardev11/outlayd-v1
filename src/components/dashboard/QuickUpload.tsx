@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { processUpload } from "@/app/actions/ledger";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
+import { useRole } from "@/components/RoleProvider";
 
 const UploadingStatus = () => {
     const [statusIndex, setStatusIndex] = useState(0);
@@ -31,6 +32,7 @@ const UploadingStatus = () => {
 };
 
 export function QuickUpload() {
+    const { isViewer } = useRole();
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +78,7 @@ export function QuickUpload() {
     }, [searchParams, router]);
 
     const handleUpload = async (file: File) => {
+        if (isViewer) return;
         setIsUploading(true);
         try {
             const formData = new FormData();
@@ -97,6 +100,7 @@ export function QuickUpload() {
 
     const onDragOver = (e: React.DragEvent) => {
         e.preventDefault();
+        if (isViewer) return;
         setIsDragging(true);
     };
 
@@ -107,6 +111,7 @@ export function QuickUpload() {
     const onDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(false);
+        if (isViewer) return;
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             handleUpload(e.dataTransfer.files[0]);
         }
@@ -142,18 +147,18 @@ export function QuickUpload() {
             </CardHeader>
             <CardContent className="flex-1 pb-2 pt-0 px-5 flex flex-col">
                 <div
-                    className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer 
+                    className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 text-center transition-colors ${isViewer ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
                         ${isDragging ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-400/50 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
                     onDragOver={onDragOver}
                     onDragLeave={onDragLeave}
                     onDrop={onDrop}
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => !isViewer && fileInputRef.current?.click()}
                 >
                     <div className={`h-10 w-10 rounded-full flex items-center justify-center mb-2 transition-colors ${isDragging ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400' : 'bg-slate-100 text-slate-400 dark:bg-slate-800/80 dark:text-slate-500'}`}>
                         <UploadCloud className="h-5 w-5" />
                     </div>
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Drop receipt here</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">or click to browse</p>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{isViewer ? "Uploads disabled" : "Drop receipt here"}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{isViewer ? "Viewers cannot upload documents" : "or click to browse"}</p>
                 </div>
             </CardContent>
 
