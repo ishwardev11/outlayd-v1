@@ -558,12 +558,17 @@ export async function acceptInvite(password: string, fullName: string) {
         return { success: false, error: "AUTH_REQUIRED", message: "You must use the secure link sent to your email to accept this invite." }
     }
 
+    // The session must belong to a verified email (the person really opened the emailed link)
+    if (!user.email_confirmed_at) {
+        return { success: false, error: "EMAIL_NOT_VERIFIED", message: "Please verify your email address using the link we sent you." }
+    }
+
     // 2. Fetch pending invite from workspace_invites using admin client
     const adminClient = createAdminClient()
     const { data: invite, error: inviteError } = await adminClient
         .from("workspace_invites")
         .select("*")
-        .eq("email", user.email)
+        .ilike("email", user.email.replace(/[\\%_]/g, (c) => "\\" + c))
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -573,6 +578,12 @@ export async function acceptInvite(password: string, fullName: string) {
         return { success: false, error: "INVITE_NOT_FOUND", message: "No active workspace invitation was found for your email address." }
     }
 
+    // Invites expire after 7 days
+    const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+    if (!invite.created_at || Date.now() - new Date(invite.created_at).getTime() > INVITE_TTL_MS) {
+        await adminClient.from("workspace_invites").delete().eq("id", invite.id)
+        return { success: false, error: "INVITE_EXPIRED", message: "This invitation has expired. Ask your workspace admin to send a new one." }
+    }
     const { organization_id, role } = invite
 
     // 3. Set the password and user full name

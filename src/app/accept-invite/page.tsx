@@ -206,18 +206,11 @@ export default function AcceptInvitePage() {
                                         <li>The link might have been scanned or clicked in the background by your email provider&apos;s link protection filter, which consumes the one-time token.</li>
                                     </ul>
                                     <p className="mt-2 text-amber-400/90 font-medium">
-                                        Good news: You can still join by signing up manually with your invited email address! Our system will automatically link you to the workspace.
+                                        Ask your workspace admin to send you a new invitation. For security, accounts can only join a workspace through the invitation link.
                                     </p>
                                 </div>
 
                                 <div className="space-y-2 pt-2">
-                                    <Button
-                                        onClick={() => router.push("/signup")}
-                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition-all shadow-md active:scale-[0.98] flex items-center justify-center cursor-pointer"
-                                    >
-                                        Create Account / Sign Up
-                                    </Button>
-
                                     <Button
                                         onClick={() => router.push("/login")}
                                         variant="outline"
