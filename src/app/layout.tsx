@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { Geist, Geist_Mono, Plus_Jakarta_Sans, Bricolage_Grotesque, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SmoothScrollProvider } from "@/components/SmoothScrollProvider";
@@ -21,9 +21,21 @@ const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
 });
 
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Outlayd | Intelligent Expense Management & Procurement",
-  description: "An expense tracking and AP automation tool for modern businesses.",
+  description: "An expense tracking and AP automation tool for Malaysian nonprofits and small businesses.",
 };
 
 import { AuthHashRedirect } from "@/components/AuthHashRedirect";
@@ -59,7 +71,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} ${bricolage.variable} ${dmSans.variable} antialiased`}
       >
         <ThemeProvider defaultTheme="system">
           <SmoothScrollProvider>

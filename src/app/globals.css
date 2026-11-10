@@ -145,3 +145,71 @@
 .animate-laser-scan {
   animation: laser-scan 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
+
+
+/* Outlayd Warm Ledger Landing Page Design Tokens */
+:root {
+  --brand: #4F3BF5;
+  --brand-hover: #4330E0;
+  --ink: #1E1B4B;
+  --ink-muted: #4B4870;
+  --tint: #EEEBFF;
+  --cream: #FBF7F0;
+  --cream-card: #FFFFFF;
+  --amber: #E8A33D;
+  --amber-soft: #FEF3C7;
+  --teal: #0F9D8A;
+  --teal-soft: #E6F8F5;
+  --paper-border: #E8E2D5;
+  --paper-line: #F1EDE4;
+}
+
+.font-heading {
+  font-family: var(--font-bricolage), Georgia, serif;
+}
+
+.font-body {
+  font-family: var(--font-dm-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* Subtle ledger paper texture & dotted perforation line */
+.perforated-top {
+  position: relative;
+}
+.perforated-top::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-image: radial-gradient(circle, #D8D2C4 1px, transparent 1.5px);
+  background-size: 8px 2px;
+}
+
+.perforated-bottom {
+  position: relative;
+}
+.perforated-bottom::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-image: radial-gradient(circle, #D8D2C4 1px, transparent 1.5px);
+  background-size: 8px 2px;
+}
+
+/* Stamp motif */
+.stamp-tag {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+  border-width: 1.5px;
+  border-style: solid;
+  transform: rotate(-1.5deg);
+}

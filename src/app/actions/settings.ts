@@ -122,10 +122,10 @@ export async function getSettingsFunds() {
         const cookieStore = await cookies();
         const choice = cookieStore.get('dev_template_choice')?.value || 'digital_agency';
         const template = TEMPLATES[choice] || TEMPLATES.digital_agency;
-        return template.funds.map((f: any, i: number) => ({ 
-            id: `mock-fund-${i}`, 
-            organization_id, 
-            name: f.name 
+        return template.funds.map((f: any, i: number) => ({
+            id: `mock-fund-${i}`,
+            organization_id,
+            name: f.name
         }));
     }
 
@@ -199,10 +199,10 @@ export async function getSettingsCategories() {
         const cookieStore = await cookies();
         const choice = cookieStore.get('dev_template_choice')?.value || 'digital_agency';
         const template = TEMPLATES[choice] || TEMPLATES.digital_agency;
-        return template.categories.map((c: any, i: number) => ({ 
-            id: `mock-category-${i}`, 
-            organization_id, 
-            name: c.name 
+        return template.categories.map((c: any, i: number) => ({
+            id: `mock-category-${i}`,
+            organization_id,
+            name: c.name
         }));
     }
 
@@ -412,8 +412,8 @@ export async function inviteTeamMember(email: string, full_name: string, role: s
 
     // 6. Block if total seats used (active + pending) exceeds limits
     if (totalSeatsUsed >= limit) {
-        return { 
-            success: false, 
+        return {
+            success: false,
             error: "LIMIT_REACHED",
             message: `You have reached your seat limit of ${limit} members. Please upgrade your subscription to add more.`
         }
@@ -464,7 +464,7 @@ export async function inviteTeamMember(email: string, full_name: string, role: s
                     .delete()
                     .eq("organization_id", organization_id)
                     .eq("email", email)
-                    
+
                 throw new Error(authInviteError.message)
             }
         }
@@ -478,9 +478,9 @@ export async function inviteTeamMember(email: string, full_name: string, role: s
 
     revalidatePath("/settings")
     if (isAlreadyRegistered) {
-        return { 
-            success: true, 
-            message: "This user is already registered with Outlayd. They have been added to this workspace's invites and will gain access automatically upon their next login." 
+        return {
+            success: true,
+            message: "This user is already registered with Outlayd. They have been added to this workspace's invites and will gain access automatically upon their next login."
         }
     }
     return { success: true }
@@ -627,7 +627,6 @@ export async function acceptInvite(password: string, fullName: string) {
 // --- Subscription / Upgrade ---
 
 export async function verifyCheckoutSession(sessionId: string) {
-    const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
     try {
@@ -640,8 +639,10 @@ export async function verifyCheckoutSession(sessionId: string) {
         if (session.payment_status === 'paid' && session.metadata?.organization_id === organization_id) {
             const customerId = typeof session.customer === 'string' ? session.customer : (session.customer as any)?.id || null;
             const tier = session.metadata?.tier || 'growth';
-            const { error } = await supabase
-                .rpc('upgrade_org_to_pro', { 
+            // Billing changes are server-only: the RPC is no longer callable with the user's session.
+            const adminClient = createAdminClient();
+            const { error } = await adminClient
+                .rpc('upgrade_org_to_pro', {
                     org_id: organization_id,
                     p_tier: tier,
                     p_customer_id: customerId
@@ -650,7 +651,6 @@ export async function verifyCheckoutSession(sessionId: string) {
             if (error) {
                 console.error('Error upgrading org from client verify via RPC:', error);
                 // Fallback: direct update via admin client
-                const adminClient = createAdminClient();
                 await adminClient.from('organizations').update({
                     subscription_status: 'pro',
                     subscription_tier: tier,
@@ -663,11 +663,11 @@ export async function verifyCheckoutSession(sessionId: string) {
             revalidatePath("/", "layout")
             return { success: true };
         }
-        
+
     } catch (e) {
         console.error("verifyCheckoutSession error:", e)
     }
-    
+
     return { success: false };
 }
 
