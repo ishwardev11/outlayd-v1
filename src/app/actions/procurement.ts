@@ -225,6 +225,7 @@ export async function processQuoteUpload(projectId: string, formData: FormData) 
 
     if (quoteError) {
         console.error("Quotes Insert Error:", quoteError)
+        await createAdminClient().storage.from("receipts").remove([storagePath])
         throw new Error("Failed to create quote record")
     }
 
@@ -245,6 +246,16 @@ export async function runSingleEvaluation(quoteId: string, projectId: string) {
 }
 
 export async function extractQuoteData(quoteId: string, projectId: string, mimeType: string, base64Data: string) {
+    await checkWriteAccess()
+
+    const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "application/pdf"]
+    if (!ALLOWED_MIMES.includes(mimeType)) {
+        throw new Error("Invalid file type")
+    }
+    if (base64Data.length > 14 * 1024 * 1024) { // ~10MB file once base64-encoded
+        throw new Error("File too large")
+    }
+
     if (!process.env.GEMINI_API_KEY) {
         throw new Error("GEMINI_API_KEY is missing from environment variables")
     }
