@@ -3,6 +3,11 @@
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
+import {
+    sanitizeDocumentUpdates,
+    assertOwnedIds,
+    UpdateValidationError,
+} from "@/utils/sanitize-updates"
 
 export async function getOrganizationId() {
     // 1. Check local dev override
@@ -59,9 +64,9 @@ export async function getOrganizationId() {
             }
             return firstOrgId;
         }
-    if (!user.email) {
-       return null;
-   }
+        if (!user.email) {
+            return null;
+        }
         // Check if there is a pending workspace invite for this user's email
         const { data: invite } = await adminClient
             .from("workspace_invites")
@@ -143,16 +148,31 @@ export async function getCurrentUserRole() {
 }
 
 
-export async function updateDocument(id: string, updates: any) {
+export async function updateDocument(id: string, rawUpdates: unknown) {
     await checkWriteAccess();
     const supabase = await createClient()
+
+    let updates: Record<string, any>
+    try {
+        updates = sanitizeDocumentUpdates(rawUpdates)
+
+        const splits = Array.isArray(updates.splits) ? updates.splits : []
+        await assertOwnedIds(supabase, "vendors", [updates.vendor_id])
+        await assertOwnedIds(supabase, "funds", [updates.fund_id, ...splits.map((s: any) => s?.fund_id)])
+        await assertOwnedIds(supabase, "categories", [updates.category_id, ...splits.map((s: any) => s?.category_id)])
+    } catch (e) {
+        if (e instanceof UpdateValidationError) {
+            return { success: false, error: e.message }
+        }
+        throw e
+    }
 
     // Automatically link vendor_id if editing the vendor_name manually in the UI
     if (updates.vendor_name && !updates.vendor_id) {
         const { data: vendor } = await supabase
             .from("vendors")
             .select("id")
-            .ilike("name", updates.vendor_name)
+            .ilike("name", String(updates.vendor_name).replace(/[\\%_]/g, (c) => "\\" + c))
             .single()
 
         if (vendor) {
@@ -226,5 +246,3 @@ export async function getOrganizationCurrency(): Promise<string> {
 
     return "MYR";
 }
-
-

@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 
 import { getOrganizationId, updateDocument, checkWriteAccess } from "./document-utils"
+import { sanitizeVendorUpdates, assertOwnedIds, UpdateValidationError } from "@/utils/sanitize-updates"
 import { extractDocumentData } from "./ai"
 export { getOrganizationId, updateDocument }
 
@@ -153,9 +154,24 @@ export async function getVendors() {
     return data
 }
 
-export async function updateVendor(id: string, updates: any) {
+export async function updateVendor(id: string, rawUpdates: unknown) {
     await checkWriteAccess();
     const supabase = await createClient()
+
+    let updates: Record<string, unknown>
+    try {
+        updates = sanitizeVendorUpdates(rawUpdates)
+        await assertOwnedIds(supabase, "categories", [updates.default_category_id])
+        await assertOwnedIds(supabase, "funds", [updates.default_fund_id])
+    } catch (e) {
+        if (e instanceof UpdateValidationError) {
+            throw new Error(e.message)
+        }
+        throw e
+    }
+    if (Object.keys(updates).length === 0) {
+        throw new Error("Nothing to update")
+    }
 
     const { data, error } = await supabase
         .from("vendors")
