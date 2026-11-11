@@ -31,19 +31,12 @@ export async function POST(req: Request) {
 
         const orgId = authenticatedOrgId;
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'http://localhost:3000';
-        
-        const tier = body.tier || (body.plan === 'nonprofit' ? 'nonprofit' : 'growth');
-        const defaultGrowthPrice = 'price_1UI92mAoi98hcDUg4w1jF3td';
-        const defaultNonprofitPrice = 'price_1UI92mAoi98hcDUgi4oMQ9NK';
 
-        let priceId = body.priceId;
-        if (!priceId) {
-            if (tier === 'nonprofit') {
-                priceId = process.env.STRIPE_PRICE_ID_NONPROFIT || defaultNonprofitPrice;
-            } else {
-                priceId = process.env.STRIPE_PRICE_ID || process.env.STRIPE_PRICE_ID_GROWTH || defaultGrowthPrice;
-            }
-        }
+        // SECURITY: the browser never chooses the price or the tier. Anything sent as
+        // body.priceId / body.tier / body.plan is ignored. The nonprofit price is a Stripe
+        // promotion code that customers enter on Stripe's checkout page.
+        const tier = 'growth';
+        const priceId = process.env.STRIPE_PRICE_ID_GROWTH || process.env.STRIPE_PRICE_ID || 'price_1UI92mAoi98hcDUg4w1jF3td';
 
         // Check if organization already has an existing Stripe customer ID
         let existingCustomerId: string | undefined;
@@ -51,9 +44,12 @@ export async function POST(req: Request) {
             const adminClient = createAdminClient();
             const { data: org } = await adminClient
                 .from('organizations')
-                .select('stripe_customer_id')
+                .select('stripe_customer_id, subscription_status')
                 .eq('id', orgId)
                 .single();
+            if (org?.subscription_status === 'pro') {
+                return NextResponse.json({ error: 'This organization already has an active subscription. Use "Manage subscription" instead.' }, { status: 400 });
+            }
             if (org?.stripe_customer_id) {
                 existingCustomerId = org.stripe_customer_id;
             }
@@ -110,6 +106,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ url: session.url });
     } catch (err: any) {
         console.error('Stripe checkout error:', err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: 'Could not start checkout. Please try again.' }, { status: 500 });
     }
 }
