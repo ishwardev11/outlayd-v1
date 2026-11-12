@@ -58,7 +58,7 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: OrgSettings |
         } catch (error: unknown) {
             const err = error as Error;
             console.error('Portal error:', err);
-            
+
             alert(err.message || 'Failed to open billing portal. Please try again.');
             if (err.message && err.message.toLowerCase().includes('reset')) {
                 window.location.reload();
@@ -107,9 +107,9 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: OrgSettings |
                     {!isPro ? (
                         <>
                             <p className="text-slate-600 dark:text-slate-300 mb-6">
-                                You are currently on the free plan which includes up to 5 document extractions.
+                                You are currently on the free plan which includes up to 5 document extractions per month.
                             </p>
-                            <Button 
+                            <Button
                                 onClick={handleUpgrade}
                                 disabled={isLoading || !isAdmin}
                                 title={!isAdmin ? "Only organization admins can upgrade the plan" : ""}

@@ -273,11 +273,18 @@ export async function processUpload(formData: FormData) {
         const isPro = orgData?.subscription_status === 'pro';
 
         if (!isPro) {
-            // Enforce Free Tier Limit
+            // Enforce Free Tier Limit: 5 AI extractions per calendar month (UTC)
+            const now = new Date();
+            const startOfMonth = new Date(
+                Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
+            ).toISOString();
+
             const { count, error: countError } = await supabase
                 .from("documents")
                 .select("*", { count: "exact", head: true })
                 .eq("organization_id", organization_id)
+                .neq("status", "DUPLICATE_WARNING")
+                .gte("created_at", startOfMonth)
 
             if (countError) {
                 console.error("Error fetching document count:", countError)
@@ -288,7 +295,7 @@ export async function processUpload(formData: FormData) {
                 return {
                     status: "error",
                     code: "LIMIT_REACHED",
-                    message: "Free tier limit reached. Please upgrade to process more documents."
+                    message: "You've used all 5 free document extractions for this month. Upgrade to Growth for unlimited extractions, or wait until next month."
                 }
             }
         }
