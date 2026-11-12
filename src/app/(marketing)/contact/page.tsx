@@ -15,6 +15,7 @@ export default function ContactPage() {
     const [email, setEmail] = useState("");
     const [subject, setSubject] = useState("");
     const [message, setMessage] = useState("");
+    const [website, setWebsite] = useState(""); // honeypot: real visitors never see this field
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
@@ -40,7 +41,7 @@ export default function ContactPage() {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ name, email, subject, message }),
+                body: JSON.stringify({ name, email, subject, message, website }),
             });
 
             const result = await response.json();
@@ -91,6 +92,19 @@ export default function ContactPage() {
                                 )}
 
                                 <form onSubmit={handleSubmit} className="space-y-4">
+                                    {/* Honeypot field: hidden from people, bots tend to fill it in */}
+                                    <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", height: 0, width: 0, overflow: "hidden" }}>
+                                        <label htmlFor="website">Website</label>
+                                        <input
+                                            id="website"
+                                            name="website"
+                                            type="text"
+                                            tabIndex={-1}
+                                            autoComplete="off"
+                                            value={website}
+                                            onChange={(e) => setWebsite(e.target.value)}
+                                        />
+                                    </div>
                                     {/* Name Input */}
                                     <div className="space-y-2">
                                         <Label htmlFor="name" className="text-slate-350 text-xs font-semibold">Your Name</Label>
