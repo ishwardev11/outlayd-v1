@@ -17,6 +17,7 @@ import { cookies, headers } from "next/headers"
 import Stripe from 'stripe';
 import { TEMPLATES } from "@/utils/templates"
 import { createAdminClient } from "@/utils/supabase/admin"
+import { toStoragePath } from "@/utils/storage-paths"
 
 // --- Organization Profile ---
 
@@ -63,7 +64,7 @@ export async function getOrganizationSettings() {
 }
 
 export async function updateOrganizationSettings(updates: any) {
-   const role = await checkWriteAccess();
+    const role = await checkWriteAccess();
     if (role !== 'Admin') {
         throw new Error("Unauthorized: Only Admins can change organization settings.");
     }
@@ -693,8 +694,10 @@ export async function deleteOrganizationAccount() {
     if (role !== 'Admin') {
         throw new Error("Unauthorized: Only Admins can delete the organization account.");
     }
-    const supabase = await createClient();
     const organization_id = await getOrganizationId();
+    if (!organization_id) {
+        throw new Error("No active organization");
+    }
 
     if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
         const cookieStore = await cookies();
@@ -713,7 +716,7 @@ export async function deleteOrganizationAccount() {
     const adminClient = createAdminClient();
     const { data: org, error: orgError } = await adminClient
         .from('organizations')
-        .select('stripe_customer_id, subscription_status, subscription_tier')
+        .select('stripe_customer_id')
         .eq('id', organization_id)
         .single();
 
@@ -722,103 +725,133 @@ export async function deleteOrganizationAccount() {
         throw new Error("Failed to delete organization: data fetch failed");
     }
 
-    // 1. Cancel Stripe subscriptions if on growth/pro plan
-    const isGrowth = org?.subscription_tier === 'growth' || org?.subscription_status === 'pro';
-    const stripeCustomerId = org?.stripe_customer_id;
-
-    if (isGrowth && stripeCustomerId && process.env.STRIPE_SECRET_KEY) {
+    // 1. Cancel every live Stripe subscription FIRST. If this fails, nothing has been deleted yet.
+    if (org?.stripe_customer_id) {
+        if (!process.env.STRIPE_SECRET_KEY) {
+            throw new Error("Billing is not configured, so the subscription cannot be cancelled. Nothing was deleted.");
+        }
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+            apiVersion: '2026-02-25.clover' as any,
+        });
         try {
-            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-                apiVersion: '2026-02-25.clover' as any,
-            });
             const subscriptions = await stripe.subscriptions.list({
-                customer: stripeCustomerId,
-                status: 'active',
+                customer: org.stripe_customer_id,
+                status: 'all',
+                limit: 100,
             });
             for (const sub of subscriptions.data) {
-                await stripe.subscriptions.cancel(sub.id);
-                console.log(`Cancelled Stripe subscription ${sub.id}`);
+                if (sub.status !== 'canceled' && sub.status !== 'incomplete_expired') {
+                    await stripe.subscriptions.cancel(sub.id);
+                    console.log(`Cancelled Stripe subscription ${sub.id}`);
+                }
             }
-        } catch (stripeError) {
-            console.error("Stripe subscription cancellation failed during account deletion:", stripeError);
-        }
-    }
-
-    // 2. Fetch all team members in user_roles for this organization
-    const { data: members, error: membersError } = await adminClient
-        .from("user_roles")
-        .select("email")
-        .eq("organization_id", organization_id);
-
-    if (membersError) {
-        console.error("Failed to fetch team members for deletion:", membersError);
-    } else if (members) {
-        // Delete users from Supabase Auth
-        for (const member of members) {
-            try {
-                const { data: userId, error: rpcError } = await adminClient.rpc('get_user_id_by_email', {
-                    email_address: member.email
-                });
-                if (rpcError) {
-                    console.error(`Failed to get user ID for email ${member.email}:`, rpcError);
-                    continue;
-                }
-                if (userId) {
-                    const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(userId);
-                    if (deleteAuthError) {
-                        console.error(`Failed to delete Auth User ${member.email}:`, deleteAuthError);
-                    } else {
-                        console.log(`Deleted Auth User ${member.email}`);
-                    }
-                }
-            } catch (err) {
-                console.error(`Error deleting user ${member.email}:`, err);
+        } catch (stripeError: any) {
+            // A customer from another Stripe environment (test vs live) has nothing to cancel here
+            if (stripeError?.code !== 'resource_missing') {
+                console.error("Stripe subscription cancellation failed during account deletion:", stripeError);
+                throw new Error("Could not cancel the subscription. Nothing was deleted. Please try again.");
             }
         }
     }
 
-    // 3. Sequentially delete all data associated with the organization to satisfy FK constraints
-    const tablesToDelete = [
-        "quotes",
-        "procurement_projects",
-        "documents",
-        "vendors",
-        "funds",
-        "categories",
-        "workspace_invites",
-        "user_profiles",
-        "user_roles"
-    ];
+    // 2. Work out which logins to remove: only people who belong to NO other organisation
+    const { data: memberRows, error: memberErr } = await adminClient
+        .from("user_roles").select("email").eq("organization_id", organization_id);
+    const { data: inviteRows, error: inviteErr } = await adminClient
+        .from("workspace_invites").select("email").eq("organization_id", organization_id);
+    if (memberErr || inviteErr) {
+        throw new Error("Could not read team members. Nothing was deleted.");
+    }
 
-    for (const table of tablesToDelete) {
-        const { error } = await adminClient
-            .from(table)
-            .delete()
-            .eq("organization_id", organization_id);
-        if (error) {
-            console.error(`Failed to delete data from table ${table}:`, error);
-            throw new Error(`Failed to delete organization data in table ${table}: ${error.message}`);
+    const candidates = [...new Set(
+        [...(memberRows ?? []), ...(inviteRows ?? [])]
+            .map((r: any) => String(r.email || "").trim().toLowerCase())
+            .filter(Boolean)
+    )];
+    // Anything unusual is left alone rather than risk deleting the wrong login
+    const safeCandidates = candidates.filter((e) => /^[a-z0-9._+\-]+@[a-z0-9.\-]+$/.test(e));
+
+    let emailsToDelete: string[] = [];
+    if (safeCandidates.length > 0) {
+        const orFilter = safeCandidates.map((e) => `email.ilike.${e}`).join(",");
+        const [otherRoles, otherInvites] = await Promise.all([
+            adminClient.from("user_roles").select("email").neq("organization_id", organization_id).or(orFilter),
+            adminClient.from("workspace_invites").select("email").neq("organization_id", organization_id).or(orFilter),
+        ]);
+        if (otherRoles.error || otherInvites.error) {
+            throw new Error("Could not verify other memberships. Nothing was deleted.");
+        }
+        const keep = new Set(
+            [...(otherRoles.data ?? []), ...(otherInvites.data ?? [])]
+                .map((r: any) => String(r.email || "").trim().toLowerCase())
+        );
+        emailsToDelete = safeCandidates.filter((e) => !keep.has(e));
+    }
+
+    // 3. Collect every uploaded file: this org's folder plus older files referenced by URL
+    const storage = adminClient.storage.from("receipts");
+    const filePaths = new Set<string>();
+
+    for (const [table, column] of [["documents", "image_url"], ["quotes", "file_url"]] as const) {
+        let from = 0;
+        while (true) {
+            const { data, error } = await adminClient
+                .from(table)
+                .select(column)
+                .eq("organization_id", organization_id)
+                .range(from, from + 999);
+            if (error) {
+                throw new Error("Could not list uploaded files. Nothing was deleted.");
+            }
+            for (const row of (data ?? []) as any[]) {
+                const path = row[column] ? toStoragePath(String(row[column])) : null;
+                if (path && !path.includes("..")) filePaths.add(path);
+            }
+            if (!data || data.length < 1000) break;
+            from += 1000;
         }
     }
 
-    // 4. Finally delete the organization record itself
-    const { error: deleteOrgError } = await adminClient
-        .from("organizations")
-        .delete()
-        .eq("id", organization_id);
-
-    if (deleteOrgError) {
-        console.error("Failed to delete organization record:", deleteOrgError);
-        throw new Error(`Failed to delete organization: ${deleteOrgError.message}`);
+    let offset = 0;
+    while (true) {
+        const { data, error } = await storage.list(organization_id, { limit: 1000, offset });
+        if (error || !data || data.length === 0) break;
+        for (const file of data) filePaths.add(`${organization_id}/${file.name}`);
+        if (data.length < 1000) break;
+        offset += 1000;
     }
 
-    // 5. Clear active organization cookie
+    // 4. Delete all organisation data in one database transaction (all or nothing)
+    const { error: deleteError } = await adminClient.rpc("delete_organization_data", { p_org_id: organization_id });
+    if (deleteError) {
+        console.error("Failed to delete organization data:", deleteError);
+        throw new Error(`Failed to delete organization: ${deleteError.message}`);
+    }
+
+    // 5. Remove uploaded files (best effort: the data is already gone)
+    const allPaths = [...filePaths];
+    for (let i = 0; i < allPaths.length; i += 100) {
+        const { error } = await storage.remove(allPaths.slice(i, i + 100));
+        if (error) console.error("Failed to remove some uploaded files:", error);
+    }
+
+    // 6. Remove logins that belong to no other organisation (best effort)
+    for (const email of emailsToDelete) {
+        try {
+            const { data: userId, error: rpcError } = await adminClient.rpc('get_user_id_by_email', {
+                email_address: email
+            });
+            if (rpcError || !userId) continue;
+            const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(userId);
+            if (deleteAuthError) console.error(`Failed to delete login ${email}:`, deleteAuthError);
+        } catch (err) {
+            console.error(`Error deleting login ${email}:`, err);
+        }
+    }
+
+    // 7. Clear active organization cookie
     const cookieStore = await cookies();
     cookieStore.set('active_org_id', '', { maxAge: 0, path: '/' });
 
     return { success: true };
 }
-
-
-
-
