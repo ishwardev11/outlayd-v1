@@ -10,6 +10,7 @@ import {
     FileText,
     Users,
     BarChart3,
+    FileCheck,
     Settings,
     Gavel,
     LogOut,
@@ -149,6 +150,16 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                 <Link id="sidebar-link-reports" href="/reports" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/reports' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <BarChart3 size={20} />
                     <span>Reports</span>
+                </Link>
+                <Link id="sidebar-link-donor-memo" href="/reports/donor-memo" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/reports/donor-memo' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                    <FileCheck size={20} />
+                    <span className="flex-1">Donor Memo</span>
+                    {isPro === false && (
+                        <span className="ml-auto bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1 shrink-0">
+                            <Lock size={9} strokeWidth={2.5} />
+                            Pro
+                        </span>
+                    )}
                 </Link>
 
                 {/* Procurement — gated for free users. Uses a button (not Link) to guarantee no HTML navigation occurs */}

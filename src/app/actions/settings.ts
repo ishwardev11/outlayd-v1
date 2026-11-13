@@ -18,6 +18,7 @@ import Stripe from 'stripe';
 import { TEMPLATES } from "@/utils/templates"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { toStoragePath } from "@/utils/storage-paths"
+import { sanitizeFundDetails, UpdateValidationError } from "@/utils/sanitize-updates"
 
 // --- Organization Profile ---
 
@@ -188,6 +189,40 @@ export async function deleteSettingFund(id: string) {
     if (error) {
         console.error("Supabase Error (deleteSettingFund):", error)
         throw new Error("Failed to delete fund")
+    }
+    revalidatePath("/", "layout")
+    return { success: true }
+}
+
+export async function updateFundDetails(id: string, rawDetails: unknown) {
+    await checkWriteAccess();
+    const supabase = await createClient()
+    const organization_id = await getOrganizationId()
+
+    let updates: Record<string, unknown>
+    try {
+        updates = sanitizeFundDetails(rawDetails)
+    } catch (e) {
+        if (e instanceof UpdateValidationError) throw new Error(e.message)
+        throw e
+    }
+    if (Object.keys(updates).length === 0) {
+        throw new Error("Nothing to update")
+    }
+
+    const { data, error } = await supabase
+        .from("funds")
+        .update(updates)
+        .eq("id", id)
+        .eq("organization_id", organization_id)
+        .select("id")
+
+    if (error) {
+        console.error("Supabase Error (updateFundDetails):", error)
+        throw new Error("Failed to save fund details")
+    }
+    if (!data || data.length === 0) {
+        throw new Error("Fund not found")
     }
     revalidatePath("/", "layout")
     return { success: true }

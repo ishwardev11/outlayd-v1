@@ -24,6 +24,12 @@ export interface Fund {
     id: string;
     name: string;
     code?: string;
+    donor_name?: string | null;
+    grant_reference?: string | null;
+    purpose?: string | null;
+    award_amount?: number | string | null;
+    period_start?: string | null;
+    period_end?: string | null;
 }
 
 export interface Category {

@@ -124,3 +124,55 @@ export async function assertOwnedIds(
         throw new UpdateValidationError(`Invalid ${table.slice(0, -1)} reference`)
     }
 }
+// --- Fund (grant) details used by the Donor & Audit Memo ---
+
+const FUND_TEXT_FIELDS: Record<string, number> = {
+    donor_name: 255,
+    grant_reference: 100,
+    purpose: 2000,
+}
+const FUND_DATE_FIELDS = ["period_start", "period_end"]
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+function cleanIsoDate(key: string, value: unknown): string | null {
+    if (value === null || value === undefined || value === "") return null
+    if (typeof value !== "string" || !ISO_DATE_RE.test(value)) {
+        throw new UpdateValidationError(`${key} must be a date (YYYY-MM-DD)`)
+    }
+    const d = new Date(`${value}T00:00:00Z`)
+    if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== value) {
+        throw new UpdateValidationError(`${key} is not a valid date`)
+    }
+    return value
+}
+
+export function sanitizeFundDetails(input: unknown): Record<string, unknown> {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+        throw new UpdateValidationError("Invalid update")
+    }
+    const src = input as Record<string, unknown>
+    const out: Record<string, unknown> = {}
+
+    for (const key of Object.keys(src)) {
+        const value = src[key]
+        if (value === undefined) continue
+        if (key in FUND_TEXT_FIELDS) {
+            out[key] = cleanText(key, value, FUND_TEXT_FIELDS[key])?.trim() || null
+        } else if (key === "award_amount") {
+            const n = cleanNumber(key, value)
+            if (n !== null && n < 0) throw new UpdateValidationError("award_amount cannot be negative")
+            out[key] = n
+        } else if (FUND_DATE_FIELDS.includes(key)) {
+            out[key] = cleanIsoDate(key, value)
+        } else {
+            console.warn(`updateFundDetails: ignoring field "${key}"`)
+        }
+    }
+
+    const start = out.period_start as string | null | undefined
+    const end = out.period_end as string | null | undefined
+    if (start && end && start > end) {
+        throw new UpdateValidationError("Grant period start must be on or before the end date")
+    }
+    return out
+}

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { CheckCircle2, LockKeyhole } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
-type PaywallContext = "upload_limit" | "procurement" | "team_limit";
+type PaywallContext = "upload_limit" | "procurement" | "team_limit" | "donor_memo";
 
 interface UpgradePaywallModalProps {
     isOpen: boolean;
@@ -24,6 +24,11 @@ const COPY: Record<PaywallContext, { heading: string; subtext: string }> = {
         heading: "Procurement is a Growth Feature",
         subtext:
             "The full Procurement pipeline — RFP management, vendor bidding, and AI-powered quote evaluation — is exclusive to Outlayd Growth. Upgrade to unlock it today.",
+    },
+    donor_memo: {
+        heading: "The Donor & Audit Memo is a Growth Feature",
+        subtext:
+            "Generate signed-off fund reports for donors, boards and auditors, with automatic checks for missing receipts and out-of-period spending. Upgrade to Outlayd Growth to unlock it.",
     },
     team_limit: {
         heading: "Collaborate with your whole team",

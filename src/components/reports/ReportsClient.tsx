@@ -4,7 +4,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, TrendingUp, AlertTriangle, Wallet, PieChart, ListX, Info } from "lucide-react";
+import { BarChart3, TrendingUp, AlertTriangle, Wallet, PieChart, ListX, Info, FileCheck } from "lucide-react";
+import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ReportsExportButton } from "@/components/reports/ReportsExportButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -138,7 +139,16 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                     <p className="text-gray-500 dark:text-slate-400 mt-2 text-lg">Detailed breakdown of expense allocation and spending.</p>
                 </div>
 
-                <ReportsExportButton filteredDocuments={filteredDocuments} dateRange="Custom" />
+                <div className="flex items-center gap-2 flex-wrap">
+                    <Link
+                        href="/reports/donor-memo"
+                        className="inline-flex items-center gap-2 h-10 px-4 rounded-md text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+                    >
+                        <FileCheck className="h-4 w-4" />
+                        Donor Memo
+                    </Link>
+                    <ReportsExportButton filteredDocuments={filteredDocuments} dateRange="Custom" />
+                </div>
             </div>
 
             {/* Filter Bar */}

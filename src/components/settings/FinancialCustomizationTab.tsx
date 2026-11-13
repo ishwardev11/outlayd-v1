@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Loader2, Plus, Trash2 } from "lucide-react"
 import { useRole } from "@/components/RoleProvider"
 import { Fund, Category } from "./SettingsLayout"
+import { FundDetailsDialog } from "./FundDetailsDialog"
 
 export function FinancialCustomizationTab({ initialFunds, initialCategories }: { initialFunds: Fund[], initialCategories: Category[] }) {
     const { isViewer } = useRole()
@@ -94,7 +95,7 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
                         <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                             <tr>
                                 <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200">Fund Name</th>
-                                <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200 w-24 text-right">Actions</th>
+                                <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200 w-48 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 dark:divide-slate-700/50">
@@ -103,7 +104,8 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
                                     <td className="px-4 py-3">
                                         <span className="font-medium text-gray-900 dark:text-white">{fund.name}</span>
                                     </td>
-                                    <td className="px-4 py-3 text-right">
+                                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                                        <FundDetailsDialog key={`${fund.id}-${fund.donor_name}-${fund.grant_reference}-${fund.award_amount}-${fund.period_start}-${fund.period_end}-${fund.purpose}`} fund={fund} disabled={isViewer} />
                                         <Button
                                             variant="ghost"
                                             size="sm"
