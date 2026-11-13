@@ -129,23 +129,43 @@ export async function POST(req: Request) {
             );
         }
 
-        // Verify customer exists in current Stripe environment (prevents test-mode IDs from crashing live portal)
+        // Verify the customer exists in the current Stripe environment (a test-mode ID used with
+        // live keys is reported by Stripe as "resource_missing"). Only a genuinely missing or
+        // deleted customer may reset the plan. Any other error (Stripe outage, network problem,
+        // rate limit, bad key) must NOT touch a paying customer's plan.
+        let customerMissing = false;
         try {
             const customer = await stripe.customers.retrieve(stripeCustomerId);
             if (customer.deleted) {
-                throw new Error('Customer was deleted in Stripe');
+                customerMissing = true;
             }
         } catch (custErr: any) {
-            console.warn(`Customer ${stripeCustomerId} not valid in current Stripe environment:`, custErr.message);
+            if (custErr?.code === 'resource_missing' || custErr?.statusCode === 404) {
+                customerMissing = true;
+            } else {
+                console.error(`Could not verify Stripe customer ${stripeCustomerId}; leaving the plan unchanged:`, custErr);
+                return NextResponse.json(
+                    { error: 'We could not reach the billing service right now. Please try again in a moment.' },
+                    { status: 502 }
+                );
+            }
+        }
+
+        if (customerMissing) {
+            console.warn(`Customer ${stripeCustomerId} not found in the current Stripe environment`);
             // Stale test customer ID in live mode or deleted customer: clean up organization record
-            await adminClient
+            const { error: resetError } = await adminClient
                 .from('organizations')
-                .update({ 
+                .update({
                     stripe_customer_id: null,
                     subscription_status: 'free',
                     subscription_tier: 'free'
                 })
                 .eq('id', orgId);
+
+            if (resetError) {
+                console.error('Failed to reset organization billing record:', resetError);
+            }
 
             return NextResponse.json(
                 { error: 'Your billing record was from the previous test environment. Your plan has been reset so you can upgrade with a live subscription.' },
