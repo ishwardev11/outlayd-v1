@@ -146,9 +146,9 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
                                     )}
                                 </div>
                             )}
-                            {previewDoc.confidence_score !== undefined && (
+                            {typeof previewDoc.confidence_score === 'number' && (
                                 <div className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400 font-medium">
-                                    AI Extraction Confidence: {previewDoc.confidence_score}%
+                                    Extraction check score: {Math.round(previewDoc.confidence_score)}%
                                 </div>
                             )}
                         </div>

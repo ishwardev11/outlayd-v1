@@ -4,6 +4,7 @@ import { GoogleGenerativeAI, SchemaType, type GenerationConfig } from "@google/g
 import { updateDocument, getOrganizationId, getOrganizationCurrency } from "./document-utils"
 import { getCurrencyDetails } from "@/utils/currency"
 import { createClient } from "@/utils/supabase/server"
+import { assessExtraction } from "@/utils/extraction-checks"
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
@@ -299,6 +300,22 @@ export async function extractDocumentData(
             }
         }
 
+        // Check the extraction itself (not the AI's own opinion of it) and keep the reasons
+        const numberOrNull = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+        const assessment = assessExtraction({
+            vendorName,
+            total: totalAmount,
+            subtotal: numberOrNull(data.financial_summary?.subtotal),
+            tax: numberOrNull(data.financial_summary?.tax_amount),
+            discount: numberOrNull(data.financial_summary?.discount_amount),
+            issueDate,
+            documentType: normalizedDocType,
+            invoiceNumber,
+            lineItems: normalizedLineItems,
+            currency: data.invoice_details?.currency ?? null,
+            baseCurrency: orgCurrency,
+        });
+
         // 4. Update Document Record in Supabase
         await updateDocument(documentId, {
             vendor_name: vendorName,
@@ -312,7 +329,8 @@ export async function extractDocumentData(
             subtotal: data.financial_summary?.subtotal,
             tax_amount: data.financial_summary?.tax_amount,
             vendor_branch_or_location: data.vendor?.address || null,
-            confidence_score: 95,
+            confidence_score: assessment.score,
+            extraction_flags: assessment.flags,
             splits: splits.length > 0 ? splits : [],
             line_items: normalizedLineItems,
             status: isDuplicate ? "DUPLICATE_WARNING" : "needs_review"
@@ -326,6 +344,8 @@ export async function extractDocumentData(
             await updateDocument(documentId, {
                 status: "needs_review",
                 vendor_name: "[Extraction Failed]",
+                confidence_score: 0,
+                extraction_flags: [{ code: "EXTRACTION_FAILED", message: "The AI could not read this document. Enter the details manually." }],
                 notes: `AI Extraction Error: ${error.message}`
             });
         } catch (updateErr) {

@@ -12,7 +12,6 @@ interface DocumentTemplate {
     date: string;
     category: string;
     amount: string;
-    confidence: string;
     lines: string[];
 }
 
@@ -27,7 +26,6 @@ export function PlaygroundDemo() {
             date: "May 28, 2026",
             category: "Hosting",
             amount: "RM142.50",
-            confidence: "99.8%",
             lines: ["EC2 Compute Instances - RM98.00", "S3 Storage Allocation - RM24.50", "Route53 DNS Hosting - RM20.00"]
         },
         {
@@ -39,7 +37,6 @@ export function PlaygroundDemo() {
             date: "May 30, 2026",
             category: "Travel",
             amount: "RM42.50",
-            confidence: "99.2%",
             lines: ["Business Ride (SF Office) - RM35.00", "Service Fee & Tips - RM7.50"]
         },
         {
@@ -51,7 +48,6 @@ export function PlaygroundDemo() {
             date: "Jun 01, 2026",
             category: "Software",
             amount: "RM220.00",
-            confidence: "99.6%",
             lines: ["Slack Pro Subscription (22 seats) - RM220.00"]
         }
     ];
@@ -209,7 +205,7 @@ export function PlaygroundDemo() {
                                     </div>
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 ${scanState === 'complete' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-indigo-500/10 text-indigo-400 animate-pulse'}`}>
                                         {scanState === 'complete' ? <CheckCircle2 className="w-3 h-3" /> : null}
-                                        {scanState === 'complete' ? `Extracted (${activeDoc.confidence})` : `Processing ${progress}%`}
+                                        {scanState === 'complete' ? 'Extracted, ready to review' : `Processing ${progress}%`}
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px] font-mono">

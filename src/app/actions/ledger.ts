@@ -353,6 +353,7 @@ export async function processUpload(formData: FormData) {
                     tax_amount: exDoc.tax_amount,
                     vendor_branch_or_location: exDoc.vendor_branch_or_location,
                     confidence_score: exDoc.confidence_score,
+                    extraction_flags: exDoc.extraction_flags ?? [],
                     splits: exDoc.splits,
                     line_items: exDoc.line_items
                 })
@@ -430,7 +431,8 @@ export async function processUpload(formData: FormData) {
                         subtotal: exDoc?.subtotal || null,
                         tax_amount: exDoc?.tax_amount || null,
                         vendor_branch_or_location: exDoc?.vendor_branch_or_location || null,
-                        confidence_score: exDoc?.confidence_score || null,
+                        confidence_score: exDoc?.confidence_score ?? null,
+                        extraction_flags: exDoc?.extraction_flags ?? [],
                         splits: exDoc?.splits || null,
                         line_items: exDoc?.line_items || null
                     })

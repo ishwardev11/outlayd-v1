@@ -217,7 +217,10 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                         </Badge>
 
                                         {typeof doc.confidence_score === 'number' && doc.status === "needs_review" && (
-                                            <span className={`text-[10px] font-mono ${doc.confidence_score >= 90 ? 'text-indigo-500' : 'text-amber-500'}`}>
+                                            <span
+                                                title={Array.isArray(doc.extraction_flags) && doc.extraction_flags.length > 0 ? doc.extraction_flags.map((f: any) => f.message).join('\n') : 'Extraction checks passed'}
+                                                className={`text-[10px] font-mono ${doc.confidence_score >= 90 ? 'text-indigo-500' : 'text-amber-500'}`}
+                                            >
                                                 ({Math.round(doc.confidence_score)}%)
                                             </span>
                                         )}

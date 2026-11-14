@@ -22,7 +22,7 @@ const DOCUMENT_TEXT_FIELDS: Record<string, number> = {
     notes: 5000,
 }
 const DOCUMENT_DATE_FIELDS = ["document_date", "due_date"]
-const DOCUMENT_NUMBER_FIELDS = ["amount", "subtotal", "tax_amount", "confidence_score"]
+const DOCUMENT_NUMBER_FIELDS = ["amount", "subtotal", "tax_amount"]
 const DOCUMENT_ID_FIELDS = ["vendor_id", "fund_id", "category_id"]
 const DOCUMENT_ARRAY_FIELDS = ["splits", "line_items"]
 
@@ -66,6 +66,17 @@ export function sanitizeDocumentUpdates(input: unknown): Record<string, unknown>
             out[key] = cleanText(key, value, DOCUMENT_TEXT_FIELDS[key])
         } else if (DOCUMENT_DATE_FIELDS.includes(key)) {
             out[key] = cleanText(key, value, 40) || null
+        } else if (key === "confidence_score") {
+            const n = cleanNumber(key, value)
+            if (n !== null && (n < 0 || n > 100)) throw new UpdateValidationError("confidence_score must be between 0 and 100")
+            out[key] = n
+        } else if (key === "extraction_flags") {
+            if (!Array.isArray(value) || value.length > 20) throw new UpdateValidationError("extraction_flags is not valid")
+            out[key] = value.map((f) => {
+                if (!f || typeof f !== "object") throw new UpdateValidationError("extraction_flags is not valid")
+                const flag = f as Record<string, unknown>
+                return { code: cleanText("code", flag.code, 50) ?? "", message: cleanText("message", flag.message, 300) ?? "" }
+            })
         } else if (DOCUMENT_NUMBER_FIELDS.includes(key)) {
             out[key] = cleanNumber(key, value)
         } else if (DOCUMENT_ID_FIELDS.includes(key)) {

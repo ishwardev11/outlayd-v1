@@ -55,8 +55,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                 invoice_number: document.invoice_number || "",
                 document_date: document.document_date || "",
                 amount: document.amount || 0,
-                document_type: document.document_type || "receipt",
-                confidence_score: document.confidence_score || 0
+                document_type: document.document_type || "receipt"
             });
             // Load existing splits or generate single default split
             if (document.splits && document.splits.length > 0) {
@@ -255,13 +254,24 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                 <DialogHeader className="px-6 py-4 border-b dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 flex flex-row items-center justify-between">
                     <DialogTitle className="dark:text-white">{document.status === "awaiting_payment" ? "Settle Invoice" : "Review Document"}: {document.id.split('-')[0]}</DialogTitle>
                     <div className="flex items-center gap-2">
-                        {formData.confidence_score >= 90 ? (
-                            <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800">High Confidence ({formData.confidence_score}%)</Badge>
-                        ) : (
-                            <Badge className="bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">Review Required ({formData.confidence_score || 'N/A'}%)</Badge>
+                        {typeof document.confidence_score === 'number' && (
+                            document.confidence_score >= 90 ? (
+                                <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800">Checks passed ({Math.round(document.confidence_score)}%)</Badge>
+                            ) : (
+                                <Badge className="bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">Review suggested ({Math.round(document.confidence_score)}%)</Badge>
+                            )
                         )}
                     </div>
                 </DialogHeader>
+
+                {Array.isArray(document.extraction_flags) && document.extraction_flags.length > 0 && (
+                    <div className="px-6 py-2.5 border-b dark:border-slate-800 bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-900 dark:text-amber-300 shrink-0">
+                        <p className="font-semibold mb-1">Worth a second look before you approve:</p>
+                        <ul className="list-disc pl-4 space-y-0.5">
+                            {document.extraction_flags.map((f: any) => <li key={f.code}>{f.message}</li>)}
+                        </ul>
+                    </div>
+                )}
 
                 <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2">
                     {/* Left Pane - Document Viewer */}

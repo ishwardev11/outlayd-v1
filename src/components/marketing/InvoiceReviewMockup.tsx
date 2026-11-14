@@ -22,7 +22,7 @@ export function InvoiceReviewMockup() {
                 </div>
                 <div className="flex items-center gap-1.5 bg-[#4F3BF5]/20 text-[#A599FF] border border-[#4F3BF5]/40 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
                     <Sparkles className="w-3 h-3 text-[#A599FF]" />
-                    <span>High confidence 95%</span>
+                    <span>Checks passed</span>
                 </div>
             </div>
 

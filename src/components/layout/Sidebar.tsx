@@ -123,7 +123,7 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
     const faqs = [
         { q: "How do I change categories?", a: "Go to Settings > Categories to add, edit, or delete the industry categories available in your ledger." },
         { q: "How do I invite team members?", a: "Navigate to Settings > Organization to invite new members via email and assign them roles." },
-        { q: "What do the AI confidence scores mean?", a: "The confidence score indicates how certain the AI is about the extracted data. Scores below 90% are flagged as 'Needs Review'." }
+        { q: "What do the extraction check scores mean?", a: "After the AI reads a document, Outlayd checks the result for problems: a missing total, vendor or date, figures that do not add up, line items that do not match, or an amount in a different currency. The score starts at 100 and drops for each problem found, and the problems are listed when you open the document. 90% or more means no significant problems were found. It is not a measure of how sure the AI is, so always check the key fields before approving." }
     ];
 
     return (
