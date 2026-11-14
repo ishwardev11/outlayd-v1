@@ -5,6 +5,7 @@ import { updateDocument, getOrganizationId, getOrganizationCurrency } from "./do
 import { getCurrencyDetails } from "@/utils/currency"
 import { createClient } from "@/utils/supabase/server"
 import { assessExtraction } from "@/utils/extraction-checks"
+import { convertAmount, fetchExchangeRate } from "@/utils/fx"
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
@@ -215,6 +216,28 @@ export async function extractDocumentData(
             amount: typeof item.amount === 'number' ? item.amount : parseFloat(item.amount) || 0,
         }));
 
+        // 1b. Currency. Everything stored in amount, subtotal, tax_amount, line_items and splits is in the
+        // organization's BASE currency. A document in another currency is converted at the ECB rate for
+        // its date, and the original figures are kept for the audit trail. If no rate can be found the
+        // figures are kept as printed, the document is flagged, and it cannot be approved until a rate is entered.
+        const numberOrNull = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+        const rawCurrency = String(data.invoice_details?.currency || "").trim().toUpperCase();
+        const docCurrency = /^[A-Z]{3}$/.test(rawCurrency) ? rawCurrency : orgCurrency.toUpperCase();
+        const isForeign = docCurrency !== orgCurrency.toUpperCase();
+        const fx = isForeign ? await fetchExchangeRate(docCurrency, orgCurrency, issueDate) : null;
+        const toBase = (n: number) => (fx ? convertAmount(n, fx.rate) : n);
+
+        const subtotalRaw = numberOrNull(data.financial_summary?.subtotal);
+        const taxRaw = numberOrNull(data.financial_summary?.tax_amount);
+        const totalBase = toBase(totalAmount);
+        const taxBase = taxRaw === null ? null : toBase(taxRaw);
+        const baseLineItems = normalizedLineItems.map((item: any) => ({
+            ...item,
+            unit_price: toBase(item.unit_price),
+            total: toBase(item.total),
+            amount: toBase(item.amount),
+        }));
+
         // 2. Vendor Association & Defaults
         let vendorId = null;
         let defaultCategoryId = null;
@@ -248,7 +271,7 @@ export async function extractDocumentData(
         let splits: any[] = [];
         if (defaultCategoryId || defaultFundId) {
             splits = [{
-                amount: totalAmount,
+                amount: totalBase,
                 category_id: defaultCategoryId || null,
                 fund_id: defaultFundId || null
             }];
@@ -284,12 +307,12 @@ export async function extractDocumentData(
                 .eq("organization_id", organization_id)
                 .ilike("vendor_name", vendorName)
                 .eq("document_date", issueDate)
-                .eq("amount", totalAmount)
+                .eq("amount", totalBase)
                 .neq("id", documentId);
                 
             if (potentialDups && potentialDups.length > 0) {
                 for (const dup of potentialDups) {
-                    const taxAmt = data.financial_summary?.tax_amount;
+                    const taxAmt = taxBase;
                     const matchTax = taxAmt !== undefined && taxAmt !== null && dup.tax_amount !== null && Number(dup.tax_amount) === Number(taxAmt);
                     if (matchTax) {
                         isDuplicate = true;
@@ -301,38 +324,42 @@ export async function extractDocumentData(
         }
 
         // Check the extraction itself (not the AI's own opinion of it) and keep the reasons
-        const numberOrNull = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
         const assessment = assessExtraction({
             vendorName,
             total: totalAmount,
-            subtotal: numberOrNull(data.financial_summary?.subtotal),
-            tax: numberOrNull(data.financial_summary?.tax_amount),
+            subtotal: subtotalRaw,
+            tax: taxRaw,
             discount: numberOrNull(data.financial_summary?.discount_amount),
             issueDate,
             documentType: normalizedDocType,
             invoiceNumber,
             lineItems: normalizedLineItems,
-            currency: data.invoice_details?.currency ?? null,
+            currency: docCurrency,
             baseCurrency: orgCurrency,
+            conversion: isForeign ? { converted: !!fx, rate: fx?.rate, rateDate: fx?.rateDate } : undefined,
         });
 
         // 4. Update Document Record in Supabase
         await updateDocument(documentId, {
             vendor_name: vendorName,
             vendor_id: vendorId,
-            amount: totalAmount,
+            amount: totalBase,
+            original_currency: isForeign ? docCurrency : null,
+            original_amount: isForeign ? totalAmount : null,
+            exchange_rate: fx ? fx.rate : null,
+            exchange_rate_source: fx ? 'ecb' : null,
             document_date: issueDate,
             due_date: dueDate,
             document_type: normalizedDocType,
             invoice_number: invoiceNumber,
             reference_number: poNumber || invoiceNumber,
-            subtotal: data.financial_summary?.subtotal,
-            tax_amount: data.financial_summary?.tax_amount,
+            subtotal: subtotalRaw === null ? null : toBase(subtotalRaw),
+            tax_amount: taxBase,
             vendor_branch_or_location: data.vendor?.address || null,
             confidence_score: assessment.score,
             extraction_flags: assessment.flags,
             splits: splits.length > 0 ? splits : [],
-            line_items: normalizedLineItems,
+            line_items: baseLineItems,
             status: isDuplicate ? "DUPLICATE_WARNING" : "needs_review"
         });
 

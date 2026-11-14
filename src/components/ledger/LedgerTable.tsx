@@ -195,6 +195,15 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                     {doc.amount !== null && doc.amount !== undefined && !isNaN(Number(doc.amount))
                                         ? `${symbol}${Number(doc.amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                         : "—"}
+                                    {doc.original_currency && (
+                                        <div
+                                            className={`text-[10px] font-normal ${doc.exchange_rate ? 'text-slate-500 dark:text-slate-400' : 'text-amber-600'}`}
+                                            title={doc.exchange_rate ? `Rate ${Number(doc.exchange_rate)} (${doc.exchange_rate_source === 'manual' ? 'entered manually' : 'ECB reference rate'})` : 'Exchange rate needed before approval'}
+                                        >
+                                            {doc.original_currency} {Number(doc.original_amount ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            {!doc.exchange_rate && " · rate needed"}
+                                        </div>
+                                    )}
                                 </TableCell>
                                 <TableCell className="py-2.5">
                                     <Badge variant="outline" className="font-normal text-xs text-gray-500 dark:text-slate-300 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">

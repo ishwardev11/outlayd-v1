@@ -80,7 +80,7 @@ export async function getFundMemoData(input: {
             const from = page * PAGE_SIZE
             const { data, error } = await supabase
                 .from("documents")
-                .select("id, vendor_name, invoice_number, reference_number, document_type, document_date, amount, status, splits, fund_id, category_id, image_url")
+                .select("id, vendor_name, invoice_number, reference_number, document_type, document_date, amount, status, splits, fund_id, category_id, image_url, original_currency, original_amount, exchange_rate, exchange_rate_source")
                 .eq("organization_id", organizationId)
                 .order("created_at", { ascending: true })
                 .order("id", { ascending: true })

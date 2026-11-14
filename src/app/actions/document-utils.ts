@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
+import { foreignApprovalProblem } from "@/utils/fx"
 import {
     sanitizeDocumentUpdates,
     assertOwnedIds,
@@ -165,6 +166,24 @@ export async function updateDocument(id: string, rawUpdates: unknown) {
             return { success: false, error: e.message }
         }
         throw e
+    }
+
+    // A foreign-currency document needs an exchange rate before it can be approved or paid,
+    // otherwise its amount would be counted as if it were in the base currency.
+    if (updates.status === "paid" || updates.status === "awaiting_payment") {
+        const { data: current, error: currentError } = await supabase
+            .from("documents")
+            .select("amount, original_currency, original_amount, exchange_rate")
+            .eq("id", id)
+            .maybeSingle()
+        if (currentError) {
+            console.error("Error checking document currency:", currentError)
+            return { success: false, error: "Could not check this document's currency. Please try again." }
+        }
+        if (!current) return { success: false, error: "Document not found" }
+
+        const problem = foreignApprovalProblem({ ...current, ...updates }, await getOrganizationCurrency())
+        if (problem) return { success: false, error: problem }
     }
 
     // Automatically link vendor_id if editing the vendor_name manually in the UI

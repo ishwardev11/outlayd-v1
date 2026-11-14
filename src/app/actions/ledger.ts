@@ -354,6 +354,10 @@ export async function processUpload(formData: FormData) {
                     vendor_branch_or_location: exDoc.vendor_branch_or_location,
                     confidence_score: exDoc.confidence_score,
                     extraction_flags: exDoc.extraction_flags ?? [],
+                    original_currency: exDoc.original_currency ?? null,
+                    original_amount: exDoc.original_amount ?? null,
+                    exchange_rate: exDoc.exchange_rate ?? null,
+                    exchange_rate_source: exDoc.exchange_rate_source ?? null,
                     splits: exDoc.splits,
                     line_items: exDoc.line_items
                 })
@@ -433,6 +437,10 @@ export async function processUpload(formData: FormData) {
                         vendor_branch_or_location: exDoc?.vendor_branch_or_location || null,
                         confidence_score: exDoc?.confidence_score ?? null,
                         extraction_flags: exDoc?.extraction_flags ?? [],
+                        original_currency: exDoc?.original_currency ?? null,
+                        original_amount: exDoc?.original_amount ?? null,
+                        exchange_rate: exDoc?.exchange_rate ?? null,
+                        exchange_rate_source: exDoc?.exchange_rate_source ?? null,
                         splits: exDoc?.splits || null,
                         line_items: exDoc?.line_items || null
                     })

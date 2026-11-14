@@ -219,6 +219,15 @@ export function generateFundMemoPdf(memo: FundMemoData): void {
         "Documents split across several funds are allocated by their recorded splits, so only the portion assigned to this fund appears here.",
         "The award remaining figure is calculated from the grant start date (if recorded) to the end of the reporting period.",
     ]
+    const foreign = memo.transactions.filter((x) => x.foreign)
+    if (foreign.length > 0) {
+        basis.push(`${foreign.length} transaction(s) were in another currency and are shown converted into ${cur} at the rate recorded on each document.`)
+        const shown = foreign.slice(0, 10).map((x) => {
+            const f = x.foreign!
+            return `${x.txnNo}: ${f.currency} ${numberFormat.format(f.originalAmount)} at ${Number(f.rate.toFixed(6))} (${f.source === "manual" ? "rate entered manually" : "ECB reference rate for the document date"})`
+        })
+        basis.push(`Foreign currency detail: ${shown.join("; ")}${foreign.length > shown.length ? `; and ${foreign.length - shown.length} more` : ""}.`)
+    }
     if (memo.excluded.pendingReviewCount > 0) {
         basis.push(`Not included: ${memo.excluded.pendingReviewCount} document(s) allocated to this fund that are still awaiting review (${money(cur, memo.excluded.pendingReviewAmount)}).`)
     }

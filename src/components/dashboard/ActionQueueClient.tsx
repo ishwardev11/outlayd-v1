@@ -25,7 +25,11 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
         e.stopPropagation();
         setIsMarking(id);
         try {
-            await updateDocument(id, { status: "paid" });
+            const result = await updateDocument(id, { status: "paid" });
+            if (result && result.success === false) {
+                alert(result.error || "Could not mark this document as paid.");
+                return;
+            }
             setQueue(q => q.filter(doc => doc.id !== id));
         } catch (error) {
             console.error("Failed to mark paid", error);

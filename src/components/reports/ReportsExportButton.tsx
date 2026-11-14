@@ -80,7 +80,7 @@ export function ReportsExportButton({ filteredDocuments, dateRange }: ExportProp
     };
 
     const exportExcel = () => {
-        const headers = ["ID", "Vendor", "Date", "Fund", "Category", `Amount (${symbol})`, "Status"];
+        const headers = ["ID", "Vendor", "Date", "Fund", "Category", `Amount (${symbol})`, "Status", "Original Currency", "Original Amount", "Exchange Rate"];
 
         const rows = filteredDocuments.map(doc => [
             `"${doc.id}"`,
@@ -89,7 +89,10 @@ export function ReportsExportButton({ filteredDocuments, dateRange }: ExportProp
             `"${doc.funds?.name || "Unassigned"}"`,
             `"${doc.categories?.name || "Uncategorized"}"`,
             `"${doc.amount || 0}"`,
-            `"${doc.status || "Unknown"}"`
+            `"${doc.status || "Unknown"}"`,
+            `"${doc.original_currency || ""}"`,
+            `"${doc.original_currency ? (doc.original_amount ?? "") : ""}"`,
+            `"${doc.original_currency ? (doc.exchange_rate ?? "") : ""}"`
         ]);
 
         const csvContent = [

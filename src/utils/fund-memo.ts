@@ -30,6 +30,11 @@ export interface MemoDocInput {
     fund_id: string | null
     category_id: string | null
     image_url: string | null
+    // Set when the document was printed in a currency other than the base currency
+    original_currency?: string | null
+    original_amount?: number | string | null
+    exchange_rate?: number | string | null
+    exchange_rate_source?: string | null
 }
 
 export interface MemoTransaction {
@@ -42,6 +47,8 @@ export interface MemoTransaction {
     status: "paid" | "committed"
     amount: number
     hasReceipt: boolean
+    // Original currency details, when the document was converted into the base currency
+    foreign: { currency: string; originalAmount: number; rate: number; source: "ecb" | "manual" | null } | null
 }
 
 export interface MemoCategoryRow {
@@ -133,6 +140,15 @@ function allocateToFund(doc: MemoDocInput, fundId: string): { lines: Line[]; spl
     return { lines: [], splitMismatch: false }
 }
 
+function foreignDetails(doc: MemoDocInput): MemoTransaction["foreign"] {
+    const currency = typeof doc.original_currency === "string" ? doc.original_currency.trim().toUpperCase() : ""
+    const rate = Number(doc.exchange_rate)
+    const original = Number(doc.original_amount)
+    if (!currency || !(rate > 0) || !Number.isFinite(original)) return null
+    const source = doc.exchange_rate_source === "ecb" || doc.exchange_rate_source === "manual" ? doc.exchange_rate_source : null
+    return { currency, originalAmount: original, rate, source }
+}
+
 function listRefs(refs: string[], max = 8): string {
     if (refs.length <= max) return refs.join(", ")
     return `${refs.slice(0, max).join(", ")} and ${refs.length - max} more`
@@ -219,6 +235,7 @@ export function buildFundMemo(input: {
         status: p.kind,
         amount: fromCents(p.line.amountCents),
         hasReceipt: !!p.doc.image_url,
+        foreign: foreignDetails(p.doc),
     }))
 
     // Category summary

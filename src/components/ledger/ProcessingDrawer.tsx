@@ -21,6 +21,7 @@ import { updateDocument, createFund, createCategory, deleteDocument } from "@/ap
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useRole } from "@/components/RoleProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
+import { CurrencyConversionPanel, convertedAmount, type FxState } from "./CurrencyConversionPanel";
 
 interface Split {
     id: string; // temporary UI id
@@ -46,7 +47,9 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
     const [splits, setSplits] = useState<Split[]>([]);
     const [lineItems, setLineItems] = useState<any[]>([]);
     const { isViewer } = useRole();
-    const { symbol } = useCurrency();
+    const { symbol, currency: baseCurrency } = useCurrency();
+    const [fx, setFx] = useState<FxState>({ currency: baseCurrency, originalAmount: "", rate: "", source: null });
+    const isForeign = fx.currency !== baseCurrency;
 
     useEffect(() => {
         if (document) {
@@ -57,6 +60,17 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                 amount: document.amount || 0,
                 document_type: document.document_type || "receipt"
             });
+            const docCurrency = String(document.original_currency || "").toUpperCase();
+            if (docCurrency && docCurrency !== baseCurrency) {
+                setFx({
+                    currency: docCurrency,
+                    originalAmount: document.original_amount != null ? Number(document.original_amount) : (Number(document.amount) || ""),
+                    rate: document.exchange_rate != null ? Number(document.exchange_rate) : "",
+                    source: document.exchange_rate_source ?? null,
+                });
+            } else {
+                setFx({ currency: baseCurrency, originalAmount: "", rate: "", source: null });
+            }
             // Load existing splits or generate single default split
             if (document.splits && document.splits.length > 0) {
                 setSplits(document.splits.map((s: any) => ({ ...s, id: Math.random().toString(36).substring(7) })));
@@ -70,7 +84,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
             }
             setLineItems(document.line_items || []);
         }
-    }, [document]);
+    }, [document, baseCurrency]);
 
     const addSplit = () => {
         setSplits([...splits, { id: Math.random().toString(36).substring(7), amount: "", fund_id: "", category_id: "" }]);
@@ -83,6 +97,16 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
     const updateSplit = (id: string, field: keyof Split, value: any) => {
         setSplits(splits.map(s => s.id === id ? { ...s, [field]: value } : s));
     };
+
+    // Foreign document: the base-currency total is always original amount x rate
+    useEffect(() => {
+        if (!isForeign) return;
+        const converted = convertedAmount(fx);
+        if (converted === null) return;
+        setFormData((f: any) => (f.amount === converted ? f : { ...f, amount: converted }));
+        // A single split simply follows the total
+        setSplits((prev) => (prev.length === 1 && prev[0].amount !== converted ? [{ ...prev[0], amount: converted }] : prev));
+    }, [isForeign, fx.originalAmount, fx.rate]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const totalSplitAmount = splits.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
     const isValidAmount = Math.abs(totalSplitAmount - (Number(formData.amount) || 0)) < 0.01;
@@ -100,6 +124,14 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         const parsedTotalAmount = parseFloat(String(formData.amount));
         if (isNaN(parsedTotalAmount) || parsedTotalAmount <= 0) {
             validationErrors.push("Total Amount must be a valid positive number.");
+        }
+        if (isForeign) {
+            if (!(Number(fx.originalAmount) > 0)) {
+                validationErrors.push(`Enter the total shown on the document in ${fx.currency}.`);
+            }
+            if (!(Number(fx.rate) > 0)) {
+                validationErrors.push(`Enter the exchange rate from ${fx.currency} to ${baseCurrency}.`);
+            }
         }
         if (!isValidAmount) {
             validationErrors.push(`Split amounts (${symbol}${totalSplitAmount.toFixed(2)}) do not match the total (${symbol}${Number(formData.amount || 0).toFixed(2)}).`);
@@ -182,6 +214,10 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
             const result = await updateDocument(document.id, {
                 ...formData,
                 amount: parsedTotalAmount, // Coerced float, not raw string
+                original_currency: isForeign ? fx.currency : null,
+                original_amount: isForeign ? Number(fx.originalAmount) : null,
+                exchange_rate: isForeign ? Number(fx.rate) : null,
+                exchange_rate_source: isForeign ? (fx.source ?? "manual") : null,
                 splits: finalSplits,
                 fund_id: finalSplits[0]?.fund_id || null,
                 category_id: finalSplits[0]?.category_id || null,
@@ -214,7 +250,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         } finally {
             setIsSubmitting(false);
         }
-    }, [formData, splits, lineItems, isValidAmount, totalSplitAmount, document?.id, document?.status, onClose, onNext]);
+    }, [formData, splits, lineItems, isValidAmount, totalSplitAmount, document?.id, document?.status, onClose, onNext, fx, isForeign, baseCurrency]);
 
     // Keyboard handling
     useEffect(() => {
@@ -350,16 +386,28 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="amount" className="dark:text-slate-300">Total Amount</Label>
+                                        <Label htmlFor="amount" className="dark:text-slate-300">Total Amount ({baseCurrency})</Label>
                                         <Input
                                             id="amount"
                                             value={formData.amount}
                                             onChange={e => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
                                             className="text-lg font-semibold dark:bg-slate-950 dark:border-slate-800"
-                                            disabled={isViewer}
+                                            disabled={isViewer || isForeign}
                                         />
+                                        {isForeign && (
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400">Calculated from the document total and the rate below.</p>
+                                        )}
                                     </div>
                                 </div>
+
+                                <CurrencyConversionPanel
+                                    baseCurrency={baseCurrency}
+                                    fx={fx}
+                                    currentAmount={Number(formData.amount) || 0}
+                                    documentDate={String(formData.document_date || "")}
+                                    disabled={isViewer}
+                                    onChange={setFx}
+                                />
 
                                 <div className="space-y-2">
                                     <Label htmlFor="type" className="dark:text-slate-300">Document Type</Label>

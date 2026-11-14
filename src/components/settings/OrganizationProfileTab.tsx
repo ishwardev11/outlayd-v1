@@ -40,10 +40,14 @@ export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettin
         e.preventDefault()
         setIsSaving(true)
         try {
-            await updateOrganizationSettings({
+            const result = await updateOrganizationSettings({
                 ...formData,
                 fiscal_year_start: parseInt(formData.fiscal_year_start)
             })
+            if (result && result.success === false) {
+                alert(result.error || "Failed to save settings")
+                return
+            }
             alert("Settings saved successfully!")
             router.refresh()
         } catch (error) {
@@ -120,6 +124,9 @@ export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettin
                                     <SelectItem value="AUD">AUD ($)</SelectItem>
                                 </SelectContent>
                             </Select>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                All amounts are stored in this currency. Documents in other currencies are converted into it. It can only be changed before you record any documents or fund awards.
+                            </p>
                         </div>
 
                         <div className="space-y-2">

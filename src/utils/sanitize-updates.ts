@@ -22,7 +22,7 @@ const DOCUMENT_TEXT_FIELDS: Record<string, number> = {
     notes: 5000,
 }
 const DOCUMENT_DATE_FIELDS = ["document_date", "due_date"]
-const DOCUMENT_NUMBER_FIELDS = ["amount", "subtotal", "tax_amount"]
+const DOCUMENT_NUMBER_FIELDS = ["amount", "subtotal", "tax_amount", "original_amount"]
 const DOCUMENT_ID_FIELDS = ["vendor_id", "fund_id", "category_id"]
 const DOCUMENT_ARRAY_FIELDS = ["splits", "line_items"]
 
@@ -70,6 +70,21 @@ export function sanitizeDocumentUpdates(input: unknown): Record<string, unknown>
             const n = cleanNumber(key, value)
             if (n !== null && (n < 0 || n > 100)) throw new UpdateValidationError("confidence_score must be between 0 and 100")
             out[key] = n
+        } else if (key === "original_currency") {
+            if (value === null || value === "") {
+                out[key] = null
+            } else if (typeof value === "string" && /^[A-Za-z]{3}$/.test(value.trim())) {
+                out[key] = value.trim().toUpperCase()
+            } else {
+                throw new UpdateValidationError("original_currency must be a 3-letter currency code")
+            }
+        } else if (key === "exchange_rate") {
+            const n = cleanNumber(key, value)
+            if (n !== null && (n <= 0 || n > 1e6)) throw new UpdateValidationError("exchange_rate must be greater than 0")
+            out[key] = n
+        } else if (key === "exchange_rate_source") {
+            if (value !== null && value !== "ecb" && value !== "manual") throw new UpdateValidationError("exchange_rate_source is not valid")
+            out[key] = value
         } else if (key === "extraction_flags") {
             if (!Array.isArray(value) || value.length > 20) throw new UpdateValidationError("extraction_flags is not valid")
             out[key] = value.map((f) => {

@@ -26,6 +26,8 @@ export interface ExtractionCheckInput {
     lineItems: Array<{ amount?: number | null }>
     currency?: string | null
     baseCurrency: string
+    // Present only for a foreign-currency document: was it converted automatically?
+    conversion?: { converted: boolean; rate?: number; rateDate?: string }
     now?: Date
 }
 
@@ -39,7 +41,8 @@ const PENALTY = {
     DATE_INVALID: 15,
     DATE_FUTURE: 10,
     TOTALS_MISMATCH: 20,
-    CURRENCY_DIFFERS: 15,
+    RATE_NEEDED: 15,
+    CURRENCY_CONVERTED: 5,
     LINE_ITEMS_MISMATCH: 10,
     INVOICE_NUMBER_MISSING: 5,
     NO_LINE_ITEMS: 5,
@@ -120,7 +123,11 @@ export function assessExtraction(input: ExtractionCheckInput): ExtractionAssessm
     const currency = (input.currency || "").trim().toUpperCase()
     const base = input.baseCurrency.trim().toUpperCase()
     if (currency && /^[A-Z]{3}$/.test(currency) && currency !== base) {
-        add("CURRENCY_DIFFERS", `This document is in ${currency} but your base currency is ${base}. The amount is not converted, so check it before approving.`)
+        if (input.conversion?.converted) {
+            add("CURRENCY_CONVERTED", `This document is in ${currency}. It was converted to ${base} at ${input.conversion.rate} (ECB rate for ${input.conversion.rateDate}). Check the rate, or enter your bank's rate, before approving.`)
+        } else {
+            add("RATE_NEEDED", `This document is in ${currency} but no exchange rate to ${base} could be found. Enter the rate before approving. The amount shown is not converted.`)
+        }
     }
 
     return { score: Math.max(0, Math.min(100, 100 - penalty)), flags }

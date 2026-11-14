@@ -119,13 +119,20 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
     const handleBulkApprove = async () => {
         setIsBulkApproving(true);
         try {
-            await Promise.all(selectedDocs.map(id => {
+            const results = await Promise.all(selectedDocs.map(async id => {
                 const doc = documents.find(d => d.id === id);
-                if (!doc) return Promise.resolve();
-                return updateDocument(id, {
+                if (!doc) return null;
+                const result = await updateDocument(id, {
                     status: (doc.document_type === 'receipt' ? 'paid' : 'awaiting_payment')
                 });
+                return result && result.success === false
+                    ? `${doc.vendor_name || 'Document'}: ${result.error}`
+                    : null;
             }));
+            const failures = results.filter((r): r is string => !!r);
+            if (failures.length > 0) {
+                alert(`${failures.length} document(s) could not be approved:\n\n${failures.join('\n')}`);
+            }
             setSelectedDocs([]);
         } catch (e) {
             console.error(e);

@@ -73,11 +73,12 @@ export async function updateOrganizationSettings(updates: any) {
     const organization_id = await getOrganizationId()
 
     const cookieStore = await cookies();
-    if (updates.base_currency) {
-        cookieStore.set('active_org_currency', updates.base_currency, { path: '/' });
+    if (updates.base_currency !== undefined && !/^[A-Z]{3}$/.test(String(updates.base_currency))) {
+        return { success: false, error: "Choose a valid base currency." };
     }
 
     if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
+        if (updates.base_currency) cookieStore.set('active_org_currency', updates.base_currency, { path: '/' });
         if (updates.name) cookieStore.set('dev_org_name', updates.name, { path: '/' });
         if (updates.base_currency) cookieStore.set('dev_org_currency', updates.base_currency, { path: '/' });
         if (updates.fiscal_year_start) cookieStore.set('dev_org_fiscal_year', updates.fiscal_year_start.toString(), { path: '/' });
@@ -89,6 +90,11 @@ export async function updateOrganizationSettings(updates: any) {
         revalidatePath("/reports")
         revalidatePath("/procurement")
         return { success: true, data: { ...updates, id: organization_id } };
+    }
+
+    if (updates.base_currency) {
+        const blocked = await baseCurrencyChangeBlocked(supabase, organization_id, updates.base_currency)
+        if (blocked) return { success: false, error: blocked }
     }
 
     const { data, error } = await supabase
@@ -108,6 +114,11 @@ export async function updateOrganizationSettings(updates: any) {
         throw new Error("Failed to update organization settings")
     }
 
+    // Only switch the display currency once the database change has actually succeeded
+    if (updates.base_currency) {
+        cookieStore.set('active_org_currency', updates.base_currency, { path: '/' });
+    }
+
     revalidatePath("/settings")
     revalidatePath("/dashboard")
     revalidatePath("/ledger")
@@ -115,6 +126,37 @@ export async function updateOrganizationSettings(updates: any) {
     revalidatePath("/reports")
     revalidatePath("/procurement")
     return { success: true, data }
+}
+
+// Every amount is stored in the base currency. Changing it after money has been recorded would
+// silently change what every existing amount means, so it is only allowed on an empty organization.
+async function baseCurrencyChangeBlocked(supabase: any, organizationId: string, newCurrency: string): Promise<string | null> {
+    const { data: org, error } = await supabase
+        .from("organizations")
+        .select("base_currency")
+        .eq("id", organizationId)
+        .maybeSingle()
+    if (error) {
+        console.error("Could not read current base currency:", error)
+        return "Could not check your current base currency. Please try again."
+    }
+
+    const current = String(org?.base_currency || "").toUpperCase()
+    if (!current || current === String(newCurrency).toUpperCase()) return null
+
+    const [docs, awards] = await Promise.all([
+        supabase.from("documents").select("id", { count: "exact", head: true }).eq("organization_id", organizationId),
+        supabase.from("funds").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).not("award_amount", "is", null),
+    ])
+    if (docs.error || awards.error) {
+        console.error("Could not check existing records:", docs.error || awards.error)
+        return "Could not check your existing records. Please try again."
+    }
+
+    if ((docs.count ?? 0) > 0 || (awards.count ?? 0) > 0) {
+        return `Your base currency can't be changed after you have recorded documents or fund awards. Every amount is stored in ${current}, and changing it would silently change what all of them mean. Contact us if you need to move to a different currency.`
+    }
+    return null
 }
 
 // --- Funds ---

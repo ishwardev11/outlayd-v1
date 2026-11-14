@@ -367,7 +367,12 @@ export function DonorMemoClient({ funds, fiscalYearStart }: { funds: MemoFundOpt
                                                     <TableCell>{t.category}</TableCell>
                                                     <TableCell>{t.status === "paid" ? "Paid" : "Committed"}</TableCell>
                                                     <TableCell className={t.hasReceipt ? "" : "text-red-600 font-semibold"}>{t.hasReceipt ? "Yes" : "No"}</TableCell>
-                                                    <TableCell className="text-right whitespace-nowrap">{numberFormat.format(t.amount)}</TableCell>
+                                                    <TableCell className="text-right whitespace-nowrap">
+                                                        {numberFormat.format(t.amount)}
+                                                        {t.foreign && (
+                                                            <div className="text-[10px] text-slate-500 dark:text-slate-400">{t.foreign.currency} {numberFormat.format(t.foreign.originalAmount)} @ {t.foreign.rate}</div>
+                                                        )}
+                                                    </TableCell>
                                                     <TableCell>
                                                         <div className="flex flex-wrap gap-1">
                                                             {flags.map((f) => (
