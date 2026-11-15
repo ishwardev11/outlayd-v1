@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { addSettingFund, deleteSettingFund, addSettingCategory, deleteSettingCategory } from "@/app/actions/settings"
+import { addSettingFund, archiveSettingFund, restoreSettingFund, addSettingCategory, deleteSettingCategory } from "@/app/actions/settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Plus, Trash2 } from "lucide-react"
+import { Loader2, Plus, Trash2, Archive, ArchiveRestore } from "lucide-react"
 import { useRole } from "@/components/RoleProvider"
 import { Fund, Category } from "./SettingsLayout"
 import { FundDetailsDialog } from "./FundDetailsDialog"
@@ -47,13 +47,22 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
         }
     }
 
-    const handleDeleteFund = async (id: string, name: string) => {
-        if (!window.confirm(`Are you sure you want to delete the fund "${name}"? This action cannot be undone.`)) return
+    const handleArchiveFund = async (id: string, name: string) => {
+        if (!window.confirm(`Archive the fund "${name}"? It will no longer be offered when you assign documents, but existing documents and reports keep it. You can restore it at any time.`)) return
         try {
-            await deleteSettingFund(id)
+            await archiveSettingFund(id)
         } catch (error) {
             console.error(error)
-            alert("Failed to delete fund")
+            alert("Failed to archive fund")
+        }
+    }
+
+    const handleRestoreFund = async (id: string) => {
+        try {
+            await restoreSettingFund(id)
+        } catch (error) {
+            console.error(error)
+            alert("Failed to restore fund")
         }
     }
 
@@ -66,6 +75,9 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
             alert("Failed to delete category")
         }
     }
+
+    const activeFunds = initialFunds.filter((f) => !f.archived_at)
+    const archivedFunds = initialFunds.filter((f) => f.archived_at)
 
     return (
         <div className="space-y-12">
@@ -99,7 +111,7 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 dark:divide-slate-700/50">
-                            {initialFunds.map(fund => (
+                            {activeFunds.map(fund => (
                                 <tr key={fund.id}>
                                     <td className="px-4 py-3">
                                         <span className="font-medium text-gray-900 dark:text-white">{fund.name}</span>
@@ -109,13 +121,13 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => handleDeleteFund(fund.id, fund.name)}
+                                            onClick={() => handleArchiveFund(fund.id, fund.name)}
                                             disabled={isViewer}
-                                            title={isViewer ? "Viewers cannot delete funds" : ""}
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                            title={isViewer ? "Viewers cannot archive funds" : ""}
+                                            className="text-amber-700 hover:text-amber-800 hover:bg-amber-50"
                                         >
-                                            <Trash2 className="w-4 h-4 mr-2" />
-                                            Delete
+                                            <Archive className="w-4 h-4 mr-2" />
+                                            Archive
                                         </Button>
                                     </td>
                                 </tr>
@@ -123,6 +135,23 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
                         </tbody>
                     </table>
                 </div>
+
+                {archivedFunds.length > 0 && (
+                    <div className="mt-6">
+                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Archived Funds</h3>
+                        <div className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden divide-y divide-gray-200 dark:divide-slate-700/50">
+                            {archivedFunds.map((fund) => (
+                                <div key={fund.id} className="flex items-center justify-between px-4 py-3 text-sm">
+                                    <span className="text-gray-500 dark:text-slate-400">{fund.name}</span>
+                                    <Button variant="ghost" size="sm" onClick={() => handleRestoreFund(fund.id)} disabled={isViewer}>
+                                        <ArchiveRestore className="w-4 h-4 mr-2" />
+                                        Restore
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Categories Section */}

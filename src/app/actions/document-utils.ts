@@ -173,7 +173,7 @@ export async function updateDocument(id: string, rawUpdates: unknown) {
     if (updates.status === "paid" || updates.status === "awaiting_payment") {
         const { data: current, error: currentError } = await supabase
             .from("documents")
-            .select("amount, original_currency, original_amount, exchange_rate")
+            .select("amount, original_currency, original_amount, exchange_rate, status, document_type, document_date")
             .eq("id", id)
             .maybeSingle()
         if (currentError) {
@@ -184,6 +184,24 @@ export async function updateDocument(id: string, rawUpdates: unknown) {
 
         const problem = foreignApprovalProblem({ ...current, ...updates }, await getOrganizationCurrency())
         if (problem) return { success: false, error: problem }
+
+        // Record the payment date. Only stamp it when the document BECOMES paid, so
+        // re-saving an already-paid document doesn't move its date.
+        if (updates.status === "paid") {
+            if (current.status !== "paid") {
+                const merged: Record<string, any> = { ...current, ...updates }
+                // A receipt is proof the payment already happened, so its own date is the payment date.
+                const receiptDate =
+                    merged.document_type === "receipt" &&
+                    typeof merged.document_date === "string" &&
+                    /^\d{4}-\d{2}-\d{2}/.test(merged.document_date)
+                        ? merged.document_date.slice(0, 10)
+                        : null
+                updates.paid_date = receiptDate ?? new Date().toISOString().slice(0, 10)
+            }
+        } else {
+            updates.paid_date = null // moved back to awaiting payment
+        }
     }
 
     // Automatically link vendor_id if editing the vendor_name manually in the UI

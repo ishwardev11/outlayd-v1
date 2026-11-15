@@ -22,6 +22,7 @@ import {
 import { signOutAction } from "@/app/actions/auth";
 import { createClient } from "@/utils/supabase/client";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
+import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
 
 interface SidebarProps {
     className?: string;
@@ -134,6 +135,7 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                 </div>
             )}
 
+            <WorkspaceSwitcher />
             <nav className="flex-1 space-y-2">
                 <Link id="sidebar-link-dashboard" href="/dashboard" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/dashboard' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <LayoutDashboard size={20} />

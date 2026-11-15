@@ -182,7 +182,7 @@ export async function addSettingFund(name: string, code?: string) {
     return { success: true }
 }
 
-export async function deleteSettingFund(id: string) {
+export async function archiveSettingFund(id: string) {
     await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
@@ -194,13 +194,37 @@ export async function deleteSettingFund(id: string) {
 
     const { error } = await supabase
         .from("funds")
-        .delete()
+        .update({ archived_at: new Date().toISOString() })
         .eq("id", id)
         .eq("organization_id", organization_id)
 
     if (error) {
-        console.error("Supabase Error (deleteSettingFund):", error)
-        throw new Error("Failed to delete fund")
+        console.error("Supabase Error (archiveSettingFund):", error)
+        throw new Error("Failed to archive fund")
+    }
+    revalidatePath("/", "layout")
+    return { success: true }
+}
+
+export async function restoreSettingFund(id: string) {
+    await checkWriteAccess();
+    const supabase = await createClient()
+    const organization_id = await getOrganizationId()
+
+    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
+        revalidatePath("/", "layout")
+        return { success: true }
+    }
+
+    const { error } = await supabase
+        .from("funds")
+        .update({ archived_at: null })
+        .eq("id", id)
+        .eq("organization_id", organization_id)
+
+    if (error) {
+        console.error("Supabase Error (restoreSettingFund):", error)
+        throw new Error("Failed to restore fund")
     }
     revalidatePath("/", "layout")
     return { success: true }
@@ -534,7 +558,7 @@ export async function inviteTeamMember(email: string, full_name: string, role: s
     if (isAlreadyRegistered) {
         return {
             success: true,
-            message: "This user is already registered with Outlayd. They have been added to this workspace's invites and will gain access automatically upon their next login."
+            message: "This user already has an Outlayd account. They'll see an invitation to accept the next time they open Outlayd."
         }
     }
     return { success: true }
@@ -686,6 +710,158 @@ export async function acceptInvite(password: string, fullName: string) {
         .eq("id", invite.id)
 
     revalidatePath("/settings")
+    return { success: true }
+}
+
+// --- Invites for people who already have an Outlayd account ---
+
+export async function getMyPendingInvites() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email || !user.email_confirmed_at) return []
+
+    const adminClient = createAdminClient()
+    const { data: invites, error } = await adminClient
+        .from("workspace_invites")
+        .select("id, organization_id, role, created_at")
+        .ilike("email", user.email.replace(/[\\%_]/g, (c) => "\\" + c))
+        .order("created_at", { ascending: false })
+    if (error || !invites || invites.length === 0) return []
+
+    const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+    const live = invites.filter((i: any) => i.created_at && Date.now() - new Date(i.created_at).getTime() <= INVITE_TTL_MS)
+    if (live.length === 0) return []
+
+    const { data: orgs } = await adminClient
+        .from("organizations")
+        .select("id, name")
+        .in("id", live.map((i: any) => i.organization_id))
+    const orgNames = new Map<string, string>((orgs ?? []).map((o: any) => [o.id, o.name]))
+
+    return live.map((i: any) => ({
+        id: i.id as string,
+        role: i.role as string,
+        organization_name: orgNames.get(i.organization_id) || "a workspace",
+    }))
+}
+
+export async function acceptPendingInvite(inviteId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email) return { success: false, message: "Please sign in again." }
+    if (!user.email_confirmed_at) return { success: false, message: "Please verify your email address first." }
+
+    const adminClient = createAdminClient()
+    const { data: invite } = await adminClient
+        .from("workspace_invites")
+        .select("*")
+        .eq("id", inviteId)
+        .maybeSingle()
+
+    // The invite must be addressed to exactly this account
+    if (!invite || String(invite.email).toLowerCase() !== user.email.toLowerCase()) {
+        return { success: false, message: "This invitation was not found." }
+    }
+
+    const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+    if (!invite.created_at || Date.now() - new Date(invite.created_at).getTime() > INVITE_TTL_MS) {
+        await adminClient.from("workspace_invites").delete().eq("id", invite.id)
+        return { success: false, message: "This invitation has expired. Ask your workspace admin to send a new one." }
+    }
+
+    const { data: existing } = await adminClient
+        .from("user_roles")
+        .select("id")
+        .eq("organization_id", invite.organization_id)
+        .eq("email", user.email)
+        .maybeSingle()
+
+    if (!existing) {
+        const { error: roleError } = await adminClient.from("user_roles").insert({
+            organization_id: invite.organization_id,
+            email: user.email,
+            role: invite.role,
+            full_name: user.user_metadata?.full_name || user.email.split("@")[0],
+        })
+        if (roleError) {
+            console.error("Failed to add user_roles row for accepted invite:", roleError)
+            return { success: false, message: "Could not join the workspace. Please try again." }
+        }
+    }
+
+    await adminClient.from("workspace_invites").delete().eq("id", invite.id)
+
+    const cookieStore = await cookies()
+    cookieStore.set("active_org_id", invite.organization_id, { path: "/" })
+    revalidatePath("/", "layout")
+    return { success: true }
+}
+
+export async function declinePendingInvite(inviteId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email) return { success: false, message: "Please sign in again." }
+
+    const adminClient = createAdminClient()
+    const { data: invite } = await adminClient
+        .from("workspace_invites")
+        .select("id, email")
+        .eq("id", inviteId)
+        .maybeSingle()
+    if (!invite || String(invite.email).toLowerCase() !== user.email.toLowerCase()) {
+        return { success: false, message: "This invitation was not found." }
+    }
+
+    await adminClient.from("workspace_invites").delete().eq("id", invite.id)
+    revalidatePath("/", "layout")
+    return { success: true }
+}
+
+export async function getMyWorkspaces() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email) return { workspaces: [] as { id: string; name: string; role: string }[], activeId: null as string | null }
+
+    const adminClient = createAdminClient()
+    const { data: roles } = await adminClient
+        .from("user_roles")
+        .select("organization_id, role")
+        .eq("email", user.email)
+        .order("created_at", { ascending: true })
+
+    const ids = (roles ?? []).map((r: any) => r.organization_id)
+    if (ids.length === 0) return { workspaces: [], activeId: null }
+
+    const { data: orgs } = await adminClient.from("organizations").select("id, name").in("id", ids)
+    const names = new Map<string, string>((orgs ?? []).map((o: any) => [o.id, o.name]))
+
+    return {
+        workspaces: (roles ?? []).map((r: any) => ({
+            id: r.organization_id as string,
+            name: names.get(r.organization_id) || "Workspace",
+            role: r.role as string,
+        })),
+        activeId: await getOrganizationId(),
+    }
+}
+
+export async function switchWorkspace(organizationId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email) return { success: false, message: "Please sign in again." }
+
+    const adminClient = createAdminClient()
+    const { data: membership } = await adminClient
+        .from("user_roles")
+        .select("id")
+        .eq("email", user.email)
+        .eq("organization_id", organizationId)
+        .maybeSingle()
+    if (!membership) return { success: false, message: "You are not a member of that workspace." }
+
+    const cookieStore = await cookies()
+    cookieStore.set("active_org_id", organizationId, { path: "/" })
+    revalidatePath("/", "layout")
     return { success: true }
 }
 

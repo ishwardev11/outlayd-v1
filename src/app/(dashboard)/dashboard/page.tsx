@@ -22,6 +22,7 @@ export default async function Home() {
 
   const documents = await getDocuments();
   const today = new Date();
+  const currentMonth = today.toISOString().slice(0, 7); // "YYYY-MM"
 
   // 1. Calculate KPI Metrics
   let awaitingPaymentTotal = 0;
@@ -37,8 +38,9 @@ export default async function Home() {
       needsReviewCount++;
       needsReviewAmountTotal += amount;
     } else if (doc.status === 'paid') {
-      const docDate = new Date(doc.document_date || doc.created_at);
-      if (!isNaN(docDate.getTime()) && docDate.getMonth() === today.getMonth() && docDate.getFullYear() === today.getFullYear()) {
+      // Use the date it was actually paid; fall back for any older row without one
+      const paidOn = String(doc.paid_date || doc.document_date || doc.created_at || '').slice(0, 7);
+      if (paidOn === currentMonth) {
         paidThisMonthTotal += amount;
       }
     }

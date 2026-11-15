@@ -452,7 +452,9 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                 <Select value={split.fund_id || undefined} onValueChange={v => updateSplit(split.id, "fund_id", v)}>
                                                     <SelectTrigger className="w-full dark:bg-slate-900 dark:border-slate-800 [&>span]:truncate text-left"><SelectValue placeholder="Fund..." /></SelectTrigger>
                                                     <SelectContent>
-                                                        {funds.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                                                        {funds
+                                                            .filter((f: any) => !f.archived_at || f.id === split.fund_id)
+                                                            .map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}{f.archived_at ? " (archived)" : ""}</SelectItem>)}
                                                         <SelectItem value="custom" className="text-indigo-600 dark:text-indigo-400 font-medium">+ Custom</SelectItem>
                                                     </SelectContent>
                                                 </Select>

@@ -30,6 +30,7 @@ export interface Fund {
     award_amount?: number | string | null;
     period_start?: string | null;
     period_end?: string | null;
+    archived_at?: string | null;
 }
 
 export interface Category {

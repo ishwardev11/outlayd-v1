@@ -22,6 +22,7 @@ export interface MemoFundOption {
     name: string;
     period_start?: string | null;
     period_end?: string | null;
+    archived_at?: string | null;
 }
 
 const iso = (d: Date) => format(d, "yyyy-MM-dd");
@@ -163,7 +164,7 @@ export function DonorMemoClient({ funds, fiscalYearStart }: { funds: MemoFundOpt
                                 </SelectTrigger>
                                 <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                                     {funds.map((f) => (
-                                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                                        <SelectItem key={f.id} value={f.id}>{f.name}{f.archived_at ? " (archived)" : ""}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
