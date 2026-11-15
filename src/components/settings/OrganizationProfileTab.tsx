@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Save, AlertTriangle, Trash2 } from "lucide-react"
 import { useRole } from "@/components/RoleProvider"
 import { useRouter } from "next/navigation"
+import { BASE_CURRENCIES, getCurrencyDetails, isBaseCurrencyCode } from "@/utils/currency"
 import { createClient } from "@/utils/supabase/client"
 import {
     Dialog,
@@ -116,12 +117,10 @@ export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettin
                                     <SelectValue placeholder="Select currency" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="MYR">MYR (RM)</SelectItem>
-                                    <SelectItem value="USD">USD ($)</SelectItem>
-                                    <SelectItem value="EUR">EUR (€)</SelectItem>
-                                    <SelectItem value="GBP">GBP (£)</SelectItem>
-                                    <SelectItem value="CAD">CAD ($)</SelectItem>
-                                    <SelectItem value="AUD">AUD ($)</SelectItem>
+                                    {/* An older currency that is no longer offered stays visible while it is the current one */}
+                                    {(isBaseCurrencyCode(formData.base_currency) ? BASE_CURRENCIES : [getCurrencyDetails(formData.base_currency), ...BASE_CURRENCIES]).map((c) => (
+                                        <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                             <p className="text-xs text-slate-500 dark:text-slate-400">

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { lookupExchangeRate } from "@/app/actions/fx";
-import { SUPPORTED_CURRENCIES } from "@/utils/currency";
+import { DOCUMENT_CURRENCY_CODES } from "@/utils/currency";
 
 export interface FxState {
     currency: string;
@@ -17,7 +17,7 @@ export interface FxState {
     source: "ecb" | "manual" | null;
 }
 
-const EXTRA_CURRENCIES = ["THB", "IDR", "CNY", "HKD", "KRW", "PHP", "NZD", "CHF"];
+const OTHER = "__other__";
 
 export const convertedAmount = (fx: FxState): number | null => {
     const o = Number(fx.originalAmount);
@@ -36,8 +36,10 @@ interface Props {
 
 export function CurrencyConversionPanel({ baseCurrency, fx, currentAmount, documentDate, disabled, onChange }: Props) {
     const [loading, setLoading] = useState(false);
+    const [otherOpen, setOtherOpen] = useState(false);
+    const [otherCode, setOtherCode] = useState("");
     const isForeign = fx.currency !== baseCurrency;
-    const options = Array.from(new Set([baseCurrency, ...Object.keys(SUPPORTED_CURRENCIES), ...EXTRA_CURRENCIES, fx.currency]));
+    const options = Array.from(new Set([baseCurrency, ...DOCUMENT_CURRENCY_CODES, fx.currency]));
     const converted = convertedAmount(fx);
 
     const fetchRate = async (currency: string, next: FxState) => {
@@ -78,12 +80,13 @@ export function CurrencyConversionPanel({ baseCurrency, fx, currentAmount, docum
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
                 <div className="space-y-1.5">
                     <Label className="dark:text-slate-300">Currency on the document</Label>
-                    <Select value={fx.currency} onValueChange={handleCurrencyChange} disabled={disabled}>
+                    <Select value={fx.currency} onValueChange={(v) => (v === OTHER ? setOtherOpen(true) : handleCurrencyChange(v))} disabled={disabled}>
                         <SelectTrigger className="dark:bg-slate-950 dark:border-slate-800"><SelectValue /></SelectTrigger>
                         <SelectContent>
                             {options.map((c) => (
                                 <SelectItem key={c} value={c}>{c}{c === baseCurrency ? " (your base currency)" : ""}</SelectItem>
                             ))}
+                            <SelectItem value={OTHER}>Other currency…</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -91,6 +94,31 @@ export function CurrencyConversionPanel({ baseCurrency, fx, currentAmount, docum
                     <p className="text-xs text-slate-500 dark:text-slate-400 pb-2">No conversion needed.</p>
                 )}
             </div>
+
+            {otherOpen && (
+                <div className="flex items-end gap-2">
+                    <div className="space-y-1.5">
+                        <Label htmlFor="fx-other" className="dark:text-slate-300">3-letter currency code</Label>
+                        <Input
+                            id="fx-other"
+                            maxLength={3}
+                            placeholder="e.g. BND"
+                            value={otherCode}
+                            onChange={(e) => setOtherCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
+                            className="w-32 dark:bg-slate-950 dark:border-slate-800"
+                            disabled={disabled}
+                        />
+                    </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={disabled || otherCode.length !== 3}
+                        onClick={() => { handleCurrencyChange(otherCode); setOtherOpen(false); setOtherCode(""); }}
+                    >
+                        Use
+                    </Button>
+                </div>
+            )}
 
             {isForeign && (
                 <div className="space-y-3">

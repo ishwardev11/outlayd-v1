@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
+import { BASE_CURRENCY_CODES, isBaseCurrencyCode } from "@/utils/currency"
 
 export interface OnboardingData {
     orgName: string;
@@ -12,6 +13,10 @@ export interface OnboardingData {
 }
 
 export async function completeOnboardingSetup(data: OnboardingData) {
+    if (!isBaseCurrencyCode(data.baseCurrency)) {
+        return { success: false, error: `Choose a base currency: ${BASE_CURRENCY_CODES.join(", ")}.` };
+    }
+
     const supabase = await createClient();
 
     // 1. Get current user (support local dev fallback)

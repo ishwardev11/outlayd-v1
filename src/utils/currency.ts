@@ -9,12 +9,29 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyDetails> = {
     USD: { code: "USD", symbol: "$", label: "USD ($)" },
     EUR: { code: "EUR", symbol: "€", label: "EUR (€)" },
     GBP: { code: "GBP", symbol: "£", label: "GBP (£)" },
-    CAD: { code: "CAD", symbol: "$", label: "CAD ($)" },
-    AUD: { code: "AUD", symbol: "$", label: "AUD ($)" },
+    CAD: { code: "CAD", symbol: "C$", label: "CAD (C$)" },
+    AUD: { code: "AUD", symbol: "A$", label: "AUD (A$)" },
     SGD: { code: "SGD", symbol: "S$", label: "SGD (S$)" },
     INR: { code: "INR", symbol: "₹", label: "INR (₹)" },
     JPY: { code: "JPY", symbol: "¥", label: "JPY (¥)" },
 };
+
+// Currencies an organization can choose as its base currency. Each has automatic exchange rates
+// and is shown with 2 decimals. The order here is the order shown in the dropdowns.
+export const BASE_CURRENCY_CODES = ["MYR", "SGD", "USD", "EUR", "GBP", "AUD"] as const;
+export type BaseCurrencyCode = (typeof BASE_CURRENCY_CODES)[number];
+
+export const BASE_CURRENCIES: CurrencyDetails[] = BASE_CURRENCY_CODES.map((code) => SUPPORTED_CURRENCIES[code]);
+
+export function isBaseCurrencyCode(code: unknown): code is BaseCurrencyCode {
+    return typeof code === "string" && (BASE_CURRENCY_CODES as readonly string[]).includes(code.toUpperCase());
+}
+
+// Currencies suggested for a document printed in a currency other than the base.
+// Any other 3-letter code can be typed in ("Other"), with the exchange rate entered by hand.
+export const DOCUMENT_CURRENCY_CODES: string[] = Array.from(
+    new Set<string>([...BASE_CURRENCY_CODES, "CAD", "INR", "JPY", "THB", "IDR", "CNY", "HKD", "KRW", "PHP", "NZD", "CHF"])
+);
 
 export function getCurrencyDetails(code?: string | null): CurrencyDetails {
     if (!code) return SUPPORTED_CURRENCIES.MYR;
