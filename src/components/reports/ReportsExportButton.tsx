@@ -1,6 +1,7 @@
 "use client";
 
-import { Download, FileText, FileSpreadsheet } from "lucide-react";
+import { useState } from "react";
+import { Download, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -12,14 +13,35 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useCurrency } from "@/components/CurrencyProvider";
+import { getReportExportRows } from "@/app/actions/aggregates";
+import type { ReportFilters } from "@/utils/aggregate-types";
 
 interface ExportProps {
-    filteredDocuments: any[];
+    filters: ReportFilters;
     dateRange: string;
 }
 
-export function ReportsExportButton({ filteredDocuments, dateRange }: ExportProps) {
+export function ReportsExportButton({ filters, dateRange }: ExportProps) {
     const { symbol } = useCurrency();
+    const [isExporting, setIsExporting] = useState(false);
+
+    // The report page only holds the totals, so the rows are fetched from the server when exporting.
+    const run = async (build: (rows: any[]) => void) => {
+        setIsExporting(true);
+        try {
+            const { rows, truncated } = await getReportExportRows(filters);
+            if (truncated) {
+                alert(`This report has more than ${rows.length.toLocaleString()} rows, so the export is limited to the newest ${rows.length.toLocaleString()}. Narrow the filters to export the rest.`);
+            }
+            build(rows);
+        } catch (error) {
+            console.error(error);
+            alert("Failed to export the report. Please try again.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     const getReportTitle = () => {
         const mapping: Record<string, string> = {
             "7days": "Last 7 Days",
@@ -31,7 +53,7 @@ export function ReportsExportButton({ filteredDocuments, dateRange }: ExportProp
         return `Financial Report - ${mapping[dateRange] || 'Custom'}`;
     };
 
-    const exportPDF = () => {
+    const buildPDF = (filteredDocuments: any[]) => {
         const doc = new jsPDF();
 
         // Header
@@ -79,7 +101,7 @@ export function ReportsExportButton({ filteredDocuments, dateRange }: ExportProp
         doc.save(`financial-report-${dateRange}.pdf`);
     };
 
-    const exportExcel = () => {
+    const buildCSV = (filteredDocuments: any[]) => {
         const headers = ["ID", "Vendor", "Date", "Fund", "Category", `Amount (${symbol})`, "Status", "Original Currency", "Original Amount", "Exchange Rate"];
 
         const rows = filteredDocuments.map(doc => [
@@ -113,11 +135,14 @@ export function ReportsExportButton({ filteredDocuments, dateRange }: ExportProp
         }
     };
 
+    const exportPDF = () => run(buildPDF);
+    const exportExcel = () => run(buildCSV);
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 border-slate-300">
-                    <Download className="h-4 w-4 text-slate-500" />
+                <Button variant="outline" className="gap-2 border-slate-300" disabled={isExporting}>
+                    {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4 text-slate-500" />}
                     Export Report
                 </Button>
             </DropdownMenuTrigger>

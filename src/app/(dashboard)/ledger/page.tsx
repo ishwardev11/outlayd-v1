@@ -1,12 +1,22 @@
-import { getDocuments, getFunds, getCategories } from "@/app/actions/ledger";
+import { getFunds, getCategories } from "@/app/actions/ledger";
+import { getLedgerPage, getLedgerStatusCounts } from "@/app/actions/aggregates";
 import { LedgerClient } from "@/components/ledger/LedgerClient";
 import { UploadButton } from "@/components/ledger/UploadButton";
+import { parseLedgerFilters } from "@/utils/aggregate-types";
 
 export const dynamic = "force-dynamic";
 
-export default async function LedgerPage() {
-    const [documents, funds, categories] = await Promise.all([
-        getDocuments(),
+export default async function LedgerPage({
+    searchParams,
+}: {
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+    // Filters, search and the page number live in the URL; the database returns just one page.
+    const filters = parseLedgerFilters(await searchParams);
+
+    const [pageData, counts, funds, categories] = await Promise.all([
+        getLedgerPage(filters),
+        getLedgerStatusCounts(),
         getFunds(),
         getCategories()
     ]);
@@ -22,7 +32,12 @@ export default async function LedgerPage() {
             </div>
 
             <LedgerClient
-                documents={documents || []}
+                documents={pageData.documents}
+                total={pageData.total}
+                page={pageData.page}
+                pageSize={pageData.pageSize}
+                counts={counts}
+                filters={filters}
                 funds={funds || []}
                 categories={categories || []}
             />

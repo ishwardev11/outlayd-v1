@@ -99,9 +99,9 @@ export function SettingsLayout({ orgSettings, initialFunds, initialCategories, i
                         <FinancialCustomizationTab initialFunds={initialFunds} initialCategories={initialCategories} />
                     )}
                     {activeTab === 'team' && (
-                        <TeamManagementTab 
-                            initialTeam={initialTeam} 
-                            orgSettings={orgSettings} 
+                        <TeamManagementTab
+                            initialTeam={initialTeam}
+                            orgSettings={orgSettings}
                             currentUserEmail={currentUserEmail}
                         />
                     )}

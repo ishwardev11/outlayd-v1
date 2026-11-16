@@ -2,7 +2,8 @@
 "use client";
 
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { KanbanFilters } from "@/components/ledger/KanbanFilters";
 import { LedgerTable } from "@/components/ledger/LedgerTable";
 import { ProcessingDrawer } from "@/components/ledger/ProcessingDrawer";
@@ -10,7 +11,8 @@ import { deleteDocument, updateDocument } from "@/app/actions/ledger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, CheckCircle, Search } from "lucide-react";
+import { Loader2, CheckCircle, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import type { LedgerFilters, LedgerStatusCounts } from "@/utils/aggregate-types";
 import {
     Dialog,
     DialogContent,
@@ -19,7 +21,18 @@ import {
 } from "@/components/ui/dialog";
 import { useRole } from "@/components/RoleProvider";
 
-export function LedgerClient({ documents, funds, categories }: { documents: any[], funds: any[], categories: any[] }) {
+interface LedgerClientProps {
+    documents: any[];
+    total: number;
+    page: number;
+    pageSize: number;
+    counts: LedgerStatusCounts;
+    filters: LedgerFilters;
+    funds: any[];
+    categories: any[];
+}
+
+export function LedgerClient({ documents, total, page, pageSize, counts, filters, funds, categories }: LedgerClientProps) {
     const [selectedDocId, setSelectedDocId] = useState<string | undefined>();
     const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -27,64 +40,51 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
     const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
     const { isViewer } = useRole();
 
-    // Filtering States
-    const [selectedStatus, setSelectedStatus] = useState<string>("all");
-    const [searchQuery, setSearchQuery] = useState<string>("");
-    const [fundFilter, setFundFilter] = useState<string>("all");
-    const [dateRangeFilter, setDateRangeFilter] = useState<string>("all");
+    // Filters, search and paging live in the URL, so the server (database) returns only one page of rows.
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    const selectedStatus = filters.status;
+    const fundFilter = filters.fund;
+    const dateRangeFilter = filters.range;
+    const [searchQuery, setSearchQuery] = useState<string>(filters.q);
+
+    const updateParams = (patch: Record<string, string | null>) => {
+        const params = new URLSearchParams(searchParams.toString());
+        for (const [key, value] of Object.entries(patch)) {
+            if (value === null || value === "" || value === "all") params.delete(key);
+            else params.set(key, value);
+        }
+        if (!("page" in patch)) params.delete("page"); // changing a filter starts again from page 1
+        const qs = params.toString();
+        router.push(qs ? `${pathname}?${qs}` : pathname);
+    };
+    const setSelectedStatus = (value: string) => updateParams({ status: value });
+    const setFundFilter = (value: string) => updateParams({ fund: value });
+    const setDateRangeFilter = (value: string) => updateParams({ range: value });
+    const goToPage = (nextPage: number) => updateParams({ page: String(nextPage) });
+
+    // Search is debounced so the database isn't queried on every keystroke
+    useEffect(() => {
+        if (searchQuery.trim() === filters.q.trim()) return;
+        const timer = setTimeout(() => updateParams({ q: searchQuery.trim() }), 350);
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchQuery]);
 
     // Quick Preview State
     const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
-    // Filter Logic
-    const filteredDocuments = useMemo(() => {
-        const today = new Date();
+    // The server has already applied every filter; "documents" is the current page.
+    const filteredDocuments = documents;
 
-        return documents.filter(doc => {
-            // Status Filter
-            if (selectedStatus !== 'all' && doc.status !== selectedStatus) return false;
-
-            // Omnibar Filter (Vendor, Invoice #, Amount, Line Items if available)
-            if (searchQuery) {
-                const query = searchQuery.toLowerCase().trim();
-                const cleanQuery = query.replace(/^#/, '').trim();
-                const vendorMatch = doc.vendor_name?.toLowerCase().includes(query);
-                const invoiceMatch = doc.invoice_number?.toLowerCase().includes(query) ||
-                    (cleanQuery ? doc.invoice_number?.toLowerCase().includes(cleanQuery) : false);
-                const amountMatch = doc.amount?.toString().includes(query);
-                const lineItemsMatch = JSON.stringify(doc.line_items || []).toLowerCase().includes(query);
-
-                if (!vendorMatch && !invoiceMatch && !amountMatch && !lineItemsMatch) return false;
-            }
-
-            // Fund Filter
-            if (fundFilter !== 'all' && doc.funds?.id !== fundFilter) return false;
-
-            // Date Range Filter
-            if (dateRangeFilter !== 'all' && doc.document_date) {
-                const docDate = new Date(doc.document_date);
-                if (isNaN(docDate.getTime())) return false; // Invalid date
-
-                const timeDiff = today.getTime() - docDate.getTime();
-                const daysDiff = timeDiff / (1000 * 3600 * 24);
-
-                if (dateRangeFilter === '7days' && daysDiff > 7) return false;
-                if (dateRangeFilter === '30days' && daysDiff > 30) return false;
-                if (dateRangeFilter === 'thisMonth') {
-                    if (docDate.getMonth() !== today.getMonth() || docDate.getFullYear() !== today.getFullYear()) return false;
-                }
-            }
-
-            return true;
-        });
-    }, [documents, selectedStatus, searchQuery, fundFilter, dateRangeFilter]);
-
-    // Calculate filter counts based on UNFILTERED data (for Status Tabs)
+    // Status tab counts cover the whole ledger, not just this page
     const filterCounts = {
-        all: documents.length,
-        needsReview: documents.filter(d => d.status === 'needs_review').length,
-        awaitingPayment: documents.filter(d => d.status === 'awaiting_payment').length,
-        paid: documents.filter(d => d.status === 'paid').length
+        all: counts.all,
+        needsReview: counts.needs_review,
+        awaitingPayment: counts.awaiting_payment,
+        paid: counts.paid
     };
 
     const selectedDocument = documents.find(d => d.id === selectedDocId);
@@ -243,6 +243,22 @@ export function LedgerClient({ documents, funds, categories }: { documents: any[
                 onToggleSelectAll={handleToggleSelectAll}
                 onPreviewImage={setPreviewImageUrl}
             />
+
+            {total > pageSize && (
+                <div className="flex items-center justify-between pt-2 text-sm text-slate-500 dark:text-slate-400">
+                    <span>
+                        Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total.toLocaleString()}
+                    </span>
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
+                            <ChevronLeft className="w-4 h-4" /> Previous
+                        </Button>
+                        <Button variant="outline" size="sm" disabled={page * pageSize >= total} onClick={() => goToPage(page + 1)}>
+                            Next <ChevronRight className="w-4 h-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             <ProcessingDrawer
                 isOpen={!!selectedDocId}

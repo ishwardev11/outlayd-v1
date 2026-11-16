@@ -1,4 +1,4 @@
-import { getDocuments } from "@/app/actions/ledger";
+import { getDashboardSummary, getActionQueue, getRecentDocuments } from "@/app/actions/aggregates";
 import { getOrganizationId, getOrganizationCurrency } from "@/app/actions/document-utils";
 import { getCurrencyDetails } from "@/utils/currency";
 import { redirect } from "next/navigation";
@@ -20,65 +20,21 @@ export default async function Home() {
   const orgCurrency = await getOrganizationCurrency();
   const { symbol } = getCurrencyDetails(orgCurrency);
 
-  const documents = await getDocuments();
-  const today = new Date();
-  const currentMonth = today.toISOString().slice(0, 7); // "YYYY-MM"
+  // Totals, the 14-day cash flow and the lists are computed in the database, so the page stays
+  // fast however many documents there are.
+  const [summary, actionQueueItems, recentDocuments] = await Promise.all([
+    getDashboardSummary(),
+    getActionQueue(),
+    getRecentDocuments(),
+  ]);
 
-  // 1. Calculate KPI Metrics
-  let awaitingPaymentTotal = 0;
-  let needsReviewCount = 0;
-  let needsReviewAmountTotal = 0;
-  let paidThisMonthTotal = 0;
-
-  documents.forEach((doc: any) => {
-    const amount = doc.amount || 0;
-    if (doc.status === 'awaiting_payment') {
-      awaitingPaymentTotal += amount;
-    } else if (doc.status === 'needs_review') {
-      needsReviewCount++;
-      needsReviewAmountTotal += amount;
-    } else if (doc.status === 'paid') {
-      // Use the date it was actually paid; fall back for any older row without one
-      const paidOn = String(doc.paid_date || doc.document_date || doc.created_at || '').slice(0, 7);
-      if (paidOn === currentMonth) {
-        paidThisMonthTotal += amount;
-      }
-    }
-  });
-
-  // 2. Calculate 14-day cash flow (Money Out: Paid or Awaiting Payment)
-  const last14Days = Array.from({ length: 14 }).map((_, i) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() - (13 - i));
-    return {
-      date: d.toISOString().split('T')[0], // YYYY-MM-DD
-      displayDate: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      amount: 0
-    };
-  });
-
-  documents.forEach((doc: any) => {
-    if (doc.status === 'paid' || doc.status === 'awaiting_payment') {
-      const docDateStr = doc.document_date || doc.created_at?.split('T')[0];
-      if (!docDateStr) return;
-
-      try {
-        const docDateObj = new Date(docDateStr);
-        const targetStr = docDateObj.toISOString().split('T')[0];
-        const index = last14Days.findIndex(d => d.date === targetStr);
-        if (index !== -1) {
-          last14Days[index].amount += (doc.amount || 0);
-        }
-      } catch (e) {
-        // Ignore invalid dates
-      }
-    }
-  });
-
-  // 3. Get recent action queue items (Needs Review or Awaiting Payment)
-  const actionQueueItems = documents
-    .filter((d: any) => d.status === 'needs_review' || d.status === 'awaiting_payment')
-    .slice(0, 10); // Show top 10
+  const {
+    awaitingTotal: awaitingPaymentTotal,
+    needsReviewCount,
+    needsReviewTotal: needsReviewAmountTotal,
+    paidThisMonth: paidThisMonthTotal,
+    cashFlow: last14Days,
+  } = summary;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -165,7 +121,7 @@ export default async function Home() {
             <QuickUpload />
           </div>
           <div className="flex-1">
-            <RecentActivity documents={documents} />
+            <RecentActivity documents={recentDocuments} />
           </div>
         </div>
 

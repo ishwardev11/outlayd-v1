@@ -1,127 +1,75 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, TrendingUp, AlertTriangle, Wallet, PieChart, ListX, Info, FileCheck } from "lucide-react";
+import { BarChart3, TrendingUp, AlertTriangle, Wallet, PieChart, ListX, Info, FileCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ReportsExportButton } from "@/components/reports/ReportsExportButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { subDays, subMonths, subQuarters, isAfter } from "date-fns";
 import { useCurrency } from "@/components/CurrencyProvider";
+import { LARGE_TX_PAGE_SIZE, type LargeTransactions, type ReportFilters, type ReportSummary } from "@/utils/aggregate-types";
 
-export function ReportsClient({ documents }: { documents: any[] }) {
+interface ReportsClientProps {
+    summary: ReportSummary;
+    largeTransactions: LargeTransactions;
+    filters: ReportFilters;
+    page: number;
+    currentYear: string;
+    fundOptions: { id: string; name: string; archived_at?: string | null }[];
+}
+
+export function ReportsClient({ summary, largeTransactions: largeTx, filters, page, currentYear, fundOptions }: ReportsClientProps) {
     const { symbol } = useCurrency();
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
 
-    const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
-    const [selectedMonth, setSelectedMonth] = useState<string>("all");
-    const [selectedFund, setSelectedFund] = useState<string>("all");
-    const [selectedStatus, setSelectedStatus] = useState<string>("all");
-    const [isMounted, setIsMounted] = useState(false);
+    // Filters live in the URL: changing one asks the server for new totals from the database.
+    const updateFilters = (patch: Partial<ReportFilters>) => {
+        const params = new URLSearchParams(searchParams.toString());
+        for (const [key, value] of Object.entries(patch)) {
+            if (value === undefined) continue;
+            if (key === "year") params.set("year", value); // keep an explicit "all"
+            else if (value === "all") params.delete(key);
+            else params.set(key, value);
+        }
+        params.delete("page"); // a new filter starts again from the first page
+        router.push(`${pathname}?${params.toString()}`);
+    };
 
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
+    const goToPage = (nextPage: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("page", String(nextPage));
+        router.push(`${pathname}?${params.toString()}`);
+    };
 
-    // Derive filter options from documents
-    const availableYears = useMemo(() => {
-        const years = new Set<string>();
-        documents.forEach(doc => {
-            const dateStr = doc.document_date || doc.created_at;
-            if (dateStr) {
-                years.add(new Date(dateStr).getFullYear().toString());
-            }
-        });
-        const currentYear = new Date().getFullYear().toString();
-        years.add(currentYear);
-        return Array.from(years).sort((a, b) => b.localeCompare(a));
-    }, [documents]);
+    const availableYears = Array.from(new Set([...summary.years.map(String), currentYear])).sort((a, b) => b.localeCompare(a));
+    const availableStatuses = summary.statuses;
 
-    const availableFunds = useMemo(() => {
-        const funds = new Set<string>();
-        documents.forEach(doc => {
-            if (doc.funds?.name) funds.add(doc.funds.name);
-        });
-        return Array.from(funds).sort();
-    }, [documents]);
-
-    const availableStatuses = useMemo(() => {
-        const statuses = new Set<string>();
-        documents.forEach(doc => {
-            if (doc.status) statuses.add(doc.status);
-        });
-        // We typically exclude needs_review but let's just show standard ones
-        return Array.from(statuses).sort();
-    }, [documents]);
-
-    const filteredDocuments = useMemo(() => {
-        return documents.filter((doc) => {
-            if (doc.status === 'needs_review' || (doc.amount || 0) <= 0) return false;
-
-            const docDate = new Date(doc.document_date || doc.created_at);
-            const docYear = docDate.getFullYear().toString();
-            const docMonth = (docDate.getMonth() + 1).toString(); // 1-12
-
-            if (selectedYear !== "all" && docYear !== selectedYear) return false;
-
-            if (selectedMonth !== "all") {
-                // selectedMonth is 1-12 as string
-                if (docMonth !== selectedMonth) return false;
-            }
-
-            if (selectedFund !== "all" && doc.funds?.name !== selectedFund) return false;
-
-            // Allow selecting standard statuses, or default behaviour filter out needs_review
-            if (selectedStatus !== "all" && doc.status !== selectedStatus) return false;
-
-            return true;
-        });
-    }, [documents, selectedYear, selectedMonth, selectedFund, selectedStatus]);
-
-    const { totalVolume, sortedFunds, sortedCategories, largeTransactions } = useMemo(() => {
-        let totalVolume = 0;
-        const fundTotals = new Map<string, number>();
-        const categoryTotals = new Map<string, number>();
-        const largeTransactions: any[] = [];
-
-        filteredDocuments.forEach((doc: any) => {
-            const amount = doc.amount || 0;
-            totalVolume += amount;
-
-            // Fund Totals
-            const fundName = doc.funds?.name || "Unassigned";
-            fundTotals.set(fundName, (fundTotals.get(fundName) || 0) + amount);
-
-            // Category Totals
-            const catName = doc.categories?.name || "Uncategorized";
-            categoryTotals.set(catName, (categoryTotals.get(catName) || 0) + amount);
-
-            // Large Transactions (>RM500)
-            if (amount >= 500) {
-                largeTransactions.push(doc);
-            }
-        });
-
-        const sortedFunds = Array.from(fundTotals.entries())
-            .map(([name, total]) => ({ name, total }))
-            .sort((a, b) => b.total - a.total);
-
-        const sortedCategories = Array.from(categoryTotals.entries())
-            .map(([name, total]) => ({ name, total }))
-            .sort((a, b) => b.total - a.total)
-            .slice(0, 5); // display Top 5
-
-        largeTransactions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-        return { totalVolume, sortedFunds, sortedCategories, largeTransactions };
-    }, [filteredDocuments]);
-
+    const totalVolume = summary.total;
+    const sortedFunds = summary.byFund;
+    const sortedCategories = summary.topCategories;
+    const largeTransactions = largeTx.rows;
     const absoluteTotalVolume = sortedFunds.reduce((sum, f) => sum + f.total, 0);
+
+    const firstRow = largeTx.total === 0 ? 0 : (page - 1) * LARGE_TX_PAGE_SIZE + 1;
+    const lastRow = Math.min(page * LARGE_TX_PAGE_SIZE, largeTx.total);
+    const pagination = largeTx.total > LARGE_TX_PAGE_SIZE && (
+        <div className="flex items-center justify-between px-4 sm:px-0 pt-4 text-sm text-gray-500 dark:text-slate-400">
+            <span>Showing {firstRow}–{lastRow} of {largeTx.total.toLocaleString()}</span>
+            <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
+                    <ChevronLeft className="w-4 h-4" /> Previous
+                </Button>
+                <Button variant="outline" size="sm" disabled={lastRow >= largeTx.total} onClick={() => goToPage(page + 1)}>
+                    Next <ChevronRight className="w-4 h-4" />
+                </Button>
+            </div>
+        </div>
+    );
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -147,7 +95,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                         <FileCheck className="h-4 w-4" />
                         Donor Memo
                     </Link>
-                    <ReportsExportButton filteredDocuments={filteredDocuments} dateRange="Custom" />
+                    <ReportsExportButton filters={filters} dateRange="Custom" />
                 </div>
             </div>
 
@@ -163,7 +111,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                 <div className="flex items-center gap-3">
                     <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Year</span>
-                        <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <Select value={filters.year} onValueChange={(v) => updateFilters({ year: v })}>
                             <SelectTrigger className="w-[90px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
                                 <SelectValue placeholder="Year" />
                             </SelectTrigger>
@@ -178,7 +126,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
 
                     <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Month</span>
-                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                        <Select value={filters.month} onValueChange={(v) => updateFilters({ month: v })}>
                             <SelectTrigger className="w-[110px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
                                 <SelectValue placeholder="Month" />
                             </SelectTrigger>
@@ -193,14 +141,14 @@ export function ReportsClient({ documents }: { documents: any[] }) {
 
                     <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Fund</span>
-                        <Select value={selectedFund} onValueChange={setSelectedFund}>
+                        <Select value={filters.fund} onValueChange={(v) => updateFilters({ fund: v })}>
                             <SelectTrigger className="w-[120px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
                                 <SelectValue placeholder="Fund" />
                             </SelectTrigger>
                             <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                                 <SelectItem value="all">All Funds</SelectItem>
-                                {availableFunds.map(fund => (
-                                    <SelectItem key={fund} value={fund}>{fund}</SelectItem>
+                                {fundOptions.map(fund => (
+                                    <SelectItem key={fund.id} value={fund.id}>{fund.name}{fund.archived_at ? " (archived)" : ""}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -208,7 +156,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
 
                     <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium text-gray-500 dark:text-slate-400 px-1">Status</span>
-                        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                        <Select value={filters.status} onValueChange={(v) => updateFilters({ status: v })}>
                             <SelectTrigger className="w-[130px] h-9 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 dark:text-white text-sm">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
@@ -338,6 +286,7 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                             <p className="text-sm font-medium text-gray-900 dark:text-slate-400">No large transactions recorded for this period.</p>
                         </div>
                     ) : (
+                        <>
                         <Table>
                             <TableHeader className="dark:border-slate-700">
                                 <TableRow className="hover:bg-gray-50/50 dark:hover:bg-slate-700/50 border-gray-200 dark:border-slate-700">
@@ -364,6 +313,8 @@ export function ReportsClient({ documents }: { documents: any[] }) {
                                 ))}
                             </TableBody>
                         </Table>
+                        {pagination}
+                        </>
                     )}
                 </CardContent>
             </Card>
