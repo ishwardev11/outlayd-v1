@@ -62,13 +62,6 @@ export async function signUpAction(formData: FormData) {
         return { success: "Account created! Please check your email to confirm your account before logging in." };
     }
 
-    // Clear local dev cookies here too so they don't override the real session
-    const cookieStore = await cookies();
-    cookieStore.set('dev_org_id', '', { maxAge: 0, path: '/' });
-    cookieStore.set('dev_org_name', '', { maxAge: 0, path: '/' });
-    cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
-    cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
-
     // Successful signup automatically logs them in as well
     const orgId = await getOrganizationId();
     if (orgId) {
@@ -97,13 +90,10 @@ export async function signInAction(formData: FormData) {
         return { error: error.message };
     }
 
-    // Clear local dev cookies
+    // Clear the active-workspace cookies so the next login picks the right organisation
     const cookieStore = await cookies();
-    cookieStore.set('dev_org_id', '', { maxAge: 0, path: '/' });
-    cookieStore.set('dev_org_name', '', { maxAge: 0, path: '/' });
-    cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
-    cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
     cookieStore.set('active_org_id', '', { maxAge: 0, path: '/' });
+    cookieStore.set('active_org_currency', '', { maxAge: 0, path: '/' });
 
     const orgId = await getOrganizationId();
     if (!orgId) {
@@ -117,13 +107,10 @@ export async function signOutAction() {
     const supabase = await createClient();
     await supabase.auth.signOut();
 
-    // Clear local dev cookies to ensure fresh state on next login/signup
+    // Clear the active-workspace cookies so the next login starts fresh
     const cookieStore = await cookies();
-    cookieStore.set('dev_org_id', '', { maxAge: 0, path: '/' });
-    cookieStore.set('dev_org_name', '', { maxAge: 0, path: '/' });
-    cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
-    cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
     cookieStore.set('active_org_id', '', { maxAge: 0, path: '/' });
+    cookieStore.set('active_org_currency', '', { maxAge: 0, path: '/' });
 
     redirect("/");
 }

@@ -19,24 +19,18 @@ export async function completeOnboardingSetup(data: OnboardingData) {
 
     const supabase = await createClient();
 
-    // 1. Get current user (support local dev fallback)
+    // 1. Get the signed-in user
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-        console.log("Local Dev: Bypassing DB insert for unauthenticated user.");
-        const cookieStore = await cookies();
-        const mockUuid = '00000000-0000-0000-0000-000000000000';
-        cookieStore.set('dev_org_id', mockUuid, { path: '/' });
-        cookieStore.set('dev_org_name', data.orgName, { path: '/' });
-        cookieStore.set('dev_org_currency', data.baseCurrency, { path: '/' });
-        cookieStore.set('active_org_currency', data.baseCurrency, { path: '/' });
-        cookieStore.set('dev_org_fiscal_year', data.fiscalYearStart, { path: '/' });
-        cookieStore.set('dev_template_choice', data.templateChoice, { path: '/' });
-        return { success: true, organization_id: mockUuid };
+        return { success: false, error: "You need to be signed in to set up an organisation." };
+    }
+    if (!user.email) {
+        return { success: false, error: "Your account has no email address, so it can't own an organisation." };
     }
 
-    const userEmail = user?.email || "admin@example.com";
-    const userFullName = user?.user_metadata?.full_name || "Admin";
+    const userEmail = user.email;
+    const userFullName = user.user_metadata?.full_name || "Admin";
 
     try {
         // Initialize admin client to reliably bypass RLS chicken-and-egg condition during first-time tenant creation
@@ -63,7 +57,6 @@ export async function completeOnboardingSetup(data: OnboardingData) {
             const cookieStore = await cookies();
             cookieStore.set('active_org_id', organization_id, { path: '/' });
             cookieStore.set('active_org_currency', data.baseCurrency, { path: '/' });
-            cookieStore.set('dev_org_currency', data.baseCurrency, { path: '/' });
 
             // Sync organization_id into user metadata for fallback lookups
             await adminClient.auth.admin.updateUserById(user.id, {

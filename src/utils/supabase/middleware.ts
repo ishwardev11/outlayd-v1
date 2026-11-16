@@ -36,14 +36,6 @@ export async function updateSession(request: NextRequest) {
 
     const pathname = request.nextUrl.pathname
 
-    // Allow dev mock session if active
-    if (process.env.NODE_ENV === 'development') {
-        const devOrg = request.cookies.get('dev_org_id')?.value
-        if (devOrg && devOrg !== '' && devOrg !== 'null' && devOrg !== 'undefined') {
-            return supabaseResponse
-        }
-    }
-
     // Protected dashboard routes
     const isProtectedPath =
         pathname.startsWith('/dashboard') ||

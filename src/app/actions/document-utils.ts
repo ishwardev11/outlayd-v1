@@ -11,17 +11,6 @@ import {
 } from "@/utils/sanitize-updates"
 
 export async function getOrganizationId() {
-    // 1. Check local dev override
-    if (process.env.NODE_ENV === 'development') {
-        const cookieStore = await cookies();
-        const devOrgId = cookieStore.get('dev_org_id')?.value;
-        if (devOrgId && devOrgId !== 'null' && devOrgId !== 'undefined' && devOrgId !== '') {
-            if (devOrgId === '11111111-1111-1111-1111-111111111111') return '00000000-0000-0000-0000-000000000000';
-            return devOrgId;
-        }
-    }
-
-    // 2. Standard Session Auth
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null;
@@ -95,18 +84,9 @@ export async function getOrganizationId() {
 }
 
 export async function getCurrentUserRole() {
-    // 1. Check local dev override
-    if (process.env.NODE_ENV === 'development') {
-        const cookieStore = await cookies();
-        const devRole = cookieStore.get('dev_user_role')?.value;
-        if (devRole) return devRole;
-    }
-
-    // 2. Standard Session Auth
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || !user.email) {
-        if (process.env.NODE_ENV === 'development') return 'Admin';
         return null;
     }
 
@@ -134,16 +114,9 @@ export async function getCurrentUserRole() {
             return roleRows[0].role;
         }
 
-        if (process.env.NODE_ENV === 'development') {
-            return 'Admin';
-        }
-
         return null;
     } catch (e: any) {
         console.error("Error in getCurrentUserRole:", e);
-        if (process.env.NODE_ENV === 'development') {
-            return 'Admin';
-        }
         return null;
     }
 }
@@ -246,25 +219,14 @@ export async function checkWriteAccess() {
 export async function getOrganizationCurrency(): Promise<string> {
     const cookieStore = await cookies();
 
-    // 1. Check cookies (both active org currency and dev override)
+    // 1. Fast path: the currency cached in a cookie for the active organisation
     const activeCurrency = cookieStore.get('active_org_currency')?.value;
     if (activeCurrency) return activeCurrency;
-
-    if (process.env.NODE_ENV === 'development') {
-        const devCurrency = cookieStore.get('dev_org_currency')?.value;
-        if (devCurrency) return devCurrency;
-    }
 
     // 2. Query from Supabase organizations table using current orgId
     try {
         const orgId = await getOrganizationId();
         if (orgId) {
-            // Local dev fallback check
-            if (process.env.NODE_ENV === 'development' && orgId === '00000000-0000-0000-0000-000000000000') {
-                const devCurrency = cookieStore.get('dev_org_currency')?.value;
-                if (devCurrency) return devCurrency;
-            }
-
             const { createAdminClient } = await import("@/utils/supabase/admin");
             const adminClient = createAdminClient();
             const { data: org } = await adminClient

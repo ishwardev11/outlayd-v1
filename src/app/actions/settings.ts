@@ -4,7 +4,6 @@ import { createClient } from "@/utils/supabase/server"
 import { getOrganizationId, getCurrentUserRole } from "./document-utils"
 
 async function checkWriteAccess() {
-    if (process.env.NODE_ENV === 'development') return 'Admin';
     const role = await getCurrentUserRole();
     if (role === 'Viewer') {
         throw new Error("Unauthorized: Viewers cannot perform this action.");
@@ -15,7 +14,6 @@ async function checkWriteAccess() {
 import { revalidatePath } from "next/cache"
 import { cookies, headers } from "next/headers"
 import Stripe from 'stripe';
-import { TEMPLATES } from "@/utils/templates"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { toStoragePath } from "@/utils/storage-paths"
 import { sanitizeFundDetails, UpdateValidationError } from "@/utils/sanitize-updates"
@@ -29,27 +27,6 @@ export async function getOrganizationSettings() {
 
     if (!organization_id) {
         return null
-    }
-
-    // Local dev fallback
-    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
-        const cookieStore = await cookies();
-        const orgName = cookieStore.get('dev_org_name')?.value || "Local Dev Organization";
-        const baseCurrency = cookieStore.get('dev_org_currency')?.value || "MYR";
-        const fiscalYearStart = parseInt(cookieStore.get('dev_org_fiscal_year')?.value || "1", 10);
-        const devStatus = cookieStore.get('dev_org_status')?.value || "pro";
-
-        return {
-            id: organization_id,
-            name: orgName,
-            base_currency: baseCurrency,
-            fiscal_year_start: fiscalYearStart,
-            registration_id: "",
-            subscription_status: devStatus,
-            subscription_tier: devStatus === 'pro' ? 'growth' : 'free',
-            cancel_at_period_end: cookieStore.get('dev_org_cancelled')?.value === 'true',
-            subscription_end_date: cookieStore.get('dev_org_end_date')?.value || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-        };
     }
 
     const { data, error } = await supabase
@@ -76,21 +53,6 @@ export async function updateOrganizationSettings(updates: any) {
     const cookieStore = await cookies();
     if (updates.base_currency !== undefined && !/^[A-Z]{3}$/.test(String(updates.base_currency))) {
         return { success: false, error: "Choose a valid base currency." };
-    }
-
-    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
-        if (updates.base_currency) cookieStore.set('active_org_currency', updates.base_currency, { path: '/' });
-        if (updates.name) cookieStore.set('dev_org_name', updates.name, { path: '/' });
-        if (updates.base_currency) cookieStore.set('dev_org_currency', updates.base_currency, { path: '/' });
-        if (updates.fiscal_year_start) cookieStore.set('dev_org_fiscal_year', updates.fiscal_year_start.toString(), { path: '/' });
-
-        revalidatePath("/settings")
-        revalidatePath("/dashboard")
-        revalidatePath("/ledger")
-        revalidatePath("/vendors")
-        revalidatePath("/reports")
-        revalidatePath("/procurement")
-        return { success: true, data: { ...updates, id: organization_id } };
     }
 
     if (updates.base_currency) {
@@ -135,17 +97,6 @@ export async function getSettingsFunds() {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
-        const cookieStore = await cookies();
-        const choice = cookieStore.get('dev_template_choice')?.value || 'digital_agency';
-        const template = TEMPLATES[choice] || TEMPLATES.digital_agency;
-        return template.funds.map((f: any, i: number) => ({
-            id: `mock-fund-${i}`,
-            organization_id,
-            name: f.name
-        }));
-    }
-
     const { data, error } = await supabase
         .from("funds")
         .select("*")
@@ -160,11 +111,6 @@ export async function addSettingFund(name: string, code?: string) {
     await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
-
-    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
-        revalidatePath("/", "layout")
-        return { success: true }
-    }
 
     const { error } = await supabase
         .from("funds")
@@ -187,11 +133,6 @@ export async function archiveSettingFund(id: string) {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
-        revalidatePath("/", "layout")
-        return { success: true }
-    }
-
     const { error } = await supabase
         .from("funds")
         .update({ archived_at: new Date().toISOString() })
@@ -210,11 +151,6 @@ export async function restoreSettingFund(id: string) {
     await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
-
-    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
-        revalidatePath("/", "layout")
-        return { success: true }
-    }
 
     const { error } = await supabase
         .from("funds")
@@ -270,17 +206,6 @@ export async function getSettingsCategories() {
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
 
-    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
-        const cookieStore = await cookies();
-        const choice = cookieStore.get('dev_template_choice')?.value || 'digital_agency';
-        const template = TEMPLATES[choice] || TEMPLATES.digital_agency;
-        return template.categories.map((c: any, i: number) => ({
-            id: `mock-category-${i}`,
-            organization_id,
-            name: c.name
-        }));
-    }
-
     const { data, error } = await supabase
         .from("categories")
         .select("*")
@@ -295,11 +220,6 @@ export async function addSettingCategory(name: string) {
     await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
-
-    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
-        revalidatePath("/", "layout")
-        return { success: true }
-    }
 
     const { error } = await supabase
         .from("categories")
@@ -320,11 +240,6 @@ export async function deleteSettingCategory(id: string) {
     await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
-
-    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
-        revalidatePath("/", "layout")
-        return { success: true }
-    }
 
     const { error } = await supabase
         .from("categories")
@@ -442,25 +357,18 @@ export async function inviteTeamMember(email: string, full_name: string, role: s
     }
 
     // 3. Determine tier and seat limits
-    let isGrowth = false
-    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
-        const cookieStore = await cookies();
-        const devStatus = cookieStore.get('dev_org_status')?.value || "pro";
-        isGrowth = devStatus === 'pro';
-    } else {
-        const { data: org, error: orgError } = await supabase
-            .from("organizations")
-            .select("subscription_tier, subscription_status")
-            .eq("id", organization_id)
-            .single()
+    const { data: org, error: orgError } = await supabase
+        .from("organizations")
+        .select("subscription_tier, subscription_status")
+        .eq("id", organization_id)
+        .single()
 
-        if (orgError) {
-            console.error("Failed to verify subscription status:", orgError)
-            throw new Error("Failed to verify subscription status")
-        }
-
-        isGrowth = org?.subscription_tier === 'growth' || org?.subscription_status === 'pro';
+    if (orgError) {
+        console.error("Failed to verify subscription status:", orgError)
+        throw new Error("Failed to verify subscription status")
     }
+
+    const isGrowth = org?.subscription_tier === 'growth' || org?.subscription_status === 'pro';
 
     const limit = isGrowth ? 5 : 1;
 
@@ -920,20 +828,6 @@ export async function deleteOrganizationAccount() {
     const organization_id = await getOrganizationId();
     if (!organization_id) {
         throw new Error("No active organization");
-    }
-
-    if (process.env.NODE_ENV === 'development' && organization_id === '00000000-0000-0000-0000-000000000000') {
-        const cookieStore = await cookies();
-        cookieStore.set('dev_org_id', '', { maxAge: 0, path: '/' });
-        cookieStore.set('dev_org_name', '', { maxAge: 0, path: '/' });
-        cookieStore.set('dev_org_currency', '', { maxAge: 0, path: '/' });
-        cookieStore.set('dev_org_fiscal_year', '', { maxAge: 0, path: '/' });
-        cookieStore.set('dev_template_choice', '', { maxAge: 0, path: '/' });
-        cookieStore.set('active_org_id', '', { maxAge: 0, path: '/' });
-        cookieStore.set('dev_org_status', '', { maxAge: 0, path: '/' });
-        cookieStore.set('dev_org_cancelled', '', { maxAge: 0, path: '/' });
-        cookieStore.set('dev_org_end_date', '', { maxAge: 0, path: '/' });
-        return { success: true };
     }
 
     const adminClient = createAdminClient();

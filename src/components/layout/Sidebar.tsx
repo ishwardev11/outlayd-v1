@@ -38,20 +38,11 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
     const [isPro, setIsPro] = useState<boolean | null>(null);
     const [showPaywall, setShowPaywall] = useState(false);
 
-    // Helper to get active organization ID, including dev override
+    // Helper to get the active organization ID
     const getActiveOrgId = (user: any) => {
         if (typeof document === "undefined") return user?.user_metadata?.organization_id;
 
         const cookies = document.cookie.split("; ");
-        const devOrgCookie = cookies.find((row) => row.trim().startsWith("dev_org_id="));
-        const devOrgId = devOrgCookie ? devOrgCookie.split("=")[1] : null;
-
-        if (devOrgId) {
-            if (devOrgId === "11111111-1111-1111-1111-111111111111")
-                return "00000000-0000-0000-0000-000000000000";
-            return devOrgId;
-        }
-
         const activeOrgCookie = cookies.find((row) => row.trim().startsWith("active_org_id="));
         const activeOrgId = activeOrgCookie ? activeOrgCookie.split("=")[1] : null;
         if (activeOrgId) return activeOrgId;
