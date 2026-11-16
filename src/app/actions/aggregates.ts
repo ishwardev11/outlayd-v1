@@ -289,3 +289,32 @@ export async function getLedgerPage(filters: LedgerFilters) {
 
     return { documents, total: res.count ?? documents.length, page, pageSize: LEDGER_PAGE_SIZE }
 }
+
+// ---------------------------------------------------------------- Uploads
+
+/** How many documents are still being extracted, so pages know whether to keep refreshing. */
+export async function getExtractingCount(): Promise<number> {
+    const supabase = await createClient()
+    const orgId = await requireOrg()
+
+    // Safety net: an extraction that never finished (function stopped, AI provider outage) must not
+    // spin forever. After 10 minutes hand it to a person to fill in, like a failed extraction.
+    const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+    await supabase
+        .from("documents")
+        .update({ status: "needs_review" })
+        .eq("organization_id", orgId)
+        .eq("status", "extracting")
+        .lt("created_at", staleBefore)
+
+    const { count, error } = await supabase
+        .from("documents")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", orgId)
+        .eq("status", "extracting")
+    if (error) {
+        console.error("Error counting extracting documents:", error)
+        return 0
+    }
+    return count ?? 0
+}

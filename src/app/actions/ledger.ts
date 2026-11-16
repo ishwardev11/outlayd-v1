@@ -3,6 +3,7 @@
 import crypto from "node:crypto"
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { after } from "next/server"
 
 import { getOrganizationId, updateDocument, checkWriteAccess } from "./document-utils"
 import { sanitizeVendorUpdates, assertOwnedIds, UpdateValidationError } from "@/utils/sanitize-updates"
@@ -461,12 +462,17 @@ export async function processUpload(formData: FormData) {
             throw new Error(`Database record creation failed: ${docError.message}`)
         }
 
-        // 5. Proceed to Gemini API Extraction for the active document record
-        try {
-            await extractDocumentData(docData.id, mimeType, base64Data)
-        } catch (e: any) {
-            console.error("Extraction failed:", e)
-        }
+        // 5. Extract in the background. The document is already saved with status "extracting", so the
+        // upload can return straight away. The extraction fills the document in, or moves it to
+        // needs_review if it fails. The ledger and dashboard refresh themselves (ExtractionPoller)
+        // while anything is still extracting.
+        after(async () => {
+            try {
+                await extractDocumentData(docData.id, mimeType, base64Data)
+            } catch (e: any) {
+                console.error("Extraction failed:", e)
+            }
+        })
 
         revalidatePath("/ledger")
         revalidatePath("/")

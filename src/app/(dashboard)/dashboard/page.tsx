@@ -1,4 +1,4 @@
-import { getDashboardSummary, getActionQueue, getRecentDocuments } from "@/app/actions/aggregates";
+import { getDashboardSummary, getActionQueue, getRecentDocuments, getExtractingCount } from "@/app/actions/aggregates";
 import { getOrganizationId, getOrganizationCurrency } from "@/app/actions/document-utils";
 import { getCurrencyDetails } from "@/utils/currency";
 import { redirect } from "next/navigation";
@@ -6,10 +6,15 @@ import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
 import { ActionQueueClient } from "@/components/dashboard/ActionQueueClient";
 import { QuickUpload } from "@/components/dashboard/QuickUpload";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { ExtractionPoller } from "@/components/ExtractionPoller";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, FileText, Banknote, Info } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+// Uploads started from this page extract their data in the background (see processUpload), and that
+// work counts towards this limit. 60s suits most receipts and invoices; raise it if your hosting plan
+// allows longer functions and large PDFs still time out.
+export const maxDuration = 60;
 
 export default async function Home() {
   const orgId = await getOrganizationId();
@@ -22,10 +27,11 @@ export default async function Home() {
 
   // Totals, the 14-day cash flow and the lists are computed in the database, so the page stays
   // fast however many documents there are.
-  const [summary, actionQueueItems, recentDocuments] = await Promise.all([
+  const [summary, actionQueueItems, recentDocuments, extractingCount] = await Promise.all([
     getDashboardSummary(),
     getActionQueue(),
     getRecentDocuments(),
+    getExtractingCount(),
   ]);
 
   const {
@@ -42,6 +48,8 @@ export default async function Home() {
         <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Dashboard</h1>
         <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">Morning briefing and action queue.</p>
       </div>
+
+      <ExtractionPoller active={extractingCount > 0} />
 
       {/* Top Row: KPI Cards */}
       <div className="grid gap-6 md:grid-cols-3">

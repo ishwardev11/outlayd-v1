@@ -1,5 +1,3 @@
-"use server"
-
 import { GoogleGenerativeAI, SchemaType, type GenerationConfig } from "@google/generative-ai"
 import { updateDocument, getOrganizationId, getOrganizationCurrency } from "./document-utils"
 import { getCurrencyDetails } from "@/utils/currency"
@@ -7,6 +5,9 @@ import { createClient } from "@/utils/supabase/server"
 import { assessExtraction } from "@/utils/extraction-checks"
 import { convertAmount, fetchExchangeRate } from "@/utils/fx"
 
+// NOTE: deliberately NOT a "use server" file. Its only caller is processUpload (server side), and a
+// "use server" export can be invoked directly by any signed-in browser, which would let someone run
+// paid AI extractions without going through the upload limits.
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
 const getExtractionSystemPrompt = (baseCurrency: string, symbol: string) => `You are an expert Document AI and financial data extractor specialized in unstructured receipts, tax invoices, utility bills, SaaS statements, and purchase orders.
