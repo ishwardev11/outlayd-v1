@@ -48,13 +48,35 @@ cp "$SRC" "supabase/migrations/${BASELINE_VERSION}_baseline_schema.sql"
 
 if supabase db dump --help 2>&1 | grep -q -- "--remote"; then TARGET="--remote"; else TARGET="--linked"; fi
 
+# The live database keeps its own list of "applied" migrations. It is often NOT the same as the local
+# file names (changes made through the Supabase dashboard get their own timestamps), and every entry
+# has to be retired, otherwise `supabase db push` later complains about unknown remote versions.
+# This reads that list from `supabase migration list` (the 2nd column is "Remote").
+remote_versions=()
+if listing="$(supabase migration list)"; then
+  while IFS= read -r v; do
+    [ -n "$v" ] && remote_versions+=("$v")
+  done < <(printf '%s\n' "$listing" | awk -F'|' 'NF>=3 { gsub(/[` \r]/, "", $2); if ($2 ~ /^[0-9]+$/) print $2 }')
+fi
+if [ "${#remote_versions[@]}" -eq 0 ]; then
+  echo "WARNING: could not read the live migration history, so the commands below only cover local files." >&2
+  echo "         Run 'supabase migration list' yourself and add every Remote version to the 'reverted' command." >&2
+fi
+
+# every old version (archived local files + everything the live database recorded), each once
+all_versions=()
+while IFS= read -r v; do
+  [ -n "$v" ] && all_versions+=("$v")
+done < <(printf '%s\n' ${versions[@]+"${versions[@]}"} ${remote_versions[@]+"${remote_versions[@]}"} | sort -u)
+
 echo
-echo "Archived ${#versions[@]} migrations and created supabase/migrations/${BASELINE_VERSION}_baseline_schema.sql"
+echo "Archived ${#versions[@]} migration files and created supabase/migrations/${BASELINE_VERSION}_baseline_schema.sql"
+echo "The live database has ${#remote_versions[@]} entries in its history."
 echo
 echo "Now tell the live database about the new history (this only edits the migration history table,"
-echo "it does not change your data or schema). Run these yourself:"
+echo "it does not change your data or schema). Run these two commands yourself, in this order:"
 echo
-echo "  supabase migration repair $TARGET --status reverted ${versions[*]}"
+echo "  supabase migration repair $TARGET --status reverted ${all_versions[*]}"
 echo "  supabase migration repair $TARGET --status applied $BASELINE_VERSION"
 echo
 echo "Then verify as described in 'Step 3' of docs/DATABASE.md."

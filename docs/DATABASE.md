@@ -25,6 +25,9 @@ Run `supabase migration list` and look at the Local and Remote columns.
 
   Any query that returns nothing means that migration is missing: paste its file from
   `supabase/migrations` into the SQL editor and run it.
+* If the two columns have **no rows in common** (every row has only a Local or only a Remote value), the
+  database history and the files in this repo were created separately. That is exactly the situation this
+  procedure fixes. Do not run `db push`; run the four files by hand as above.
 * `20261116150000_ensure_receipts_bucket.sql` is safe either way (the bucket already exists, it only makes sure
   it is private).
 
@@ -54,6 +57,7 @@ migrations so the live database does not try to run the baseline. Your data and 
 ```bash
 supabase start                 # needs Docker
 supabase db reset              # builds a brand new local database from the migrations
+                               # NEVER add --remote or --linked to db reset: that would erase the live database
 supabase db diff --remote      # use --linked on older CLI versions; should say there are no schema changes
 supabase migration list        # Local and Remote should now match
 ```
