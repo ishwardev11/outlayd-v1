@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
-import { getOrganizationId } from "@/app/actions/document-utils";
+import { getOrganizationId, getOrganizationTimezone } from "@/app/actions/document-utils";
+import { todayInTimezone } from "@/utils/dates";
 import { getOrganizationSettings, getSettingsFunds } from "@/app/actions/settings";
 import { DonorMemoClient } from "@/components/reports/DonorMemoClient";
 import { DonorMemoLocked } from "@/components/reports/DonorMemoLocked";
@@ -26,9 +27,10 @@ export default async function DonorMemoPage() {
         );
     }
 
-    const [funds, orgSettings] = await Promise.all([
+    const [funds, orgSettings, timezone] = await Promise.all([
         getSettingsFunds(),
         getOrganizationSettings(),
+        getOrganizationTimezone(),
     ]);
 
     return (
@@ -36,6 +38,7 @@ export default async function DonorMemoPage() {
             <DonorMemoClient
                 funds={funds ?? []}
                 fiscalYearStart={Number(orgSettings?.fiscal_year_start) || 1}
+                today={todayInTimezone(timezone)}
             />
         </div>
     );

@@ -1,7 +1,9 @@
 import { getFunds } from "@/app/actions/ledger";
+import { getOrganizationTimezone } from "@/app/actions/document-utils";
 import { getLargeTransactions, getReportSummary } from "@/app/actions/aggregates";
 import { ReportsClient } from "@/components/reports/ReportsClient";
 import { parsePage, parseReportFilters } from "@/utils/aggregate-types";
+import { todayInTimezone } from "@/utils/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +13,7 @@ export default async function ReportsPage({
     searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
     const sp = await searchParams;
-    const currentYear = String(new Date().getUTCFullYear());
+    const currentYear = todayInTimezone(await getOrganizationTimezone()).slice(0, 4);
 
     // Filters live in the URL so the database can do the work and the page can be shared/bookmarked
     const filters = parseReportFilters(sp, currentYear);

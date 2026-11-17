@@ -11,6 +11,7 @@ import { useRole } from "@/components/RoleProvider"
 import { useRouter } from "next/navigation"
 import { BASE_CURRENCIES, getCurrencyDetails, isBaseCurrencyCode } from "@/utils/currency"
 import { createClient } from "@/utils/supabase/client"
+import { DEFAULT_TIMEZONE, TIMEZONE_OPTIONS } from "@/utils/dates"
 import {
     Dialog,
     DialogContent,
@@ -34,7 +35,8 @@ export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettin
         name: orgSettings?.name || "",
         registration_id: orgSettings?.registration_id || "",
         base_currency: orgSettings?.base_currency || "MYR",
-        fiscal_year_start: orgSettings?.fiscal_year_start?.toString() || "1"
+        fiscal_year_start: orgSettings?.fiscal_year_start?.toString() || "1",
+        timezone: orgSettings?.timezone || DEFAULT_TIMEZONE
     })
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -144,6 +146,30 @@ export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettin
                                     <SelectItem value="10">October</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="dark:text-slate-200">Timezone</Label>
+                            <Select
+                                value={formData.timezone}
+                                onValueChange={(val) => setFormData(f => ({ ...f, timezone: val }))}
+                            >
+                                <SelectTrigger className="dark:bg-slate-900 dark:border-slate-700 dark:text-white dark:placeholder-slate-500">
+                                    <SelectValue placeholder="Select timezone" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {/* A timezone that is not in the list stays visible while it is the current one */}
+                                    {(TIMEZONE_OPTIONS.some((t) => t.value === formData.timezone)
+                                        ? TIMEZONE_OPTIONS
+                                        : [{ value: formData.timezone, label: formData.timezone }, ...TIMEZONE_OPTIONS]
+                                    ).map((t) => (
+                                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                Decides what &quot;today&quot; and &quot;this month&quot; mean on the dashboard and reports, and which day a payment is recorded on.
+                            </p>
                         </div>
                     </div>
 

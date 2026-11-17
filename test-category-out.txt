@@ -1,9 +1,0 @@
-[
-  {
-    "id": "3ac89d67-835a-4d78-9410-fe0daae7c576",
-    "name": "Software Subscriptions",
-    "created_at": "2026-02-27T02:48:47.872642+00:00",
-    "organization_id": "00000000-0000-0000-0000-000000000000",
-    "is_archived": false
-  }
-]

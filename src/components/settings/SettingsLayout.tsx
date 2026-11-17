@@ -14,6 +14,7 @@ export interface OrgSettings {
     registration_id?: string | null;
     base_currency?: string | null;
     fiscal_year_start?: number | null;
+    timezone?: string | null;
     subscription_status?: string | null;
     subscription_tier?: string | null;
     cancel_at_period_end?: boolean | null;

@@ -13,6 +13,7 @@ async function checkWriteAccess() {
 
 import { revalidatePath } from "next/cache"
 import { cookies, headers } from "next/headers"
+import { isValidTimezone } from "@/utils/dates"
 import Stripe from 'stripe';
 import { createAdminClient } from "@/utils/supabase/admin"
 import { toStoragePath } from "@/utils/storage-paths"
@@ -54,6 +55,9 @@ export async function updateOrganizationSettings(updates: any) {
     if (updates.base_currency !== undefined && !/^[A-Z]{3}$/.test(String(updates.base_currency))) {
         return { success: false, error: "Choose a valid base currency." };
     }
+    if (updates.timezone !== undefined && !isValidTimezone(updates.timezone)) {
+        return { success: false, error: "Choose a valid timezone." };
+    }
 
     if (updates.base_currency) {
         const blocked = await baseCurrencyChangeBlocked(supabase, organization_id, updates.base_currency)
@@ -66,7 +70,8 @@ export async function updateOrganizationSettings(updates: any) {
             name: updates.name,
             registration_id: updates.registration_id,
             base_currency: updates.base_currency,
-            fiscal_year_start: updates.fiscal_year_start
+            fiscal_year_start: updates.fiscal_year_start,
+            timezone: updates.timezone
         })
         .eq("id", organization_id)
         .select()
@@ -701,6 +706,7 @@ export async function acceptPendingInvite(inviteId: string) {
 
     const cookieStore = await cookies()
     cookieStore.set("active_org_id", invite.organization_id, { path: "/" })
+    cookieStore.delete("active_org_currency") // belongs to the previous workspace; it is re-read from the database
     revalidatePath("/", "layout")
     return { success: true }
 }
@@ -769,6 +775,7 @@ export async function switchWorkspace(organizationId: string) {
 
     const cookieStore = await cookies()
     cookieStore.set("active_org_id", organizationId, { path: "/" })
+    cookieStore.delete("active_org_currency") // belongs to the previous workspace; it is re-read from the database
     revalidatePath("/", "layout")
     return { success: true }
 }

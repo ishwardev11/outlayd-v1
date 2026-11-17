@@ -5,7 +5,8 @@ import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { after } from "next/server"
 
-import { getOrganizationId, updateDocument, checkWriteAccess } from "./document-utils"
+import { getOrganizationId, getOrganizationTimezone, updateDocument, checkWriteAccess } from "./document-utils"
+import { startOfMonthInstant } from "@/utils/dates"
 import { sanitizeVendorUpdates, assertOwnedIds, UpdateValidationError } from "@/utils/sanitize-updates"
 import { extractDocumentData } from "./ai"
 export { getOrganizationId, updateDocument }
@@ -274,11 +275,8 @@ export async function processUpload(formData: FormData) {
         const isPro = orgData?.subscription_status === 'pro';
 
         if (!isPro) {
-            // Enforce Free Tier Limit: 5 AI extractions per calendar month (UTC)
-            const now = new Date();
-            const startOfMonth = new Date(
-                Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
-            ).toISOString();
+            // Enforce Free Tier Limit: 5 AI extractions per calendar month (in the organisation's timezone)
+            const startOfMonth = startOfMonthInstant(await getOrganizationTimezone());
 
             const { count, error: countError } = await supabase
                 .from("documents")

@@ -70,6 +70,7 @@ export default function WizardForm() {
         // Filter out empty invites
         const finalData = {
             ...formData,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             // invites: formData.invites.filter(inv => inv.email.trim() !== "")
         };
 

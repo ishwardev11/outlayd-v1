@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 import { foreignApprovalProblem } from "@/utils/fx"
+import { DEFAULT_TIMEZONE, isValidTimezone, todayInTimezone } from "@/utils/dates"
 import {
     sanitizeDocumentUpdates,
     assertOwnedIds,
@@ -170,7 +171,7 @@ export async function updateDocument(id: string, rawUpdates: unknown) {
                     /^\d{4}-\d{2}-\d{2}/.test(merged.document_date)
                         ? merged.document_date.slice(0, 10)
                         : null
-                updates.paid_date = receiptDate ?? new Date().toISOString().slice(0, 10)
+                updates.paid_date = receiptDate ?? todayInTimezone(await getOrganizationTimezone())
             }
         } else {
             updates.paid_date = null // moved back to awaiting payment
@@ -244,4 +245,21 @@ export async function getOrganizationCurrency(): Promise<string> {
     }
 
     return "MYR";
+}
+export async function getOrganizationTimezone(): Promise<string> {
+    try {
+        const orgId = await getOrganizationId();
+        if (orgId) {
+            const supabase = await createClient();
+            const { data } = await supabase
+                .from("organizations")
+                .select("timezone")
+                .eq("id", orgId)
+                .maybeSingle();
+            if (data?.timezone && isValidTimezone(data.timezone)) return data.timezone;
+        }
+    } catch (e) {
+        console.error("Error fetching organization timezone:", e);
+    }
+    return DEFAULT_TIMEZONE;
 }

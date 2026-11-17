@@ -36,8 +36,10 @@ const FLAG_LABELS: Record<string, string> = {
     SPLIT_MISMATCH: "Split mismatch",
 };
 
-function presetRange(preset: string, fund: MemoFundOption | undefined, fiscalYearStart: number): [string, string] | null {
-    const now = new Date();
+function presetRange(preset: string, fund: MemoFundOption | undefined, fiscalYearStart: number, today: string): [string, string] | null {
+    // "today" is the organisation's calendar day (YYYY-MM-DD), not whatever the browser's clock says
+    const [ty, tm, td] = today.split("-").map(Number);
+    const now = new Date(ty, tm - 1, td);
     switch (preset) {
         case "grant":
             return fund?.period_start && fund?.period_end ? [fund.period_start, fund.period_end] : null;
@@ -60,11 +62,11 @@ function presetRange(preset: string, fund: MemoFundOption | undefined, fiscalYea
     }
 }
 
-export function DonorMemoClient({ funds, fiscalYearStart }: { funds: MemoFundOption[]; fiscalYearStart: number }) {
+export function DonorMemoClient({ funds, fiscalYearStart, today }: { funds: MemoFundOption[]; fiscalYearStart: number; today: string }) {
     const [fundId, setFundId] = useState("");
     const [preset, setPreset] = useState("last_month");
-    const [start, setStart] = useState(() => presetRange("last_month", undefined, 1)![0]);
-    const [end, setEnd] = useState(() => presetRange("last_month", undefined, 1)![1]);
+    const [start, setStart] = useState(() => presetRange("last_month", undefined, 1, today)![0]);
+    const [end, setEnd] = useState(() => presetRange("last_month", undefined, 1, today)![1]);
     const [isLoading, setIsLoading] = useState(false);
     const [memo, setMemo] = useState<FundMemoData | null>(null);
     const [memoKey, setMemoKey] = useState("");
@@ -76,7 +78,7 @@ export function DonorMemoClient({ funds, fiscalYearStart }: { funds: MemoFundOpt
 
     const applyPreset = (value: string, forFund = fund) => {
         setPreset(value);
-        const range = presetRange(value, forFund, fiscalYearStart);
+        const range = presetRange(value, forFund, fiscalYearStart, today);
         if (range) {
             setStart(range[0]);
             setEnd(range[1]);

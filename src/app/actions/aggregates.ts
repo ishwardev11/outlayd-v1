@@ -1,8 +1,8 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
-import { getOrganizationId } from "./document-utils"
-import { addDaysIso, formatShortDate, monthBounds, todayIso } from "@/utils/dates"
+import { getOrganizationId, getOrganizationTimezone } from "./document-utils"
+import { addDaysIso, formatShortDate, monthBounds, todayInTimezone } from "@/utils/dates"
 import {
     LARGE_TX_PAGE_SIZE,
     LARGE_TX_THRESHOLD,
@@ -15,8 +15,7 @@ import {
     type ReportSummary,
 } from "@/utils/aggregate-types"
 
-// Dates are handled in UTC for now, exactly as before. Fixing the Malaysia day-shift is a separate change.
-const TIMEZONE = "UTC"
+// "Today" and "this month" follow the organisation's own timezone (Settings > Organization).
 
 /*
  * Totals, filtering and paging are done in Postgres (see
@@ -40,11 +39,11 @@ async function requireOrg() {
 export async function getDashboardSummary(): Promise<DashboardSummary> {
     const supabase = await createClient()
     const orgId = await requireOrg()
-    const tz = TIMEZONE
+    const tz = await getOrganizationTimezone()
 
     const { data, error } = await supabase.rpc("dashboard_summary", {
         p_org: orgId,
-        p_today: todayIso(),
+        p_today: todayInTimezone(tz),
         p_tz: tz,
     })
     if (error) {
@@ -127,7 +126,7 @@ function reportArgs(filters: ReportFilters, orgId: string, tz: string) {
 export async function getReportSummary(filters: ReportFilters): Promise<ReportSummary> {
     const supabase = await createClient()
     const orgId = await requireOrg()
-    const tz = TIMEZONE
+    const tz = await getOrganizationTimezone()
 
     const { data, error } = await supabase.rpc("report_summary", reportArgs(filters, orgId, tz))
     if (error) {
@@ -148,7 +147,7 @@ export async function getReportSummary(filters: ReportFilters): Promise<ReportSu
 export async function getLargeTransactions(filters: ReportFilters, page: number): Promise<LargeTransactions> {
     const supabase = await createClient()
     const orgId = await requireOrg()
-    const tz = TIMEZONE
+    const tz = await getOrganizationTimezone()
 
     const { data, error } = await supabase.rpc("report_large_transactions", {
         ...reportArgs(filters, orgId, tz),
@@ -172,7 +171,7 @@ const EXPORT_MAX_ROWS = 20000
 export async function getReportExportRows(filters: ReportFilters) {
     const supabase = await createClient()
     const orgId = await requireOrg()
-    const tz = TIMEZONE
+    const tz = await getOrganizationTimezone()
     const args = reportArgs(filters, orgId, tz)
 
     const [fundsRes, catsRes] = await Promise.all([
@@ -234,8 +233,8 @@ export async function getLedgerStatusCounts(): Promise<LedgerStatusCounts> {
 export async function getLedgerPage(filters: LedgerFilters) {
     const supabase = await createClient()
     const orgId = await requireOrg()
-    const tz = TIMEZONE
-    const today = todayIso()
+    const tz = await getOrganizationTimezone()
+    const today = todayInTimezone(tz)
 
     let from: string | null = null
     let to: string | null = null

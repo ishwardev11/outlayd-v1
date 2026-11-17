@@ -3,12 +3,14 @@
 import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import { BASE_CURRENCY_CODES, isBaseCurrencyCode } from "@/utils/currency"
+import { isValidTimezone } from "@/utils/dates"
 
 export interface OnboardingData {
     orgName: string;
     baseCurrency: string;
     fiscalYearStart: string;
     templateChoice: string;
+    timezone?: string; // IANA name from the browser, e.g. "Asia/Kuala_Lumpur"
     // invites: { email: string; role: string }[];
 }
 
@@ -44,6 +46,8 @@ export async function completeOnboardingSetup(data: OnboardingData) {
                 name: data.orgName,
                 base_currency: data.baseCurrency,
                 fiscal_year_start: parseInt(data.fiscalYearStart, 10),
+                // Falls back to the database default (Kuala Lumpur) if the browser sent nothing usable
+                ...(isValidTimezone(data.timezone) ? { timezone: data.timezone } : {}),
             })
             .select()
             .single();
