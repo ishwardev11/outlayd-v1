@@ -17,8 +17,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { updateDocument, createFund, createCategory, deleteDocument } from "@/app/actions/ledger";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { updateDocument, createFund, createCategory, deleteDocument, retryExtraction } from "@/app/actions/ledger";
+import { Loader2, Plus, Trash2, RefreshCw } from "lucide-react";
 import { useRole } from "@/components/RoleProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { CurrencyConversionPanel, convertedAmount, type FxState } from "./CurrencyConversionPanel";
@@ -43,6 +43,7 @@ interface ProcessingDrawerProps {
 
 export function ProcessingDrawer({ isOpen, onClose, document, funds, categories, onNext }: ProcessingDrawerProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isRetrying, setIsRetrying] = useState(false);
     const [formData, setFormData] = useState<any>({});
     const [splits, setSplits] = useState<Split[]>([]);
     const [lineItems, setLineItems] = useState<any[]>([]);
@@ -282,6 +283,27 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         }
     };
 
+    // A failed or timed-out extraction can be read again without uploading the file a second time
+    const canRetryExtraction =
+        !isViewer &&
+        document?.status === "needs_review" &&
+        Array.isArray(document?.extraction_flags) &&
+        document.extraction_flags.some((f: any) => f?.code === "EXTRACTION_FAILED" || f?.code === "EXTRACTION_TIMED_OUT");
+
+    const handleRetryExtraction = async () => {
+        if (!document) return;
+        setIsRetrying(true);
+        try {
+            await retryExtraction(document.id);
+            toast.success("Reading the document again", { description: "The details will appear in the ledger in a moment." });
+            onClose();
+        } catch (e: any) {
+            toast.error("Could not read the document again", { description: e?.message });
+        } finally {
+            setIsRetrying(false);
+        }
+    };
+
     if (!document) return null;
 
     return (
@@ -301,11 +323,19 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                 </DialogHeader>
 
                 {Array.isArray(document.extraction_flags) && document.extraction_flags.length > 0 && (
-                    <div className="px-6 py-2.5 border-b dark:border-slate-800 bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-900 dark:text-amber-300 shrink-0">
-                        <p className="font-semibold mb-1">Worth a second look before you approve:</p>
-                        <ul className="list-disc pl-4 space-y-0.5">
-                            {document.extraction_flags.map((f: any) => <li key={f.code}>{f.message}</li>)}
-                        </ul>
+                    <div className="px-6 py-2.5 border-b dark:border-slate-800 bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-900 dark:text-amber-300 shrink-0 flex items-start justify-between gap-4">
+                        <div>
+                            <p className="font-semibold mb-1">Worth a second look before you approve:</p>
+                            <ul className="list-disc pl-4 space-y-0.5">
+                                {document.extraction_flags.map((f: any) => <li key={f.code}>{f.message}</li>)}
+                            </ul>
+                        </div>
+                        {canRetryExtraction && (
+                            <Button size="sm" variant="outline" onClick={handleRetryExtraction} disabled={isRetrying || isSubmitting} className="shrink-0 bg-white dark:bg-slate-900 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300">
+                                {isRetrying ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <RefreshCw className="w-3.5 h-3.5 mr-2" />}
+                                Try reading again
+                            </Button>
+                        )}
                     </div>
                 )}
 

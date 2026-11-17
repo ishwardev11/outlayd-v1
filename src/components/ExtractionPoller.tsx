@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation"
 /**
  * Uploads return immediately and the AI extraction finishes in the background. While any document
  * is still "extracting", re-fetch the page every few seconds so the result appears on its own.
- * It stops by itself after a few minutes in case an extraction never completes.
+ * It stops by itself after a few minutes. Stuck extractions are handed to a person after 2 minutes
+ * (see getExtractingCount), so the poll normally ends well before that.
  */
 export function ExtractionPoller({
     active,
     intervalMs = 4000,
-    maxMinutes = 3,
+    maxMinutes = 5,
 }: {
     active: boolean
     intervalMs?: number

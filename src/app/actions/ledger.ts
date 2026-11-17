@@ -8,7 +8,8 @@ import { after } from "next/server"
 import { getOrganizationId, getOrganizationTimezone, updateDocument, checkWriteAccess } from "./document-utils"
 import { startOfMonthInstant } from "@/utils/dates"
 import { sanitizeVendorUpdates, assertOwnedIds, UpdateValidationError } from "@/utils/sanitize-updates"
-import { extractDocumentData } from "./ai"
+import { runExtraction } from "./ai"
+import { toStoragePath } from "@/utils/storage-paths"
 export { getOrganizationId, updateDocument }
 
 
@@ -464,13 +465,8 @@ export async function processUpload(formData: FormData) {
         // upload can return straight away. The extraction fills the document in, or moves it to
         // needs_review if it fails. The ledger and dashboard refresh themselves (ExtractionPoller)
         // while anything is still extracting.
-        after(async () => {
-            try {
-                await extractDocumentData(docData.id, mimeType, base64Data)
-            } catch (e: any) {
-                console.error("Extraction failed:", e)
-            }
-        })
+        // runExtraction enforces a deadline and always moves the document out of "extracting".
+        after(() => runExtraction(docData.id, mimeType, base64Data, organization_id ?? undefined))
 
         revalidatePath("/ledger")
         revalidatePath("/")
@@ -479,4 +475,89 @@ export async function processUpload(formData: FormData) {
         console.error("processUpload failed:", error)
         throw new Error(error.message || "Unknown error during processUpload")
     }
+}
+
+// Re-reads a document whose AI extraction failed or timed out. Used by the "Try reading again"
+// button in the Review drawer, so a failed document can be fixed without uploading the file again
+// (which would be flagged as a duplicate of the failed one).
+export async function retryExtraction(documentId: string) {
+    await checkWriteAccess()
+    if (typeof documentId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(documentId)) {
+        throw new Error("Invalid document")
+    }
+
+    const supabase = await createClient()
+    const organization_id = await getOrganizationId()
+    if (!organization_id) throw new Error("No active organization")
+
+    // Read through the user's own session, so row-level security limits this to their organisation
+    const { data: doc, error } = await supabase
+        .from("documents")
+        .select("id, image_url, status, extraction_flags")
+        .eq("id", documentId)
+        .eq("organization_id", organization_id)
+        .maybeSingle()
+    if (error || !doc) throw new Error("Document not found")
+
+    // Only documents whose extraction actually failed can be retried, so this cannot be used to
+    // run repeated paid AI extractions on documents that were read fine.
+    const flags: any[] = Array.isArray(doc.extraction_flags) ? doc.extraction_flags : []
+    const failed = flags.some((f) => f?.code === "EXTRACTION_FAILED" || f?.code === "EXTRACTION_TIMED_OUT")
+    if (doc.status !== "needs_review" || !failed) {
+        throw new Error("This document does not need to be read again.")
+    }
+    if (!doc.image_url) throw new Error("This document has no file to read.")
+
+    const path = toStoragePath(doc.image_url)
+    if (!path || path.includes("..") || (path.includes("/") && !path.startsWith(`${organization_id}/`))) {
+        throw new Error("The file for this document could not be found.")
+    }
+
+    const { createAdminClient } = await import("@/utils/supabase/admin")
+    const { data: blob, error: downloadError } = await createAdminClient().storage.from("receipts").download(path)
+    if (downloadError || !blob) {
+        console.error("retryExtraction download failed:", downloadError)
+        throw new Error("The file for this document could not be loaded.")
+    }
+
+    const ext = path.split(".").pop()?.toLowerCase() ?? ""
+    const mimeType =
+        blob.type && blob.type !== "application/octet-stream" ? blob.type
+        : ext === "pdf" ? "application/pdf"
+        : ext === "png" ? "image/png"
+        : ext === "webp" ? "image/webp"
+        : "image/jpeg"
+    if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(mimeType)) {
+        throw new Error("This file type cannot be read.")
+    }
+    const base64Data = Buffer.from(await blob.arrayBuffer()).toString("base64")
+
+    // Claim the document: only one retry can move it from needs_review back to extracting
+    const { data: claimed, error: claimError } = await supabase
+        .from("documents")
+        .update({
+            status: "extracting",
+            extraction_started_at: new Date().toISOString(),
+            extraction_flags: [],
+            vendor_name: null,
+            confidence_score: null,
+            notes: null,
+        })
+        .eq("id", documentId)
+        .eq("organization_id", organization_id)
+        .eq("status", "needs_review")
+        .select("id")
+    if (claimError) {
+        console.error("retryExtraction claim failed:", claimError)
+        throw new Error("Could not restart the extraction. Please try again.")
+    }
+    if (!claimed || claimed.length === 0) {
+        throw new Error("This document is already being read.")
+    }
+
+    after(() => runExtraction(documentId, mimeType, base64Data, organization_id))
+
+    revalidatePath("/ledger")
+    revalidatePath("/")
+    return { success: true }
 }

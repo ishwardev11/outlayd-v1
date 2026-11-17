@@ -10,6 +10,12 @@ import { convertAmount, fetchExchangeRate } from "@/utils/fx"
 // paid AI extractions without going through the upload limits.
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
+// One Gemini request is given 30s. The whole extraction (Gemini, FX lookup, database writes) must
+// finish inside EXTRACTION_DEADLINE_MS, which is kept under the 60s page/function limit so a slow
+// document is marked "needs review" instead of being killed mid-way and left on "extracting" forever.
+const GEMINI_ATTEMPT_TIMEOUT_MS = 30_000
+export const EXTRACTION_DEADLINE_MS = 50_000
+
 const getExtractionSystemPrompt = (baseCurrency: string, symbol: string) => `You are an expert Document AI and financial data extractor specialized in unstructured receipts, tax invoices, utility bills, SaaS statements, and purchase orders.
 
 Your task is to extract all key financial, vendor, line item, and tax metadata from the provided document image or text into a strict, validated JSON structure.
@@ -54,17 +60,18 @@ Your task is to extract all key financial, vendor, line item, and tax metadata f
 6. UNREADABLE / MISSING FIELDS:
 - Never fabricate or guess values. If a field (e.g., "po_number", "tax_rate", or "due_date") is not explicitly present on the document, return null.`;
 
+// Callers should use runExtraction(), which enforces the deadline and always leaves the document in
+// a final state. The document must already have status "extracting" (processUpload and
+// retryExtraction both set it), so there is no extra "extracting" write here.
 export async function extractDocumentData(
     documentId: string,
     mimeType: string,
-    base64Data: string
+    base64Data: string,
+    organizationId?: string
 ) {
     if (!process.env.GEMINI_API_KEY) {
         throw new Error("GEMINI_API_KEY is missing from environment variables")
     }
-
-    // Update document status to extracting while Gemini processes
-    await updateDocument(documentId, { status: "extracting" })
 
     const orgCurrency = await getOrganizationCurrency();
     const { symbol } = getCurrencyDetails(orgCurrency);
@@ -141,17 +148,21 @@ export async function extractDocumentData(
 
     try {
         let result;
-        const maxRetries = 3;
-        
+        const maxRetries = 2;
+
+        // Gemini 2.5 Flash "thinks" before it answers by default. Reading a document does not need
+        // that, and it adds many seconds, so the thinking budget is set to 0. The SDK's types do not
+        // list thinkingConfig yet, but it is passed straight through to the API.
+        const model = genAI.getGenerativeModel(
+            {
+                model: "gemini-2.5-flash",
+                generationConfig: { ...generationConfig, thinkingConfig: { thinkingBudget: 0 } } as GenerationConfig,
+            },
+            { timeout: GEMINI_ATTEMPT_TIMEOUT_MS }
+        );
+
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-                // Always use gemini-2.5-flash
-                const modelName = "gemini-2.5-flash";
-                const model = genAI.getGenerativeModel({
-                    model: modelName,
-                    generationConfig
-                });
-
                 // Pass system prompt and the document inline for extraction
                 result = await model.generateContent([
                     extractionPrompt,
@@ -162,21 +173,22 @@ export async function extractDocumentData(
                         }
                     }
                 ]);
-                
+
                 // If successful, break out of the retry loop
                 break;
             } catch (error: any) {
                 const status = error?.status || error?.response?.status;
                 const isRateLimitOrUnavailable = status === 503 || status === 429 || error.message?.includes("503") || error.message?.includes("429");
-                
+
+                // Only "busy" errors are retried. A request that timed out is not retried: it already
+                // used its 30s, and a second attempt would run into the overall deadline.
                 if (isRateLimitOrUnavailable && attempt < maxRetries) {
                     const waitTime = Math.pow(2, attempt) * 1000;
                     console.warn(`Gemini API unavailable or rate limited. Retrying in ${waitTime}ms... (Attempt ${attempt + 1} of ${maxRetries})`);
                     await new Promise(resolve => setTimeout(resolve, waitTime));
                     continue;
                 }
-                
-                // If it's not a retryable error or we've exhausted retries, throw
+
                 throw error;
             }
         }
@@ -239,6 +251,9 @@ export async function extractDocumentData(
             amount: toBase(item.amount),
         }));
 
+        // The organisation id is passed in by the upload, which already looked it up
+        const organization_id = organizationId ?? await getOrganizationId();
+
         // 2. Vendor Association & Defaults
         let vendorId = null;
         let defaultCategoryId = null;
@@ -256,7 +271,6 @@ export async function extractDocumentData(
                 defaultCategoryId = existingVendor.default_category_id;
                 defaultFundId = existingVendor.default_fund_id;
             } else {
-                const organization_id = await getOrganizationId();
                 const { data: newVendor } = await supabase
                     .from("vendors")
                     .insert({ name: vendorName, organization_id })
@@ -278,8 +292,6 @@ export async function extractDocumentData(
             }];
         }
 
-        const organization_id = await getOrganizationId();
-        
         // 3. Duplicate Detection Logic
         let isDuplicate = false;
         const normalizedInv = typeof invoiceNumber === 'string' ? invoiceNumber.trim() : null;
@@ -366,19 +378,63 @@ export async function extractDocumentData(
 
         return data;
     } catch (error: any) {
-        console.error("CRITICAL error in extractDocumentData:", error);
-        console.error("Error stack trace:", error.stack);
-        try {
-            await updateDocument(documentId, {
-                status: "needs_review",
-                vendor_name: "[Extraction Failed]",
-                confidence_score: 0,
-                extraction_flags: [{ code: "EXTRACTION_FAILED", message: "The AI could not read this document. Enter the details manually." }],
-                notes: `AI Extraction Error: ${error.message}`
-            });
-        } catch (updateErr) {
-            console.error("Failed to update status on error:", updateErr);
+        console.error("CRITICAL error in extractDocumentData:", error)
+        console.error("Error stack trace:", error.stack)
+        // runExtraction() records the failure on the document
+        throw error
+    }
+}
+
+// Puts a document that could not be read into "needs review" with a reason, so it never sits on
+// "extracting". The extraction_flags code is what the Review drawer uses to offer "Try reading again".
+export async function markExtractionFailed(
+    documentId: string,
+    code: "EXTRACTION_FAILED" | "EXTRACTION_TIMED_OUT",
+    detail?: string
+) {
+    const message = code === "EXTRACTION_TIMED_OUT"
+        ? "Reading this document took too long. Try reading it again, or enter the details manually."
+        : "The AI could not read this document. Try reading it again, or enter the details manually."
+    try {
+        await updateDocument(documentId, {
+            status: "needs_review",
+            vendor_name: "[Extraction Failed]",
+            confidence_score: 0,
+            extraction_flags: [{ code, message }],
+            notes: detail ? `AI Extraction Error: ${detail}`.slice(0, 1000) : null,
+        })
+    } catch (updateErr) {
+        console.error("Failed to update status on error:", updateErr)
+    }
+}
+
+// The one entry point for background extraction. Whatever happens (an error, a missing API key, a
+// hung request, hitting the deadline) the document ends up out of "extracting".
+export async function runExtraction(
+    documentId: string,
+    mimeType: string,
+    base64Data: string,
+    organizationId?: string
+) {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const deadline = new Promise<"timeout">((resolve) => {
+        timer = setTimeout(() => resolve("timeout"), EXTRACTION_DEADLINE_MS)
+    })
+    try {
+        const outcome = await Promise.race([
+            extractDocumentData(documentId, mimeType, base64Data, organizationId).then(() => "done" as const),
+            deadline,
+        ])
+        if (outcome === "timeout") {
+            console.error(`Extraction of ${documentId} passed ${EXTRACTION_DEADLINE_MS}ms; marking it for manual review`)
+            await markExtractionFailed(documentId, "EXTRACTION_TIMED_OUT", `no result within ${EXTRACTION_DEADLINE_MS / 1000}s`)
         }
-        throw error;
+    } catch (error: any) {
+        console.error("Extraction failed:", error)
+        const message = String(error?.message ?? "")
+        const timedOut = error?.name === "AbortError" || /abort|timed? ?out/i.test(message)
+        await markExtractionFailed(documentId, timedOut ? "EXTRACTION_TIMED_OUT" : "EXTRACTION_FAILED", message)
+    } finally {
+        clearTimeout(timer)
     }
 }

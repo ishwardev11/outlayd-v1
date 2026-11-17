@@ -297,14 +297,24 @@ export async function getExtractingCount(): Promise<number> {
     const orgId = await requireOrg()
 
     // Safety net: an extraction that never finished (function stopped, AI provider outage) must not
-    // spin forever. After 10 minutes hand it to a person to fill in, like a failed extraction.
-    const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+    // spin forever. A healthy extraction ends within about a minute (it has a 50s deadline), so after
+    // 2 minutes hand the document to a person, with the same flag a failed extraction gets so the
+    // Review drawer offers "Try reading again".
+    const staleBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString()
     await supabase
         .from("documents")
-        .update({ status: "needs_review" })
+        .update({
+            status: "needs_review",
+            vendor_name: "[Extraction Failed]",
+            confidence_score: 0,
+            extraction_flags: [{
+                code: "EXTRACTION_TIMED_OUT",
+                message: "Reading this document took too long. Try reading it again, or enter the details manually.",
+            }],
+        })
         .eq("organization_id", orgId)
         .eq("status", "extracting")
-        .lt("created_at", staleBefore)
+        .lt("extraction_started_at", staleBefore)
 
     const { count, error } = await supabase
         .from("documents")
