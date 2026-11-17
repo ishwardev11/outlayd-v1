@@ -20,6 +20,7 @@ export function FundDetailsDialog({ fund, disabled }: { fund: Fund; disabled?: b
     const [grantReference, setGrantReference] = useState(fund.grant_reference ?? "")
     const [purpose, setPurpose] = useState(fund.purpose ?? "")
     const [awardAmount, setAwardAmount] = useState(fund.award_amount != null ? String(fund.award_amount) : "")
+    const [budget, setBudget] = useState(fund.budget != null ? String(fund.budget) : "")
     const [periodStart, setPeriodStart] = useState(fund.period_start ?? "")
     const [periodEnd, setPeriodEnd] = useState(fund.period_end ?? "")
 
@@ -35,6 +36,7 @@ export function FundDetailsDialog({ fund, disabled }: { fund: Fund; disabled?: b
                 grant_reference: grantReference,
                 purpose,
                 award_amount: awardAmount.trim() === "" ? null : Number(awardAmount),
+                budget: budget.trim() === "" ? null : Number(budget),
                 period_start: periodStart || null,
                 period_end: periodEnd || null,
             })
@@ -58,7 +60,7 @@ export function FundDetailsDialog({ fund, disabled }: { fund: Fund; disabled?: b
             <DialogContent className="sm:max-w-lg dark:bg-slate-900 dark:border-slate-700">
                 <DialogHeader>
                     <DialogTitle>{fund.name}: grant details</DialogTitle>
-                    <DialogDescription>Shown on the Donor & Audit Memo. All fields are optional.</DialogDescription>
+                    <DialogDescription>Grant details appear on the Donor & Audit Memo. The internal budget is only used to track spending in Settings. All fields are optional.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                     <div className="grid grid-cols-2 gap-3">
@@ -75,9 +77,15 @@ export function FundDetailsDialog({ fund, disabled }: { fund: Fund; disabled?: b
                         <Label htmlFor="purpose">Purpose / restrictions</Label>
                         <Textarea id="purpose" value={purpose} maxLength={2000} rows={3} onChange={(e) => setPurpose(e.target.value)} placeholder="e.g. Scholarships and learning materials only. No staff salaries." className="bg-white dark:bg-slate-900 dark:border-slate-700" />
                     </div>
-                    <div className="space-y-1.5">
-                        <Label htmlFor="award">Award amount</Label>
-                        <Input id="award" type="number" min="0" step="0.01" value={awardAmount} onChange={(e) => setAwardAmount(e.target.value)} className="bg-white dark:bg-slate-900 dark:border-slate-700" />
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="award">Award amount</Label>
+                            <Input id="award" type="number" min="0" step="0.01" value={awardAmount} onChange={(e) => setAwardAmount(e.target.value)} className="bg-white dark:bg-slate-900 dark:border-slate-700" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="budget">Internal budget</Label>
+                            <Input id="budget" type="number" min="0" step="0.01" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Optional" className="bg-white dark:bg-slate-900 dark:border-slate-700" />
+                        </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">

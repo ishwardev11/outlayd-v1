@@ -112,6 +112,25 @@ export async function getSettingsFunds() {
     return data
 }
 
+// Spent (paid) and committed (awaiting payment) per fund, added up from document splits in Postgres.
+// Used with funds.budget to show budget vs actual in Settings > Financial Customization.
+export async function getFundBudgetSummary() {
+    const supabase = await createClient()
+    const organization_id = await getOrganizationId()
+    if (!organization_id) return []
+
+    const { data, error } = await supabase.rpc("fund_budget_summary", { p_org: organization_id })
+    if (error) {
+        console.error("Supabase Error (getFundBudgetSummary):", error)
+        return []
+    }
+    return ((data ?? []) as any[]).map((r) => ({
+        fund_id: String(r.fund_id),
+        spent: Number(r.spent) || 0,
+        committed: Number(r.committed) || 0,
+    }))
+}
+
 export async function addSettingFund(name: string, code?: string) {
     await checkWriteAccess();
     const supabase = await createClient()

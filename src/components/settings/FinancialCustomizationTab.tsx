@@ -7,11 +7,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Plus, Trash2, Archive, ArchiveRestore } from "lucide-react"
 import { useRole } from "@/components/RoleProvider"
-import { Fund, Category } from "./SettingsLayout"
+import { useCurrency } from "@/components/CurrencyProvider"
+import { Fund, FundSpend, Category } from "./SettingsLayout"
 import { FundDetailsDialog } from "./FundDetailsDialog"
 
-export function FinancialCustomizationTab({ initialFunds, initialCategories }: { initialFunds: Fund[], initialCategories: Category[] }) {
+export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initialCategories }: { initialFunds: Fund[], fundSpend?: FundSpend[], initialCategories: Category[] }) {
     const { isViewer } = useRole()
+    const { formatAmount } = useCurrency()
+    const spendByFund = new Map(fundSpend.map((s) => [s.fund_id, s]))
     const [isSavingFund, setIsSavingFund] = useState(false)
     const [isSavingCategory, setIsSavingCategory] = useState(false)
     const [newFundName, setNewFundName] = useState("")
@@ -107,17 +110,33 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
                         <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                             <tr>
                                 <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200">Fund Name</th>
+                                <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200 text-right">Budget</th>
+                                <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200 text-right">Spent</th>
+                                <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200 text-right">Committed</th>
+                                <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200 text-right">Remaining</th>
                                 <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200 w-48 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 dark:divide-slate-700/50">
-                            {activeFunds.map(fund => (
+                            {activeFunds.map(fund => {
+                                const spend = spendByFund.get(fund.id)
+                                const spent = spend?.spent ?? 0
+                                const committed = spend?.committed ?? 0
+                                const budget = fund.budget != null && fund.budget !== "" ? Number(fund.budget) : null
+                                const remaining = budget !== null ? budget - spent - committed : null
+                                return (
                                 <tr key={fund.id}>
                                     <td className="px-4 py-3">
                                         <span className="font-medium text-gray-900 dark:text-white">{fund.name}</span>
                                     </td>
+                                    <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{budget !== null ? formatAmount(budget) : "—"}</td>
+                                    <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{formatAmount(spent)}</td>
+                                    <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{formatAmount(committed)}</td>
+                                    <td className={`px-4 py-3 text-right tabular-nums font-medium ${remaining !== null && remaining < 0 ? "text-rose-600 dark:text-rose-400" : "text-gray-700 dark:text-slate-300"}`}>
+                                        {remaining !== null ? formatAmount(remaining) : "—"}
+                                    </td>
                                     <td className="px-4 py-3 text-right whitespace-nowrap">
-                                        <FundDetailsDialog key={`${fund.id}-${fund.donor_name}-${fund.grant_reference}-${fund.award_amount}-${fund.period_start}-${fund.period_end}-${fund.purpose}`} fund={fund} disabled={isViewer} />
+                                        <FundDetailsDialog key={`${fund.id}-${fund.donor_name}-${fund.grant_reference}-${fund.award_amount}-${fund.budget}-${fund.period_start}-${fund.period_end}-${fund.purpose}`} fund={fund} disabled={isViewer} />
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -131,10 +150,14 @@ export function FinancialCustomizationTab({ initialFunds, initialCategories }: {
                                         </Button>
                                     </td>
                                 </tr>
-                            ))}
+                                )
+                            })}
                         </tbody>
                     </table>
                 </div>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    Spent counts paid documents and Committed counts documents awaiting payment, both added up from each document&apos;s fund splits. Remaining = Budget − Spent − Committed.
+                </p>
 
                 {archivedFunds.length > 0 && (
                     <div className="mt-6">

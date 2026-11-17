@@ -184,9 +184,9 @@ export function sanitizeFundDetails(input: unknown): Record<string, unknown> {
         if (value === undefined) continue
         if (key in FUND_TEXT_FIELDS) {
             out[key] = cleanText(key, value, FUND_TEXT_FIELDS[key])?.trim() || null
-        } else if (key === "award_amount") {
+        } else if (key === "award_amount" || key === "budget") {
             const n = cleanNumber(key, value)
-            if (n !== null && n < 0) throw new UpdateValidationError("award_amount cannot be negative")
+            if (n !== null && n < 0) throw new UpdateValidationError(`${key} cannot be negative`)
             out[key] = n
         } else if (FUND_DATE_FIELDS.includes(key)) {
             out[key] = cleanIsoDate(key, value)

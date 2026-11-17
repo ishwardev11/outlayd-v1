@@ -29,9 +29,17 @@ export interface Fund {
     grant_reference?: string | null;
     purpose?: string | null;
     award_amount?: number | string | null;
+    budget?: number | string | null;
     period_start?: string | null;
     period_end?: string | null;
     archived_at?: string | null;
+}
+
+// Per-fund totals worked out in the database from document splits (see fund_budget_summary)
+export interface FundSpend {
+    fund_id: string;
+    spent: number;
+    committed: number;
 }
 
 export interface Category {
@@ -50,6 +58,7 @@ export interface TeamMember {
 interface SettingsLayoutProps {
     orgSettings: OrgSettings | null;
     initialFunds: Fund[];
+    fundSpend?: FundSpend[];
     initialCategories: Category[];
     initialTeam: TeamMember[];
     currentUserEmail: string | null;
@@ -63,7 +72,7 @@ const TABS = [
     { id: 'billing', label: 'Billing & Subscription', icon: CreditCard },
 ]
 
-export function SettingsLayout({ orgSettings, initialFunds, initialCategories, initialTeam, currentUserEmail }: SettingsLayoutProps) {
+export function SettingsLayout({ orgSettings, initialFunds, fundSpend = [], initialCategories, initialTeam, currentUserEmail }: SettingsLayoutProps) {
     const [activeTab, setActiveTab] = useState('general')
 
     return (
@@ -97,7 +106,7 @@ export function SettingsLayout({ orgSettings, initialFunds, initialCategories, i
                         <OrganizationProfileTab orgSettings={orgSettings} />
                     )}
                     {activeTab === 'financial' && (
-                        <FinancialCustomizationTab initialFunds={initialFunds} initialCategories={initialCategories} />
+                        <FinancialCustomizationTab initialFunds={initialFunds} fundSpend={fundSpend} initialCategories={initialCategories} />
                     )}
                     {activeTab === 'team' && (
                         <TeamManagementTab

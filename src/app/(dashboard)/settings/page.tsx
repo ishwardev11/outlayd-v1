@@ -1,4 +1,4 @@
-import { getOrganizationSettings, getSettingsFunds, getSettingsCategories, getTeamMembers } from "@/app/actions/settings"
+import { getOrganizationSettings, getSettingsFunds, getFundBudgetSummary, getSettingsCategories, getTeamMembers } from "@/app/actions/settings"
 import { SettingsLayout } from "@/components/settings/SettingsLayout"
 import { createClient } from "@/utils/supabase/server"
 
@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic"
 export default async function SettingsPage() {
     const orgSettings = await getOrganizationSettings()
     const funds = await getSettingsFunds()
+    const fundSpend = await getFundBudgetSummary()
     const categories = await getSettingsCategories()
     const team = await getTeamMembers()
 
@@ -24,6 +25,7 @@ export default async function SettingsPage() {
             <SettingsLayout
                 orgSettings={orgSettings}
                 initialFunds={funds}
+                fundSpend={fundSpend}
                 initialCategories={categories}
                 initialTeam={team}
                 currentUserEmail={currentUserEmail}
