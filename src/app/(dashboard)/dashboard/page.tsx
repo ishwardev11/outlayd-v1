@@ -49,7 +49,7 @@ export default async function Home() {
         <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">Morning briefing and action queue.</p>
       </div>
 
-      <ExtractionPoller active={extractingCount > 0} />
+      <ExtractionPoller count={extractingCount} />
 
       {/* Top Row: KPI Cards */}
       <div className="grid gap-6 md:grid-cols-3">

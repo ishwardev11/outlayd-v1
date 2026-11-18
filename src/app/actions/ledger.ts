@@ -5,8 +5,8 @@ import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { after } from "next/server"
 
-import { getOrganizationId, getOrganizationTimezone, updateDocument, checkWriteAccess } from "./document-utils"
-import { startOfMonthInstant } from "@/utils/dates"
+import { getOrganizationId, updateDocument, checkWriteAccess } from "./document-utils"
+import { startOfMonthInstant, isValidTimezone, DEFAULT_TIMEZONE } from "@/utils/dates"
 import { sanitizeVendorUpdates, assertOwnedIds, UpdateValidationError } from "@/utils/sanitize-updates"
 import { runExtraction } from "./ai"
 import { toStoragePath } from "@/utils/storage-paths"
@@ -262,11 +262,24 @@ export async function processUpload(formData: FormData) {
 
         const supabase = await createClient()
         const organization_id = await getOrganizationId()
-        const { data: orgData, error: orgError } = await supabase
-            .from("organizations")
-            .select("subscription_status")
-            .eq("id", organization_id)
-            .single();
+        // The plan, the timezone and the "uploads in the last minute" count do not depend on each
+        // other, so they are fetched together. The timezone comes from the same organisation row,
+        // which also saves a second slow organisation lookup.
+        const ONE_MINUTE_AGO = new Date(Date.now() - 60 * 1000).toISOString();
+        const [orgRes, recentRes] = await Promise.all([
+            supabase
+                .from("organizations")
+                .select("subscription_status, timezone")
+                .eq("id", organization_id)
+                .single(),
+            // Global Rate Limit (per Organization): Max 5 uploads per minute to prevent AI spam
+            supabase
+                .from("documents")
+                .select("*", { count: "exact", head: true })
+                .eq("organization_id", organization_id)
+                .gt("created_at", ONE_MINUTE_AGO),
+        ]);
+        const { data: orgData, error: orgError } = orgRes;
 
         if (orgError) {
             console.error("Error fetching organization status:", orgError)
@@ -277,7 +290,7 @@ export async function processUpload(formData: FormData) {
 
         if (!isPro) {
             // Enforce Free Tier Limit: 5 AI extractions per calendar month (in the organisation's timezone)
-            const startOfMonth = startOfMonthInstant(await getOrganizationTimezone());
+            const startOfMonth = startOfMonthInstant(isValidTimezone(orgData?.timezone) ? orgData.timezone : DEFAULT_TIMEZONE);
 
             const { count, error: countError } = await supabase
                 .from("documents")
@@ -300,14 +313,7 @@ export async function processUpload(formData: FormData) {
             }
         }
 
-        // Global Rate Limit (per Organization): Max 5 uploads per minute to prevent AI spam
-        const ONE_MINUTE_AGO = new Date(Date.now() - 60 * 1000).toISOString();
-        const { count: recentCount } = await supabase
-            .from("documents")
-            .select("*", { count: "exact", head: true })
-            .eq("organization_id", organization_id)
-            .gt("created_at", ONE_MINUTE_AGO);
-
+        const recentCount = recentRes.count;
         if (recentCount && recentCount >= 5) {
             throw new Error("Too many uploads. Please wait a minute before uploading more.");
         }

@@ -60,6 +60,45 @@ Your task is to extract all key financial, vendor, line item, and tax metadata f
 6. UNREADABLE / MISSING FIELDS:
 - Never fabricate or guess values. If a field (e.g., "po_number", "tax_rate", or "due_date") is not explicitly present on the document, return null.`;
 
+// Finds the vendor by name or creates it. Returns its id and default fund/category, or null.
+async function findOrCreateVendor(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    vendorName: string,
+    organization_id: string | null
+) {
+    const { data: existingVendor } = await supabase
+        .from("vendors")
+        .select("id, default_category_id, default_fund_id")
+        .ilike("name", vendorName)
+        .single()
+
+    if (existingVendor) {
+        return {
+            id: existingVendor.id as string,
+            defaultCategoryId: (existingVendor.default_category_id as string | null) ?? null,
+            defaultFundId: (existingVendor.default_fund_id as string | null) ?? null,
+        }
+    }
+
+    const { data: newVendor } = await supabase
+        .from("vendors")
+        .insert({ name: vendorName, organization_id })
+        .select("id")
+        .single()
+
+    return newVendor ? { id: newVendor.id as string, defaultCategoryId: null, defaultFundId: null } : null
+}
+
+// The AI sometimes returns "N/A", "30/13/2026" or other text for a date. The database would reject
+// the whole save, so only a real YYYY-MM-DD date is kept; anything else is left empty for a person.
+function isoDateOrNull(value: unknown): string | null {
+    if (typeof value !== "string") return null
+    const v = value.trim().slice(0, 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null
+    const d = new Date(`${v}T00:00:00Z`)
+    return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v ? null : v
+}
+
 // Callers should use runExtraction(), which enforces the deadline and always leaves the document in
 // a final state. The document must already have status "extracting" (processUpload and
 // retryExtraction both set it), so there is no extra "extracting" write here.
@@ -209,8 +248,8 @@ export async function extractDocumentData(
         const totalAmount = typeof data.financial_summary?.total_amount === 'number'
             ? data.financial_summary.total_amount
             : parseFloat(data.financial_summary?.total_amount) || 0;
-        const issueDate = data.invoice_details?.issue_date || null;
-        const dueDate = data.invoice_details?.due_date || null;
+        const issueDate = isoDateOrNull(data.invoice_details?.issue_date);
+        const dueDate = isoDateOrNull(data.invoice_details?.due_date);
         const invoiceNumber = data.invoice_details?.invoice_number ? String(data.invoice_details.invoice_number).trim() : null;
         const poNumber = data.invoice_details?.po_number ? String(data.invoice_details.po_number).trim() : null;
 
@@ -237,7 +276,16 @@ export async function extractDocumentData(
         const rawCurrency = String(data.invoice_details?.currency || "").trim().toUpperCase();
         const docCurrency = /^[A-Z]{3}$/.test(rawCurrency) ? rawCurrency : orgCurrency.toUpperCase();
         const isForeign = docCurrency !== orgCurrency.toUpperCase();
-        const fx = isForeign ? await fetchExchangeRate(docCurrency, orgCurrency, issueDate) : null;
+
+        // The organisation id is passed in by the upload, which already looked it up
+        const organization_id = organizationId ?? await getOrganizationId();
+
+        // The exchange-rate lookup (a call to another website) and the vendor lookup do not depend
+        // on each other, so they run at the same time instead of one after the other.
+        const [fx, vendor] = await Promise.all([
+            isForeign ? fetchExchangeRate(docCurrency, orgCurrency, issueDate) : Promise.resolve(null),
+            vendorName ? findOrCreateVendor(supabase, vendorName, organization_id) : Promise.resolve(null),
+        ]);
         const toBase = (n: number) => (fx ? convertAmount(n, fx.rate) : n);
 
         const subtotalRaw = numberOrNull(data.financial_summary?.subtotal);
@@ -251,37 +299,10 @@ export async function extractDocumentData(
             amount: toBase(item.amount),
         }));
 
-        // The organisation id is passed in by the upload, which already looked it up
-        const organization_id = organizationId ?? await getOrganizationId();
-
-        // 2. Vendor Association & Defaults
-        let vendorId = null;
-        let defaultCategoryId = null;
-        let defaultFundId = null;
-
-        if (vendorName) {
-            const { data: existingVendor } = await supabase
-                .from("vendors")
-                .select("id, default_category_id, default_fund_id")
-                .ilike("name", vendorName)
-                .single();
-
-            if (existingVendor) {
-                vendorId = existingVendor.id;
-                defaultCategoryId = existingVendor.default_category_id;
-                defaultFundId = existingVendor.default_fund_id;
-            } else {
-                const { data: newVendor } = await supabase
-                    .from("vendors")
-                    .insert({ name: vendorName, organization_id })
-                    .select("id")
-                    .single();
-
-                if (newVendor) {
-                    vendorId = newVendor.id;
-                }
-            }
-        }
+        // 2. Vendor defaults (the vendor itself was looked up above)
+        const vendorId = vendor?.id ?? null;
+        const defaultCategoryId = vendor?.defaultCategoryId ?? null;
+        const defaultFundId = vendor?.defaultFundId ?? null;
 
         let splits: any[] = [];
         if (defaultCategoryId || defaultFundId) {
@@ -353,7 +374,7 @@ export async function extractDocumentData(
         });
 
         // 4. Update Document Record in Supabase
-        await updateDocument(documentId, {
+        const saved = await updateDocument(documentId, {
             vendor_name: vendorName,
             vendor_id: vendorId,
             amount: totalBase,
@@ -375,6 +396,13 @@ export async function extractDocumentData(
             line_items: baseLineItems,
             status: isDuplicate ? "DUPLICATE_WARNING" : "needs_review"
         });
+
+        // updateDocument reports a failed save by returning { success: false } instead of throwing.
+        // Without this check the AI's work was lost silently and the row stayed on "extracting"
+        // until the 2 minute safety net. Throwing lets runExtraction mark it for review at once.
+        if (!saved?.success) {
+            throw new Error(`Could not save the extracted data: ${saved?.error ?? "unknown error"}`);
+        }
 
         return data;
     } catch (error: any) {

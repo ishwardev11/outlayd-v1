@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
     Table,
     TableBody,
@@ -18,6 +18,57 @@ import { processUpload } from "@/app/actions/ledger";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
 import { useRole } from "@/components/RoleProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
+
+// What the person sees while the AI reads a document. The stages are time-based (the AI does not
+// report real progress), so the wording stays honest: it says what is happening, not "37% done".
+const EXTRACTION_STAGES: { until: number; label: string }[] = [
+    { until: 4, label: "Uploaded. Starting to read…" },
+    { until: 15, label: "Reading the document…" },
+    { until: 30, label: "Pulling out vendor, dates and totals…" },
+    { until: 50, label: "Checking the numbers…" },
+];
+
+function Skeleton({ className = "" }: { className?: string }) {
+    return <span className={`inline-block h-3.5 rounded bg-slate-200 dark:bg-slate-700 animate-pulse ${className}`} />;
+}
+
+function ExtractingVendorCell({ startedAt }: { startedAt?: string | null }) {
+    // null until mounted, so the server and browser render the same thing first
+    const [elapsed, setElapsed] = useState<number | null>(null);
+
+    useEffect(() => {
+        const started = startedAt ? Date.parse(startedAt) : NaN;
+        if (Number.isNaN(started)) {
+            setElapsed(null);
+            return;
+        }
+        const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - started) / 1000)));
+        tick();
+        const timer = setInterval(tick, 1000);
+        return () => clearInterval(timer);
+    }, [startedAt]);
+
+    const slow = elapsed !== null && elapsed > 50;
+    const stage = elapsed === null
+        ? "Reading the document…"
+        : slow
+            ? "Taking longer than usual. Still working…"
+            : EXTRACTION_STAGES.find((s) => elapsed < s.until)!.label;
+
+    return (
+        <div className="flex flex-col min-w-0" role="status" aria-live="polite">
+            <span className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                <span className="truncate">{stage}</span>
+            </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                {slow
+                    ? "If it can't finish, it moves to Needs Review and you can try again."
+                    : `Usually under a minute. You can leave this page.${elapsed !== null ? ` · ${elapsed}s` : ""}`}
+            </span>
+        </div>
+    );
+}
 
 interface LedgerTableProps {
     documents: any[];
@@ -141,8 +192,9 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                         {documents.map((doc) => (
                             <TableRow
                                 key={doc.id}
-                                className={`cursor-pointer transition-colors duration-150 border-b border-gray-200 dark:border-slate-700 group relative ${selectedDocs.includes(doc.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/30' : 'bg-white dark:bg-slate-800 hover:bg-indigo-50/40 dark:hover:bg-slate-700/50'}`}
-                                onClick={() => onRowClick(doc.id)}
+                                className={`${doc.status === "extracting" ? "cursor-default" : "cursor-pointer"} transition-colors duration-150 border-b border-gray-200 dark:border-slate-700 group relative ${selectedDocs.includes(doc.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/30' : 'bg-white dark:bg-slate-800 hover:bg-indigo-50/40 dark:hover:bg-slate-700/50'}`}
+                                // Nothing to review yet while the AI is still reading the document
+                                onClick={() => { if (doc.status !== "extracting") onRowClick(doc.id) }}
                             >
                                 <TableCell className="text-center py-2.5" onClick={(e) => { e.stopPropagation(); onToggleSelect(doc.id); }}>
                                     <Checkbox checked={selectedDocs.includes(doc.id)} />
@@ -163,15 +215,14 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                                 <ImageIcon className="h-3 w-3" />
                                             </Button>
                                         )}
-                                        <span>{doc.document_date || "—"}</span>
+                                        {doc.status === "extracting"
+                                            ? <Skeleton className="w-16" />
+                                            : <span>{doc.document_date || "—"}</span>}
                                     </div>
                                 </TableCell>
                                 <TableCell className="py-2.5">
                                     {doc.status === "extracting" ? (
-                                        <span className="text-gray-400 dark:text-slate-400 animate-pulse flex items-center gap-2 text-sm font-medium">
-                                            <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-500" />
-                                            Extracting...
-                                        </span>
+                                        <ExtractingVendorCell startedAt={doc.extraction_started_at} />
                                     ) : (
                                         <div className="flex flex-col min-w-0">
                                             <span className="font-semibold text-gray-900 dark:text-white truncate text-sm">
@@ -192,6 +243,7 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                     )}
                                 </TableCell>
                                 <TableCell className="text-sm font-medium text-gray-900 dark:text-white py-2.5">
+                                    {doc.status === "extracting" ? <Skeleton className="w-16" /> : <>
                                     {doc.amount !== null && doc.amount !== undefined && !isNaN(Number(doc.amount))
                                         ? `${symbol}${Number(doc.amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                         : "—"}
@@ -204,11 +256,16 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                             {!doc.exchange_rate && " · rate needed"}
                                         </div>
                                     )}
+                                    </>}
                                 </TableCell>
                                 <TableCell className="py-2.5">
-                                    <Badge variant="outline" className="font-normal text-xs text-gray-500 dark:text-slate-300 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-                                        {doc.funds?.name || "Uncategorized"}
-                                    </Badge>
+                                    {doc.status === "extracting" ? (
+                                        <Skeleton className="w-20 rounded-full" />
+                                    ) : (
+                                        <Badge variant="outline" className="font-normal text-xs text-gray-500 dark:text-slate-300 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+                                            {doc.funds?.name || "Uncategorized"}
+                                        </Badge>
+                                    )}
                                 </TableCell>
                                 <TableCell className="py-2.5">
                                     <div className="flex items-center gap-2">
@@ -218,11 +275,14 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                                     doc.status === "awaiting_payment" ? "secondary" :
                                                         doc.status === "paid" ? "default" : "secondary"
                                         } className={
+                                            doc.status === "extracting" ? "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800/50" :
                                             doc.status === "needs_review" ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50" :
                                                 doc.status === "DUPLICATE_WARNING" ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800/50" :
                                                     "bg-slate-100 text-slate-700 border-transparent dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
                                         }>
-                                            {doc.status.replace("_", " ")}
+                                            {doc.status === "extracting"
+                                                ? <><Loader2 className="animate-spin" />Reading</>
+                                                : doc.status.replace("_", " ")}
                                         </Badge>
 
                                         {typeof doc.confidence_score === 'number' && doc.status === "needs_review" && (
