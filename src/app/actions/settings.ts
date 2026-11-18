@@ -260,6 +260,34 @@ export async function addSettingCategory(name: string) {
     return { success: true }
 }
 
+// The account code from the organisation's chart of accounts (for example "6100"). The accounting
+// export writes it into the AccountCode column. Empty clears it.
+export async function updateCategoryAccountCode(id: string, code: string) {
+    await checkWriteAccess();
+    const supabase = await createClient()
+    const organization_id = await getOrganizationId()
+
+    const cleaned = String(code ?? "").trim()
+    if (cleaned !== "" && !/^[A-Za-z0-9._\/ -]{1,30}$/.test(cleaned)) {
+        throw new Error("Account codes can use letters, numbers, dots, dashes and slashes (up to 30 characters)")
+    }
+
+    const { data, error } = await supabase
+        .from("categories")
+        .update({ account_code: cleaned === "" ? null : cleaned })
+        .eq("id", id)
+        .eq("organization_id", organization_id)
+        .select("id")
+
+    if (error) {
+        console.error("Supabase Error (updateCategoryAccountCode):", error)
+        throw new Error("Failed to save the account code")
+    }
+    if (!data || data.length === 0) throw new Error("Category not found")
+    revalidatePath("/settings")
+    return { success: true }
+}
+
 export async function deleteSettingCategory(id: string) {
     await checkWriteAccess();
     const supabase = await createClient()

@@ -45,6 +45,7 @@ export interface FundSpend {
 export interface Category {
     id: string;
     name: string;
+    account_code?: string | null;
 }
 
 export interface TeamMember {

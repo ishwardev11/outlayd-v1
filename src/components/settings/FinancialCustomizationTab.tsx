@@ -9,6 +9,7 @@ import { Loader2, Plus, Trash2, Archive, ArchiveRestore } from "lucide-react"
 import { useRole } from "@/components/RoleProvider"
 import { useCurrency } from "@/components/CurrencyProvider"
 import { Fund, FundSpend, Category } from "./SettingsLayout"
+import { CategoryAccountCode } from "./CategoryAccountCode"
 import { FundDetailsDialog } from "./FundDetailsDialog"
 
 export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initialCategories }: { initialFunds: Fund[], fundSpend?: FundSpend[], initialCategories: Category[] }) {
@@ -202,6 +203,7 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
                         <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                             <tr>
                                 <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200">Category Name</th>
+                                <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200 w-40" title="The account code from your accounting software, used by the accounting export">Accounting code</th>
                                 <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200 w-24 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -210,6 +212,9 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
                                 <tr key={cat.id}>
                                     <td className="px-4 py-3">
                                         <span className="font-medium text-gray-900 dark:text-white">{cat.name}</span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <CategoryAccountCode key={`${cat.id}-${cat.account_code ?? ""}`} id={cat.id} initial={cat.account_code} disabled={isViewer} />
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <Button

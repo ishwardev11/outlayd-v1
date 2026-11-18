@@ -3,7 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, TrendingUp, AlertTriangle, Wallet, PieChart, ListX, Info, FileCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { BarChart3, TrendingUp, AlertTriangle, Wallet, PieChart, ListX, Info, FileCheck, FileSpreadsheet, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -94,6 +94,13 @@ export function ReportsClient({ summary, largeTransactions: largeTx, filters, pa
                     >
                         <FileCheck className="h-4 w-4" />
                         Donor Memo
+                    </Link>
+                    <Link
+                        href="/reports/accounting-export"
+                        className="inline-flex items-center gap-2 h-10 px-4 rounded-md text-sm font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                        <FileSpreadsheet className="h-4 w-4" />
+                        Accounting export
                     </Link>
                     <ReportsExportButton filters={filters} dateRange="Custom" />
                 </div>
