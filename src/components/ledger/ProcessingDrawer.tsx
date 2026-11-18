@@ -22,6 +22,7 @@ import { Loader2, Plus, Trash2, RefreshCw } from "lucide-react";
 import { useRole } from "@/components/RoleProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { CurrencyConversionPanel, convertedAmount, type FxState } from "./CurrencyConversionPanel";
+import { DocumentHistory } from "./DocumentHistory";
 
 interface Split {
     id: string; // temporary UI id
@@ -603,6 +604,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                 </div>
                             </div>
 
+                            <DocumentHistory documentId={document.id} />
                         </div>
 
                         {/* Pinned Action Buttons Footer */}
