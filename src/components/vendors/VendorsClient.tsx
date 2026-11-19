@@ -5,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, FileText, AlertCircle, Search, Banknote, Building2, Merge, Loader2, Trash2, Sparkles } from "lucide-react";
+import { Users, FileText, AlertCircle, Search, Banknote, Building2, Merge, Loader2, Trash2, Sparkles, Plus, Pencil, ArchiveRestore } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { mergeVendors, deleteVendor, updateVendor } from "@/app/actions/ledger";
+import { mergeVendors, deleteVendor, updateVendor, restorePayee } from "@/app/actions/ledger";
+import { AddPayeeDialog, PayeeDetailsDialog } from "@/components/vendors/PayeeDialogs";
+import { PAYEE_TYPES, payeeTypeLabel } from "@/utils/payee-types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useRole } from "@/components/RoleProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
@@ -26,6 +28,10 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [vendorToDelete, setVendorToDelete] = useState<{ id: string, name: string } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [typeFilter, setTypeFilter] = useState("all");
+    const [showArchived, setShowArchived] = useState(false);
+    const [addOpen, setAddOpen] = useState(false);
+    const [detailsPayee, setDetailsPayee] = useState<any | null>(null);
     const { isViewer } = useRole();
     const { symbol } = useCurrency();
 
@@ -64,7 +70,10 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
         }
     };
 
+    const archivedCount = vendors.filter(v => v.archived_at).length;
     const filteredVendors = vendors.filter(v => {
+        if (!showArchived && v.archived_at) return false;
+        if (typeFilter !== "all" && v.payee_type !== typeFilter) return false;
         const catName = categories.find(c => c.id === v.default_category_id)?.name || v.topCategory || v.suggestedCategoryName || "";
         return (
             v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -72,7 +81,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
         );
     });
 
-    const totalVendors = vendors.length;
+    const totalVendors = vendors.filter(v => !v.archived_at).length;
     const totalOutstanding = vendors.reduce((sum, v) => sum + v.totalUnpaid, 0);
     const totalPaidLifelong = vendors.reduce((sum, v) => sum + v.totalPaid, 0);
 
@@ -101,7 +110,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
             setSelectedVendors([]);
             setMergeModalOpen(false);
         } catch (e) {
-            alert("Failed to merge vendors");
+            toast.error("Failed to merge payees");
         } finally {
             setIsMerging(false);
         }
@@ -118,12 +127,15 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
         if (!vendorToDelete || isViewer) return;
         setIsDeleting(true);
         try {
-            await deleteVendor(vendorToDelete.id);
+            const result = await deleteVendor(vendorToDelete.id);
+            toast.success(result.action === "archived"
+                ? `${vendorToDelete.name} has documents, so it was archived instead of deleted`
+                : `${vendorToDelete.name} was deleted`);
             setDeleteModalOpen(false);
             setVendorToDelete(null);
             setSelectedVendors(prev => prev.filter(v => v !== vendorToDelete.id));
         } catch (e) {
-            alert("Failed to delete vendor");
+            toast.error("Failed to remove payee");
         } finally {
             setIsDeleting(false);
         }
@@ -136,12 +148,12 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
             <div className="grid gap-6 md:grid-cols-3">
                 <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">Total Vendors</CardTitle>
+                        <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">Total Payees</CardTitle>
                         <Building2 className="h-4 w-4 text-muted-foreground dark:text-slate-400" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalVendors}</div>
-                        <p className="text-xs text-muted-foreground dark:text-slate-400">Active partnerships</p>
+                        <p className="text-xs text-muted-foreground dark:text-slate-400">Active payees</p>
                     </CardContent>
                 </Card>
 
@@ -172,11 +184,34 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 " />
                     <Input
-                        placeholder="Search vendors or categories..."
+                        placeholder="Search payees or categories..."
                         className="pl-8 bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                        <SelectTrigger className="h-9 w-40 text-sm bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-white">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                            <SelectItem value="all" className="cursor-pointer">All types</SelectItem>
+                            {PAYEE_TYPES.map(t => (
+                                <SelectItem key={t.value} value={t.value} className="cursor-pointer">{t.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {archivedCount > 0 && (
+                        <Button variant="outline" size="sm" onClick={() => setShowArchived(s => !s)}>
+                            {showArchived ? "Hide archived" : `Show archived (${archivedCount})`}
+                        </Button>
+                    )}
+                    <Button size="sm" onClick={() => setAddOpen(true)} disabled={isViewer} title={isViewer ? "Viewers cannot add payees" : ""} className="bg-indigo-600 hover:bg-indigo-700">
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add payee
+                    </Button>
                 </div>
 
                 {selectedVendors.length > 0 && (
@@ -207,7 +242,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                 <Card className="border-gray-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
                     <CardContent className="flex flex-col items-center justify-center py-16 text-gray-500 dark:text-slate-400">
                         <Users className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-4" />
-                        <p>{searchQuery ? "No vendors match your search." : "No vendors found yet. Process documents to build your directory."}</p>
+                        <p>{searchQuery || typeFilter !== "all" ? "No payees match your filters." : "No payees yet. Process documents or add one to build your directory."}</p>
                     </CardContent>
                 </Card>
             ) : (
@@ -217,7 +252,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                         <TableHeader className="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700">
                             <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="w-12 text-center"></TableHead>
-                                <TableHead className="font-semibold text-gray-900 dark:text-slate-300">Vendor Info</TableHead>
+                                <TableHead className="font-semibold text-gray-900 dark:text-slate-300">Payee</TableHead>
                                 <TableHead className="font-semibold text-gray-900 dark:text-slate-300">Default Category</TableHead>
                                 <TableHead className="font-semibold text-gray-900 dark:text-slate-300 text-center">Documents</TableHead>
                                 <TableHead className="text-right font-semibold text-gray-900 dark:text-slate-300">Total Paid</TableHead>
@@ -227,12 +262,14 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                         </TableHeader>
                         <TableBody>
                             {filteredVendors.map((vendor) => (
-                                <TableRow key={vendor.id} className={`transition-colors group border-b border-gray-200 dark:border-slate-700 ${selectedVendors.includes(vendor.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/30' : 'bg-white dark:bg-slate-800 hover:bg-gray-50/50 dark:hover:bg-slate-700/50 cursor-pointer'}`} onClick={() => toggleSelect(vendor.id)}>
+                                <TableRow key={vendor.id} className={`transition-colors group border-b border-gray-200 dark:border-slate-700 ${vendor.archived_at ? 'opacity-60' : ''} ${selectedVendors.includes(vendor.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/30' : 'bg-white dark:bg-slate-800 hover:bg-gray-50/50 dark:hover:bg-slate-700/50'} ${vendor.is_system || vendor.archived_at ? '' : 'cursor-pointer'}`} onClick={() => { if (!vendor.is_system && !vendor.archived_at) toggleSelect(vendor.id) }}>
                                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                                        {!vendor.is_system && !vendor.archived_at && (
                                         <Checkbox
                                             checked={selectedVendors.includes(vendor.id)}
                                             onCheckedChange={() => toggleSelect(vendor.id)}
                                         />
+                                        )}
                                     </TableCell>
                                     <TableCell className="font-medium text-gray-900 dark:text-white">
                                         <div className="flex items-center gap-3">
@@ -241,7 +278,12 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                                             </div>
                                             <div>
                                                 <div className="truncate group-hover:text-blue-600 dark:group-hover:text-cyan-400 transition-colors">{vendor.name}</div>
-                                                <div className="text-xs text-gray-500 dark:text-slate-400 font-normal mt-0.5">Last active: {vendor.lastActivity}</div>
+                                                <div className="text-xs text-gray-500 dark:text-slate-400 font-normal mt-0.5 flex items-center gap-2 flex-wrap">
+                                                    <span>{payeeTypeLabel(vendor.payee_type)}</span>
+                                                    {vendor.is_system && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Built-in</Badge>}
+                                                    {vendor.archived_at && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Archived</Badge>}
+                                                    <span>· Last active: {vendor.lastActivity}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </TableCell>
@@ -318,17 +360,42 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                                             </span>
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                                    <TableCell className="text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50/20 transition-colors"
-                                            onClick={(e) => handleDeleteClick(e, vendor.id, vendor.name)}
-                                            disabled={isViewer}
-                                            title={isViewer ? "Viewers cannot delete vendors" : ""}
+                                            className="h-8 w-8 text-gray-500 hover:text-indigo-600"
+                                            onClick={() => setDetailsPayee(vendor)}
+                                            title="Payee details"
                                         >
-                                            <Trash2 className="h-4 w-4" />
+                                            <Pencil className="h-4 w-4" />
                                         </Button>
+                                        {vendor.archived_at ? (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-gray-500 hover:text-indigo-600"
+                                                onClick={async () => {
+                                                    try { await restorePayee(vendor.id); toast.success(`${vendor.name} restored`) }
+                                                    catch { toast.error("Failed to restore payee") }
+                                                }}
+                                                disabled={isViewer}
+                                                title="Restore payee"
+                                            >
+                                                <ArchiveRestore className="h-4 w-4" />
+                                            </Button>
+                                        ) : !vendor.is_system && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50/20 transition-colors"
+                                                onClick={(e) => handleDeleteClick(e, vendor.id, vendor.name)}
+                                                disabled={isViewer}
+                                                title={isViewer ? "Viewers cannot remove payees" : "Remove payee"}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -338,12 +405,15 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                 </Card>
             )}
 
+            <AddPayeeDialog open={addOpen} onOpenChange={setAddOpen} />
+            <PayeeDetailsDialog payee={detailsPayee} onOpenChange={(open) => { if (!open) setDetailsPayee(null) }} disabled={isViewer} />
+
             <Dialog open={mergeModalOpen} onOpenChange={setMergeModalOpen}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Merge className="w-5 h-5 text-indigo-500" />
-                            Merge Selected Vendors
+                            Merge Selected Payees
                         </DialogTitle>
                         <DialogDescription>
                             Select which vendor profile should be kept. All historical documents from the secondary vendor will be reassigned to the primary vendor, and the secondary vendor will be permanently deleted.
@@ -384,12 +454,12 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-red-600">
                             <AlertCircle className="w-5 h-5" />
-                            Delete Vendor
+                            Remove Payee
                         </DialogTitle>
                         <DialogDescription className="pt-2">
-                            Are you sure you want to permanently delete <strong>{vendorToDelete?.name}</strong>?
+                            Remove <strong>{vendorToDelete?.name}</strong>?
                             <br /><br />
-                            This action cannot be undone. If there are documents associated with this vendor, their vendor field will be cleared.
+                            If this payee has documents it is archived, so your reports and old entries keep it, and you can restore it later. A payee with no documents is deleted for good.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -397,7 +467,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                         <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
                         <Button onClick={confirmDelete} disabled={isDeleting} variant="destructive">
                             {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            Delete Vendor
+                            Remove Payee
                         </Button>
                     </DialogFooter>
                 </DialogContent>

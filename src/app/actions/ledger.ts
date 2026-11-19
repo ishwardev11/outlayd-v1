@@ -1,5 +1,6 @@
 "use server"
 
+import { PAYEE_TYPE_VALUES } from "@/utils/payee-types"
 import crypto from "node:crypto"
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
@@ -137,23 +138,84 @@ export async function deleteDocument(id: string) {
     revalidatePath("/reports")
 }
 
-export async function deleteVendor(id: string) {
+// A payee that has documents is archived, never deleted, so reports and old entries keep their payee.
+// Only a payee with no documents at all is removed for good. Returns which of the two happened.
+export async function deleteVendor(id: string): Promise<{ action: "archived" | "deleted" }> {
     await checkWriteAccess();
     const supabase = await createClient()
-    const { error } = await supabase
-        .from("vendors")
-        .delete()
-        .eq("id", id)
 
-    if (error) {
-        console.error("Error deleting vendor:", error)
-        throw new Error("Failed to delete vendor")
+    const { count, error: countError } = await supabase
+        .from("documents")
+        .select("id", { count: "exact", head: true })
+        .eq("vendor_id", id)
+    if (countError) {
+        console.error("Error checking payee usage:", countError)
+        throw new Error("Failed to remove payee")
+    }
+
+    let action: "archived" | "deleted"
+    if ((count ?? 0) > 0) {
+        const { error } = await supabase
+            .from("vendors")
+            .update({ archived_at: new Date().toISOString() })
+            .eq("id", id)
+        if (error) {
+            console.error("Error archiving payee:", error)
+            throw new Error("Failed to archive payee")
+        }
+        action = "archived"
+    } else {
+        const { error } = await supabase.from("vendors").delete().eq("id", id)
+        if (error) {
+            console.error("Error deleting payee:", error)
+            throw new Error("Failed to delete payee")
+        }
+        action = "deleted"
     }
 
     revalidatePath("/vendors")
     revalidatePath("/ledger")
     revalidatePath("/")
     revalidatePath("/reports")
+    return { action }
+}
+
+export async function restorePayee(id: string) {
+    await checkWriteAccess();
+    const supabase = await createClient()
+    const { error } = await supabase.from("vendors").update({ archived_at: null }).eq("id", id)
+    if (error) {
+        console.error("Error restoring payee:", error)
+        throw new Error("Failed to restore payee")
+    }
+    revalidatePath("/vendors")
+    revalidatePath("/ledger")
+}
+
+export async function createPayee(name: string, payeeType: string = "vendor") {
+    await checkWriteAccess();
+    const supabase = await createClient()
+    const organization_id = await getOrganizationId()
+
+    const cleanName = (name ?? "").trim().slice(0, 255)
+    if (!cleanName) throw new Error("Enter a name for the payee")
+    if (!PAYEE_TYPE_VALUES.includes(payeeType)) throw new Error("Choose a valid payee type")
+
+    const { data, error } = await supabase
+        .from("vendors")
+        .insert({ name: cleanName, payee_type: payeeType, organization_id })
+        .select()
+        .single()
+
+    if (error) {
+        if (error.code === "23505") throw new Error("A payee with this name already exists")
+        console.error("Error creating payee:", error)
+        throw new Error("Failed to create payee")
+    }
+
+    revalidatePath("/vendors")
+    revalidatePath("/ledger")
+    return data
 }
 
 export async function getVendors() {

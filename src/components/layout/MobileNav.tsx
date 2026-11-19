@@ -37,7 +37,7 @@ export function MobileNav() {
     const bottomTabs = [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/ledger", label: "Ledger", icon: FileText },
-        { href: "/vendors", label: "Vendors", icon: Users },
+        { href: "/vendors", label: "Payees", icon: Users },
         { href: "/reports", label: "Reports", icon: BarChart3 },
     ];
 

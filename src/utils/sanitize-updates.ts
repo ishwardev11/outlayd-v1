@@ -1,3 +1,4 @@
+import { PAYEE_TYPE_VALUES } from "@/utils/payee-types"
 // Allowlists for fields the browser may change on documents and vendors.
 // Anything not listed here (organization_id, image_url, file_hash, created_at, ...) is dropped.
 
@@ -129,6 +130,15 @@ export function sanitizeVendorUpdates(input: unknown): Record<string, unknown> {
             out[key] = name
         } else if (key === "default_category_id" || key === "default_fund_id") {
             out[key] = cleanId(key, value)
+        } else if (key === "payee_type") {
+            if (typeof value !== "string" || !PAYEE_TYPE_VALUES.includes(value)) {
+                throw new UpdateValidationError("payee_type is not a valid payee type")
+            }
+            out[key] = value
+        } else if (key === "email" || key === "phone" || key === "registration_number") {
+            out[key] = cleanText(key, value, 255)?.trim() || null
+        } else if (key === "address" || key === "notes") {
+            out[key] = cleanText(key, value, 1000)?.trim() || null
         } else {
             console.warn(`updateVendor: ignoring field "${key}"`)
         }

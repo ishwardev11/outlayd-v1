@@ -66,13 +66,21 @@ async function findOrCreateVendor(
     vendorName: string,
     organization_id: string | null
 ) {
+    // The name is matched as plain text (a "%" or "_" in a payee name is not a wildcard)
+    const exactName = vendorName.replace(/[\\%_]/g, (c) => "\\" + c)
     const { data: existingVendor } = await supabase
         .from("vendors")
-        .select("id, default_category_id, default_fund_id")
-        .ilike("name", vendorName)
-        .single()
+        .select("id, default_category_id, default_fund_id, archived_at")
+        .ilike("name", exactName)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle()
 
     if (existingVendor) {
+        // A new document from an archived payee brings it back
+        if (existingVendor.archived_at) {
+            await supabase.from("vendors").update({ archived_at: null }).eq("id", existingVendor.id)
+        }
         return {
             id: existingVendor.id as string,
             defaultCategoryId: (existingVendor.default_category_id as string | null) ?? null,
@@ -80,11 +88,29 @@ async function findOrCreateVendor(
         }
     }
 
-    const { data: newVendor } = await supabase
+    const { data: newVendor, error: insertError } = await supabase
         .from("vendors")
         .insert({ name: vendorName, organization_id })
         .select("id")
         .single()
+
+    // Two documents from the same new payee can be read at the same moment. The second insert hits
+    // the unique name, so it uses the payee the first one created.
+    if (!newVendor && insertError?.code === "23505") {
+        const { data: raced } = await supabase
+            .from("vendors")
+            .select("id, default_category_id, default_fund_id")
+            .ilike("name", exactName)
+            .limit(1)
+            .maybeSingle()
+        if (raced) {
+            return {
+                id: raced.id as string,
+                defaultCategoryId: (raced.default_category_id as string | null) ?? null,
+                defaultFundId: (raced.default_fund_id as string | null) ?? null,
+            }
+        }
+    }
 
     return newVendor ? { id: newVendor.id as string, defaultCategoryId: null, defaultFundId: null } : null
 }
