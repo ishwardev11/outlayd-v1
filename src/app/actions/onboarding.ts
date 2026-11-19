@@ -46,6 +46,9 @@ export async function completeOnboardingSetup(data: OnboardingData) {
                 name: data.orgName,
                 base_currency: data.baseCurrency,
                 fiscal_year_start: parseInt(data.fiscalYearStart, 10),
+                // Drives report labels later (Income & Expenditure vs Profit & Loss). The database also
+                // creates the General Fund, Main Account and system categories for the new organisation.
+                org_type: data.templateChoice === 'non_profit' ? 'nonprofit' : 'small_business',
                 // Falls back to the database default (Kuala Lumpur) if the browser sent nothing usable
                 ...(isValidTimezone(data.timezone) ? { timezone: data.timezone } : {}),
             })
@@ -95,7 +98,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
                     'Professional Fees', 'Travel & Events', 'Grants & Awards'
                 ];
                 fundsList = [
-                    'General Unrestricted', 'Restricted Grant', 'Community Outreach', 'Building Fund'
+                    'Restricted Grant', 'Community Outreach', 'Building Fund'
                 ];
                 break;
             case 'ecommerce':
@@ -114,7 +117,7 @@ export async function completeOnboardingSetup(data: OnboardingData) {
                     'Legal & Professional', 'Office & Equipment', 'Travel & Meals'
                 ];
                 fundsList = [
-                    'General OpEx', 'Client Projects', 'Internal R&D'
+                    'Client Projects', 'Internal R&D'
                 ];
                 break;
         }

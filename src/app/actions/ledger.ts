@@ -65,7 +65,14 @@ export async function getFunds() {
 
 export async function getCategories() {
     const supabase = await createClient()
-    const { data, error } = await supabase.from("categories").select("*").order("name")
+    // Pickers only offer real expense categories. System categories (Uncategorised, Depreciation) are
+    // created and used by Outlayd itself, and income categories arrive with the money-in feature.
+    const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("kind", "expense")
+        .eq("is_system", false)
+        .order("name")
 
     if (error) throw new Error("Failed to fetch categories")
     return data

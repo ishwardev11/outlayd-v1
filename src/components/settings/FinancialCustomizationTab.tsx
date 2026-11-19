@@ -88,7 +88,8 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
 
             {/* Funds Section */}
             <div>
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Active Funds</h2>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">Active Funds</h2>
+                <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">A fund answers &quot;whose money is this?&quot; (for example the General Fund, a building appeal or a specific grant). Most organisations only need the General Fund plus one fund per grant.</p>
                 <form onSubmit={handleAddFund} className="flex gap-4 items-end mb-6">
                     <div className="flex-1 space-y-2">
                         <Label htmlFor="newFund" className="sr-only">New Fund Name</Label>
@@ -129,6 +130,12 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
                                 <tr key={fund.id}>
                                     <td className="px-4 py-3">
                                         <span className="font-medium text-gray-900 dark:text-white">{fund.name}</span>
+                                        {fund.is_default && (
+                                            <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300" title="Used whenever you do not pick a fund. It cannot be archived.">Default</span>
+                                        )}
+                                        {fund.fund_type === 'restricted' && (
+                                            <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300" title="Money that may only be spent on its stated purpose">Restricted</span>
+                                        )}
                                     </td>
                                     <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{budget !== null ? formatAmount(budget) : "—"}</td>
                                     <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{formatAmount(spent)}</td>
@@ -138,6 +145,7 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
                                     </td>
                                     <td className="px-4 py-3 text-right whitespace-nowrap">
                                         <FundDetailsDialog key={`${fund.id}-${fund.donor_name}-${fund.grant_reference}-${fund.award_amount}-${fund.budget}-${fund.period_start}-${fund.period_end}-${fund.purpose}`} fund={fund} disabled={isViewer} />
+                                        {!fund.is_default && (
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -149,6 +157,7 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
                                             <Archive className="w-4 h-4 mr-2" />
                                             Archive
                                         </Button>
+                                        )}
                                     </td>
                                 </tr>
                                 )
@@ -180,7 +189,8 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
 
             {/* Categories Section */}
             <div>
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Expense Categories</h2>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">Expense Categories</h2>
+                <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">A category answers &quot;what was the money spent on?&quot; (for example Rent or Printing). Every expense has both: a fund and a category.</p>
                 <form onSubmit={handleAddCategory} className="flex gap-4 items-end mb-6">
                     <div className="flex-1 space-y-2">
                         <Label htmlFor="newCategory" className="sr-only">New Category Name</Label>

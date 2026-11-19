@@ -162,6 +162,7 @@ export async function archiveSettingFund(id: string) {
         .update({ archived_at: new Date().toISOString() })
         .eq("id", id)
         .eq("organization_id", organization_id)
+        .eq("is_default", false)
 
     if (error) {
         console.error("Supabase Error (archiveSettingFund):", error)
@@ -234,6 +235,8 @@ export async function getSettingsCategories() {
         .from("categories")
         .select("*")
         .eq("organization_id", organization_id)
+        .eq("kind", "expense")
+        .eq("is_system", false)
         .order("name")
 
     if (error) return []
@@ -308,6 +311,7 @@ export async function deleteSettingCategory(id: string) {
         .delete()
         .eq("id", id)
         .eq("organization_id", organization_id)
+        .eq("is_system", false)
 
     if (error) {
         console.error("Supabase Error (deleteSettingCategory):", error)
