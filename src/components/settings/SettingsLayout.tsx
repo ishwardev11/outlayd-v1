@@ -33,6 +33,8 @@ export interface Fund {
     period_start?: string | null;
     period_end?: string | null;
     archived_at?: string | null;
+    fund_type?: "unrestricted" | "restricted";
+    is_default?: boolean;
 }
 
 // Per-fund totals worked out in the database from document splits (see fund_budget_summary)
@@ -46,6 +48,8 @@ export interface Category {
     id: string;
     name: string;
     account_code?: string | null;
+    kind?: "income" | "expense";
+    is_system?: boolean;
 }
 
 export interface TeamMember {
