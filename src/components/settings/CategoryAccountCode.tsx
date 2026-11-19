@@ -18,11 +18,16 @@ export function CategoryAccountCode({ id, initial, disabled }: { id: string; ini
         }
         setSaving(true)
         try {
-            await updateCategoryAccountCode(id, next)
+            const res = await updateCategoryAccountCode(id, next)
+            if (!res.success) {
+                alert(res.error)
+                setValue(saved)
+                return
+            }
             setSaved(next)
             setValue(next)
-        } catch (e: any) {
-            alert(e?.message || "Failed to save the account code")
+        } catch {
+            alert("Failed to save the account code")
             setValue(saved)
         } finally {
             setSaving(false)

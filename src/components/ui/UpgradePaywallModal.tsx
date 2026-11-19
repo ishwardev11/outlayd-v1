@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { CheckCircle2, LockKeyhole } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
-type PaywallContext = "upload_limit" | "procurement" | "team_limit" | "donor_memo";
+type PaywallContext = "upload_limit" | "procurement" | "team_limit" | "donor_memo" | "accounting_export" | "bank_statements";
 
 interface UpgradePaywallModalProps {
     isOpen: boolean;
@@ -29,6 +29,16 @@ const COPY: Record<PaywallContext, { heading: string; subtext: string }> = {
         heading: "The Donor & Audit Memo is a Growth Feature",
         subtext:
             "Generate signed-off fund reports for donors, boards and auditors, with automatic checks for missing receipts and out-of-period spending. Upgrade to Outlayd Growth to unlock it.",
+    },
+    accounting_export: {
+        heading: "The Accounting Export is a Growth Feature",
+        subtext:
+            "Download approved documents as a CSV your accountant or accounting software can import, including a Xero bills layout and account codes per category. Upgrade to Outlayd Growth to unlock it.",
+    },
+    bank_statements: {
+        heading: "Bank Statement Import is a Growth Feature",
+        subtext:
+            "Upload a bank statement PDF, match each payment to an approved invoice or receipt, and see which payments have no paperwork. Upgrade to Outlayd Growth to unlock it.",
     },
     team_limit: {
         heading: "Collaborate with your whole team",

@@ -1,6 +1,10 @@
-import { getOrganizationTimezone } from "@/app/actions/document-utils"
+import { FileSpreadsheet } from "lucide-react"
+import { createClient } from "@/utils/supabase/server"
+import { getOrganizationId, getOrganizationTimezone } from "@/app/actions/document-utils"
+import { organizationIsPro } from "@/utils/plan"
 import { todayInTimezone } from "@/utils/dates"
 import { AccountingExportClient } from "@/components/reports/AccountingExportClient"
+import { FeatureLocked } from "@/components/ui/FeatureLocked"
 
 export const dynamic = "force-dynamic"
 
@@ -15,6 +19,28 @@ function lastMonthRange(today: string): { from: string; to: string } {
 }
 
 export default async function AccountingExportPage() {
+    // Paid plans only (same rule as the Donor & Audit Memo)
+    const supabase = await createClient()
+    const organizationId = await getOrganizationId()
+    if (!organizationId || !(await organizationIsPro(supabase, organizationId))) {
+        return (
+            <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-3xl mx-auto">
+                <FeatureLocked
+                    title="Accounting export"
+                    tagline="Hand your accountant a file they can import, instead of retyping every invoice."
+                    heading="The Accounting Export is a Growth feature"
+                    features={[
+                        "A CSV of approved documents that opens in Excel or imports into your accounting software",
+                        "A Xero bills layout, with an accounting code per category",
+                        "A preview that warns about missing account codes and splits that do not add up",
+                    ]}
+                    context="accounting_export"
+                    icon={<FileSpreadsheet className="h-4 w-4" />}
+                />
+            </div>
+        )
+    }
+
     const timezone = await getOrganizationTimezone()
     const range = lastMonthRange(todayInTimezone(timezone))
 

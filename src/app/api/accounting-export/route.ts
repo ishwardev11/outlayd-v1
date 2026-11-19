@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import { getOrganizationId, getOrganizationCurrency } from "@/app/actions/document-utils"
 import { buildExport, parseExportParams, toGenericCsv, toXeroBillsCsv } from "@/utils/accounting-export"
+import { organizationIsPro } from "@/utils/plan"
 import { EXPORT_MAX_DOCUMENTS, loadExportData } from "@/utils/accounting-export-data"
 
 export const dynamic = "force-dynamic"
@@ -21,6 +22,14 @@ export async function GET(request: NextRequest) {
 
     const organizationId = await getOrganizationId()
     if (!organizationId) return NextResponse.json({ error: "No active organization" }, { status: 403 })
+
+    // Paid plans only. The page shows a locked screen, and this stops a direct call to the endpoint.
+    if (!(await organizationIsPro(supabase, organizationId))) {
+        return NextResponse.json(
+            { error: "The Accounting Export is available on the Growth and Nonprofit plans. Please upgrade to use it.", upgradeRequired: true },
+            { status: 403 }
+        )
+    }
 
     try {
         const [loaded, currency] = await Promise.all([

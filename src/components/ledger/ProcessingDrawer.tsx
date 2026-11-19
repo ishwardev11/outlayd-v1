@@ -295,7 +295,11 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         if (!document) return;
         setIsRetrying(true);
         try {
-            await retryExtraction(document.id);
+            const res = await retryExtraction(document.id);
+            if (!res.success) {
+                toast.error("Could not read the document again", { description: res.error });
+                return;
+            }
             toast.success("Reading the document again", { description: "The details will appear in the ledger in a moment." });
             onClose();
         } catch (e: any) {

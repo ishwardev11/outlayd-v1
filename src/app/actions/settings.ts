@@ -262,7 +262,7 @@ export async function addSettingCategory(name: string) {
 
 // The account code from the organisation's chart of accounts (for example "6100"). The accounting
 // export writes it into the AccountCode column. Empty clears it.
-export async function updateCategoryAccountCode(id: string, code: string) {
+async function updateCategoryAccountCodeOrThrow(id: string, code: string) {
     await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
@@ -286,6 +286,16 @@ export async function updateCategoryAccountCode(id: string, code: string) {
     if (!data || data.length === 0) throw new Error("Category not found")
     revalidatePath("/settings")
     return { success: true }
+}
+
+// Errors thrown from a server action are hidden from the browser in production, so the reason is returned.
+export async function updateCategoryAccountCode(id: string, code: string): Promise<{ success: true } | { success: false; error: string }> {
+    try {
+        await updateCategoryAccountCodeOrThrow(id, code)
+        return { success: true }
+    } catch (e: any) {
+        return { success: false, error: e?.message || "Failed to save the account code" }
+    }
 }
 
 export async function deleteSettingCategory(id: string) {

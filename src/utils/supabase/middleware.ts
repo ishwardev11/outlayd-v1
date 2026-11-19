@@ -42,6 +42,7 @@ export async function updateSession(request: NextRequest) {
         pathname.startsWith('/ledger') ||
         pathname.startsWith('/reports') ||
         pathname.startsWith('/audit-log') ||
+        pathname.startsWith('/bank-statements') ||
         pathname.startsWith('/procurement') ||
         pathname.startsWith('/vendors') ||
         pathname.startsWith('/settings') ||

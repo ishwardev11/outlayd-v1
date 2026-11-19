@@ -486,7 +486,7 @@ export async function processUpload(formData: FormData) {
 // Re-reads a document whose AI extraction failed or timed out. Used by the "Try reading again"
 // button in the Review drawer, so a failed document can be fixed without uploading the file again
 // (which would be flagged as a duplicate of the failed one).
-export async function retryExtraction(documentId: string) {
+async function retryExtractionOrThrow(documentId: string) {
     await checkWriteAccess()
     if (typeof documentId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(documentId)) {
         throw new Error("Invalid document")
@@ -566,4 +566,15 @@ export async function retryExtraction(documentId: string) {
     revalidatePath("/ledger")
     revalidatePath("/")
     return { success: true }
+}
+
+// Errors thrown from a server action are hidden from the browser in production, so the reasons
+// (which are written for the user) are returned as a result instead.
+export async function retryExtraction(documentId: string): Promise<{ success: true } | { success: false; error: string }> {
+    try {
+        await retryExtractionOrThrow(documentId)
+        return { success: true }
+    } catch (e: any) {
+        return { success: false, error: e?.message || "Could not read the document again." }
+    }
 }
