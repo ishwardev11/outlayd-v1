@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
     Select,
     SelectContent,
@@ -58,6 +59,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
             setFormData({
                 vendor_name: document.vendor_name || "",
                 invoice_number: document.invoice_number || "",
+                remarks: document.remarks || "",
                 document_date: document.document_date || "",
                 amount: document.amount || 0,
                 document_type: document.document_type || "receipt"
@@ -433,6 +435,23 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                             <p className="text-[11px] text-slate-500 dark:text-slate-400">Calculated from the document total and the rate below.</p>
                                         )}
                                     </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="remarks" className="dark:text-slate-300">Remarks</Label>
+                                        <span className="text-[11px] text-slate-400 dark:text-slate-500">{String(formData.remarks || "").length}/500</span>
+                                    </div>
+                                    <Textarea
+                                        id="remarks"
+                                        rows={2}
+                                        maxLength={500}
+                                        placeholder="Optional. For example: paid by cheque 4471, approved at the March committee"
+                                        className="text-sm dark:bg-slate-950 dark:border-slate-800"
+                                        value={formData.remarks || ""}
+                                        onChange={e => setFormData({ ...formData, remarks: e.target.value })}
+                                        disabled={isViewer}
+                                    />
                                 </div>
 
                                 <CurrencyConversionPanel

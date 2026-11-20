@@ -21,6 +21,7 @@ const DOCUMENT_TEXT_FIELDS: Record<string, number> = {
     document_type: 50,
     vendor_branch_or_location: 255,
     notes: 5000,
+    remarks: 500,
 }
 const DOCUMENT_DATE_FIELDS = ["document_date", "due_date"]
 const DOCUMENT_NUMBER_FIELDS = ["amount", "subtotal", "tax_amount", "original_amount"]

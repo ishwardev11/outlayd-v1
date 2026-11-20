@@ -176,7 +176,7 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                 />
                             </TableHead>
                             <TableHead className="text-xs font-semibold text-gray-900 dark:text-slate-300">Date</TableHead>
-                            <TableHead className="text-xs font-semibold text-gray-900 dark:text-slate-300">Vendor</TableHead>
+                            <TableHead className="text-xs font-semibold text-gray-900 dark:text-slate-300">Payee</TableHead>
                             <TableHead className="text-xs font-semibold text-gray-900 dark:text-slate-300">Amount</TableHead>
                             <TableHead className="text-xs font-semibold text-gray-900 dark:text-slate-300">
                                 <div className="flex items-center gap-1 cursor-help" title="You can add or edit your industry categories in Settings.">
@@ -184,6 +184,7 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                     <HelpCircle className="w-3.5 h-3.5 text-gray-400 dark:text-slate-500 hover:text-gray-600 transition-colors" />
                                 </div>
                             </TableHead>
+                            <TableHead className="hidden lg:table-cell text-xs font-semibold text-gray-900 dark:text-slate-300">Remarks</TableHead>
                             <TableHead className="text-xs font-semibold text-gray-900 dark:text-slate-300">Status</TableHead>
                             <TableHead className="w-12"></TableHead>
                         </TableRow>
@@ -265,6 +266,15 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                         <Badge variant="outline" className="font-normal text-xs text-gray-500 dark:text-slate-300 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
                                             {doc.funds?.name || "Uncategorized"}
                                         </Badge>
+                                    )}
+                                </TableCell>
+                                <TableCell className="hidden lg:table-cell py-2.5 max-w-[220px]">
+                                    {doc.remarks ? (
+                                        <span className="block truncate text-xs text-slate-600 dark:text-slate-300" title={doc.remarks}>
+                                            {doc.remarks}
+                                        </span>
+                                    ) : (
+                                        <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
                                     )}
                                 </TableCell>
                                 <TableCell className="py-2.5">

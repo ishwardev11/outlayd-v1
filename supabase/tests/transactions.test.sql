@@ -82,10 +82,10 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', c.uid::text, true);
   SET LOCAL ROLE authenticated;
 
-  UPDATE public.documents SET amount = 150, notes = 'edited by editor' WHERE id = doc;
+  UPDATE public.documents SET amount = 150, remarks = 'edited by editor' WHERE id = doc;
   SELECT total INTO n FROM public.transactions WHERE document_id = doc;
   ASSERT n = 150, format('mirror did not follow a signed-in edit (total %s)', n);
-  ASSERT (SELECT remarks FROM public.transactions WHERE document_id = doc) = 'edited by editor', 'remarks follow the document notes';
+  ASSERT (SELECT remarks FROM public.transactions WHERE document_id = doc) = 'edited by editor', 'remarks follow the document remarks';
   RAISE NOTICE 'PASS a signed-in Editor''s edit is mirrored (total and remarks)';
 
   BEGIN
@@ -134,5 +134,35 @@ BEGIN
   RAISE NOTICE 'PASS a transaction with no lines is refused';
 END $$;
 SET CONSTRAINTS ALL DEFERRED;
+
+-- Remarks: copied to the transaction, never from notes, limited to 500 characters, searchable
+DO $$
+DECLARE o uuid := (SELECT org FROM t_ctx); doc uuid; n int; r text;
+BEGIN
+  INSERT INTO public.documents (organization_id, vendor_name, status, amount, paid_date, notes, remarks)
+    VALUES (o, 'notes vs remarks', 'paid', 10, '2026-11-03', 'AI Extraction Error: boom', 'cheque 4471')
+    RETURNING id INTO doc;
+  SELECT remarks INTO r FROM public.transactions WHERE document_id = doc;
+  ASSERT r = 'cheque 4471', format('the transaction should carry the remarks, got %L', r);
+  RAISE NOTICE 'PASS remarks are mirrored and the extraction error note is not';
+
+  UPDATE public.documents SET remarks = NULL WHERE id = doc;
+  SELECT remarks INTO r FROM public.transactions WHERE document_id = doc;
+  ASSERT r IS NULL, 'clearing the remarks clears them on the transaction, notes never fill in';
+  RAISE NOTICE 'PASS clearing remarks is mirrored';
+
+  BEGIN
+    UPDATE public.documents SET remarks = repeat('x', 501) WHERE id = doc;
+    RAISE EXCEPTION 'a 501 character remark should have been refused';
+  EXCEPTION WHEN check_violation THEN NULL; END;
+  RAISE NOTICE 'PASS remarks are limited to 500 characters';
+
+  UPDATE public.documents SET remarks = 'March committee approval' WHERE id = doc;
+  SELECT count(*) INTO n FROM public.ledger_page(o, NULL, NULL, NULL, NULL, 'committee');
+  ASSERT n = 1, format('ledger search should find the remark, found %s', n);
+  SELECT count(*) INTO n FROM public.ledger_page(o, NULL, NULL, NULL, NULL, 'AI Extraction');
+  ASSERT n = 0, 'ledger search must not search the notes column';
+  RAISE NOTICE 'PASS ledger search finds remarks';
+END $$;
 
 ROLLBACK;
