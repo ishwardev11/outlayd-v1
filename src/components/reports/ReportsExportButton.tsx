@@ -15,6 +15,12 @@ import autoTable from "jspdf-autotable";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { getReportExportRows } from "@/app/actions/aggregates";
 import type { ReportFilters } from "@/utils/aggregate-types";
+import { buildReportCsv, buildReportPdfTable, type ReportExportRow } from "@/utils/report-export";
+
+// One exported row. report_rows returns whole documents rows, and the database sends the numeric
+// amount column as a JSON number, so amount is a number here (the totals below add it directly).
+type ServerRow = Awaited<ReturnType<typeof getReportExportRows>>["rows"][number];
+type ReportRow = Omit<ServerRow, "amount"> & { amount: number | null } & ReportExportRow;
 
 interface ExportProps {
     filters: ReportFilters;
@@ -26,14 +32,14 @@ export function ReportsExportButton({ filters, dateRange }: ExportProps) {
     const [isExporting, setIsExporting] = useState(false);
 
     // The report page only holds the totals, so the rows are fetched from the server when exporting.
-    const run = async (build: (rows: any[]) => void) => {
+    const run = async (build: (rows: ReportRow[]) => void) => {
         setIsExporting(true);
         try {
             const { rows, truncated } = await getReportExportRows(filters);
             if (truncated) {
                 alert(`This report has more than ${rows.length.toLocaleString()} rows, so the export is limited to the newest ${rows.length.toLocaleString()}. Narrow the filters to export the rest.`);
             }
-            build(rows);
+            build(rows as ReportRow[]);
         } catch (error) {
             console.error(error);
             alert("Failed to export the report. Please try again.");
@@ -53,7 +59,7 @@ export function ReportsExportButton({ filters, dateRange }: ExportProps) {
         return `Financial Report - ${mapping[dateRange] || 'Custom'}`;
     };
 
-    const buildPDF = (filteredDocuments: any[]) => {
+    const buildPDF = (filteredDocuments: ReportRow[]) => {
         const doc = new jsPDF();
 
         // Header
@@ -71,19 +77,8 @@ export function ReportsExportButton({ filters, dateRange }: ExportProps) {
         doc.setTextColor(79, 70, 229); // Indigo 600 approximate
         doc.text(`Total Volume: ${symbol}${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, 48);
 
-        // Outflows Table
-        const headers = [["Vendor / Payee", "Date", "Fund", "Category", `Amount (${symbol})`]];
-
-        // Sort for the table display: highest amounts first
-        const sortedDocs = [...filteredDocuments].sort((a, b) => (b.amount || 0) - (a.amount || 0));
-
-        const data = sortedDocs.map(d => [
-            d.vendor_name || "Unknown",
-            d.document_date || "—",
-            d.funds?.name || "—",
-            d.categories?.name || "—",
-            `${symbol}${(d.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        ]);
+        // Outflows Table (highest amounts first), with Remarks as the last column
+        const { head: headers, body: data } = buildReportPdfTable(filteredDocuments, symbol);
 
         doc.setFontSize(14);
         doc.setTextColor(0);
@@ -95,32 +90,17 @@ export function ReportsExportButton({ filters, dateRange }: ExportProps) {
             body: data,
             theme: 'grid',
             headStyles: { fillColor: [79, 70, 229] }, // Indigo 600
-            styles: { fontSize: 9 },
+            styles: { fontSize: 9, overflow: "linebreak" },
+            // Remarks wrap inside a fixed-width column so long notes do not squeeze the other columns
+            columnStyles: { 5: { cellWidth: 55, fontSize: 8 } },
         });
 
         doc.save(`financial-report-${dateRange}.pdf`);
     };
 
-    const buildCSV = (filteredDocuments: any[]) => {
-        const headers = ["ID", "Vendor", "Date", "Fund", "Category", `Amount (${symbol})`, "Status", "Original Currency", "Original Amount", "Exchange Rate"];
-
-        const rows = filteredDocuments.map(doc => [
-            `"${doc.id}"`,
-            `"${doc.vendor_name || "Unknown"}"`,
-            `"${doc.document_date || doc.created_at || ""}"`,
-            `"${doc.funds?.name || "Unassigned"}"`,
-            `"${doc.categories?.name || "Uncategorized"}"`,
-            `"${doc.amount || 0}"`,
-            `"${doc.status || "Unknown"}"`,
-            `"${doc.original_currency || ""}"`,
-            `"${doc.original_currency ? (doc.original_amount ?? "") : ""}"`,
-            `"${doc.original_currency ? (doc.exchange_rate ?? "") : ""}"`
-        ]);
-
-        const csvContent = [
-            headers.join(","),
-            ...rows.map(e => e.join(","))
-        ].join("\n");
+    const buildCSV = (filteredDocuments: ReportRow[]) => {
+        // Same columns as before plus Remarks at the end; every cell is escaped safely
+        const csvContent = buildReportCsv(filteredDocuments, symbol);
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");

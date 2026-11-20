@@ -73,7 +73,7 @@ export function parseStatement(raw: RawStatement): ParsedStatement {
 
     const seen = new Map<string, number>()
     const transactions: ParsedTransaction[] = []
-    for (const r of rows as any[]) {
+    for (const r of rows as (Record<string, unknown> | null)[]) {
         const date = validDate(r?.date)
         const debit = money(r?.debit)
         const credit = money(r?.credit)

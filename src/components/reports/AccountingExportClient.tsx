@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ArrowLeft, Download, Loader2, AlertTriangle } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { errorMessage, errorProp } from "@/utils/row-types";
 
 interface Preview {
     documents: number
@@ -31,7 +32,6 @@ function formatMoney(cents: number, currency: string): string {
 export function AccountingExportClient({ defaultFrom, defaultTo }: { defaultFrom: string; defaultTo: string }) {
     const [from, setFrom] = useState(defaultFrom)
     const [to, setTo] = useState(defaultTo)
-    const [format, setFormat] = useState<"generic" | "xero_bills">("generic")
     const [dateField, setDateField] = useState<"document_date" | "paid_date">("document_date")
     const [scope, setScope] = useState<"paid" | "approved">("paid")
     const [preview, setPreview] = useState<Preview | null>(null)
@@ -39,12 +39,13 @@ export function AccountingExportClient({ defaultFrom, defaultTo }: { defaultFrom
     const [loading, setLoading] = useState(false)
 
     const effectiveScope = dateField === "paid_date" ? "paid" : scope
-    const query = new URLSearchParams({ format, from, to, scope: effectiveScope, dateField }).toString()
+    const query = new URLSearchParams({ from, to, scope: effectiveScope, dateField }).toString()
     const ready = !!from && !!to && from <= to
 
     // Show what the export will contain before anything is downloaded
     useEffect(() => {
         if (!ready) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- the preview is fetched from the server whenever the filters change
             setPreview(null)
             setError(!from || !to ? null : "The start date must be on or before the end date")
             return
@@ -58,10 +59,10 @@ export function AccountingExportClient({ defaultFrom, defaultTo }: { defaultFrom
                 const body = await res.json()
                 if (!res.ok) throw new Error(body?.error || "Could not load the preview")
                 setPreview(body as Preview)
-            } catch (e: any) {
-                if (e?.name === "AbortError") return
+            } catch (e) {
+                if (errorProp(e, "name") === "AbortError") return
                 setPreview(null)
-                setError(e?.message || "Could not load the preview")
+                setError(errorMessage(e) || "Could not load the preview")
             } finally {
                 if (!controller.signal.aborted) setLoading(false)
             }
@@ -98,32 +99,24 @@ export function AccountingExportClient({ defaultFrom, defaultTo }: { defaultFrom
                     </div>
                     <div className="space-y-1.5">
                         <Label htmlFor="ae-date-field">Date to filter by</Label>
-                        <select id="ae-date-field" className={selectClass} value={dateField} onChange={(e) => setDateField(e.target.value as any)}>
+                        <select id="ae-date-field" className={selectClass} value={dateField} onChange={(e) => setDateField(e.target.value as typeof dateField)}>
                             <option value="document_date">Invoice or receipt date</option>
                             <option value="paid_date">Payment date</option>
                         </select>
                     </div>
                     <div className="space-y-1.5">
                         <Label htmlFor="ae-scope">Include</Label>
-                        <select id="ae-scope" className={selectClass} value={effectiveScope} disabled={dateField === "paid_date"} onChange={(e) => setScope(e.target.value as any)}>
+                        <select id="ae-scope" className={selectClass} value={effectiveScope} disabled={dateField === "paid_date"} onChange={(e) => setScope(e.target.value as typeof scope)}>
                             <option value="paid">Paid documents only</option>
                             <option value="approved">Paid and awaiting payment</option>
                         </select>
                     </div>
                 </div>
 
-                <div className="space-y-1.5">
-                    <Label htmlFor="ae-format">Format</Label>
-                    <select id="ae-format" className={selectClass} value={format} onChange={(e) => setFormat(e.target.value as any)}>
-                        <option value="generic">Standard CSV (any accounting software or Excel)</option>
-                        <option value="xero_bills">Xero bills import</option>
-                    </select>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {format === "generic"
-                            ? "One row per fund and category allocation, with the vendor, dates, category, account code, fund, amount and any original currency."
-                            : "Uses Xero's bill import columns. Each document becomes a bill and each split becomes a line. Tax type is left blank."}
-                    </p>
-                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                    A standard CSV that opens in Excel or imports into any accounting software: one row per fund and category
+                    allocation, with the vendor, dates, category, account code, fund, amount, any original currency and remarks.
+                </p>
             </div>
 
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-3">
@@ -150,9 +143,7 @@ export function AccountingExportClient({ defaultFrom, defaultTo }: { defaultFrom
                                     <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                                     <p>
                                         {preview.linesWithoutAccountCode} line{preview.linesWithoutAccountCode === 1 ? " has" : "s have"} no accounting code ({preview.categoriesWithoutAccountCode.join(", ")}).
-                                        {format === "xero_bills"
-                                            ? " Xero may reject lines with no account code, or ask you to pick one. "
-                                            : " Your accountant will need to assign these. "}
+                                        {" Your accountant will need to assign these. "}
                                         You can add codes under <Link href="/settings" className="underline font-medium">Settings, Expense Categories</Link>.
                                     </p>
                                 </div>
@@ -186,18 +177,6 @@ export function AccountingExportClient({ defaultFrom, defaultTo }: { defaultFrom
                 )}
             </div>
 
-            {format === "xero_bills" && (
-                <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
-                    <p className="font-medium text-slate-700 dark:text-slate-300">Importing into Xero</p>
-                    <ul className="list-disc pl-4 space-y-0.5">
-                        <li>In Xero, open Bills and choose Import from CSV. Bills arrive as drafts for you to review.</li>
-                        <li>Amounts are the full amount of each line, so choose the tax-inclusive option if Xero asks.</li>
-                        <li>Dates are written day/month/year. Check the date format on Xero&apos;s import screen.</li>
-                        <li>Vendors must match your Xero contacts, or Xero must be set to create them.</li>
-                        <li>Download Xero&apos;s own bill template once and compare its column names with this file.</li>
-                    </ul>
-                </div>
-            )}
         </div>
     )
 }

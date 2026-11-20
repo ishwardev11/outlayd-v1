@@ -14,6 +14,10 @@ import {
     type ReportFilters,
     type ReportSummary,
 } from "@/utils/aggregate-types"
+import type { DocumentRow, IdName } from "@/utils/row-types"
+
+// A JSON object returned by a database function; every field is checked before use
+type JsonObject = Record<string, unknown>
 
 // "Today" and "this month" follow the organisation's own timezone (Settings > Organization).
 
@@ -51,13 +55,13 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
         throw new Error("Failed to load dashboard")
     }
 
-    const raw: any = data ?? {}
+    const raw = (data ?? {}) as JsonObject
     return {
         awaitingTotal: num(raw.awaiting_total),
         needsReviewCount: num(raw.needs_review_count),
         needsReviewTotal: num(raw.needs_review_total),
         paidThisMonth: num(raw.paid_this_month),
-        cashFlow: ((raw.cash_flow ?? []) as any[]).map((p) => ({
+        cashFlow: ((raw.cash_flow ?? []) as JsonObject[]).map((p) => ({
             date: String(p.date),
             displayDate: formatShortDate(String(p.date)),
             amount: num(p.amount),
@@ -134,13 +138,13 @@ export async function getReportSummary(filters: ReportFilters): Promise<ReportSu
         throw new Error("Failed to load report")
     }
 
-    const raw: any = data ?? {}
+    const raw = (data ?? {}) as JsonObject
     return {
         total: num(raw.total),
-        byFund: ((raw.by_fund ?? []) as any[]).map((f) => ({ name: String(f.name), total: num(f.total) })),
-        topCategories: ((raw.top_categories ?? []) as any[]).map((c) => ({ name: String(c.name), total: num(c.total) })),
-        years: ((raw.years ?? []) as any[]).map(num),
-        statuses: ((raw.statuses ?? []) as any[]).map(String),
+        byFund: ((raw.by_fund ?? []) as JsonObject[]).map((f) => ({ name: String(f.name), total: num(f.total) })),
+        topCategories: ((raw.top_categories ?? []) as JsonObject[]).map((c) => ({ name: String(c.name), total: num(c.total) })),
+        years: ((raw.years ?? []) as unknown[]).map(num),
+        statuses: ((raw.statuses ?? []) as unknown[]).map(String),
     }
 }
 
@@ -160,8 +164,8 @@ export async function getLargeTransactions(filters: ReportFilters, page: number)
         throw new Error("Failed to load transactions")
     }
 
-    const raw: any = data ?? {}
-    return { total: num(raw.total), rows: (raw.rows ?? []) as any[] }
+    const raw = (data ?? {}) as JsonObject
+    return { total: num(raw.total), rows: (raw.rows ?? []) as DocumentRow[] }
 }
 
 const EXPORT_PAGE = 1000 // PostgREST returns at most 1000 rows per request by default
@@ -178,10 +182,10 @@ export async function getReportExportRows(filters: ReportFilters) {
         supabase.from("funds").select("id, name").eq("organization_id", orgId),
         supabase.from("categories").select("id, name").eq("organization_id", orgId),
     ])
-    const fundNames = new Map<string, string>((fundsRes.data ?? []).map((f: any) => [f.id, f.name]))
-    const catNames = new Map<string, string>((catsRes.data ?? []).map((c: any) => [c.id, c.name]))
+    const fundNames = new Map<string, string>(((fundsRes.data ?? []) as IdName[]).map((f) => [f.id, f.name]))
+    const catNames = new Map<string, string>(((catsRes.data ?? []) as IdName[]).map((c) => [c.id, c.name]))
 
-    const rows: any[] = []
+    const rows: DocumentRow[] = []
     let truncated = false
     for (let from = 0; from < EXPORT_MAX_ROWS; from += EXPORT_PAGE) {
         const { data, error } = await supabase
@@ -193,7 +197,7 @@ export async function getReportExportRows(filters: ReportFilters) {
             console.error("Error exporting report rows:", error)
             throw new Error("Failed to export report")
         }
-        const chunk = (data ?? []) as any[]
+        const chunk = (data ?? []) as DocumentRow[]
         rows.push(...chunk)
         if (chunk.length < EXPORT_PAGE) break
         if (from + EXPORT_PAGE >= EXPORT_MAX_ROWS) truncated = true
@@ -201,11 +205,15 @@ export async function getReportExportRows(filters: ReportFilters) {
 
     return {
         truncated,
-        rows: rows.map((d) => ({
-            ...d,
-            funds: d.fund_id && fundNames.has(d.fund_id) ? { name: fundNames.get(d.fund_id) } : null,
-            categories: d.category_id && catNames.has(d.category_id) ? { name: catNames.get(d.category_id) } : null,
-        })),
+        rows: rows.map((d) => {
+            const fundName = d.fund_id ? fundNames.get(d.fund_id) : undefined
+            const catName = d.category_id ? catNames.get(d.category_id) : undefined
+            return {
+                ...d,
+                funds: fundName !== undefined ? { name: fundName } : null,
+                categories: catName !== undefined ? { name: catName } : null,
+            }
+        }),
     }
 }
 
@@ -220,7 +228,7 @@ export async function getLedgerStatusCounts(): Promise<LedgerStatusCounts> {
         console.error("Error loading ledger counts:", error)
         throw new Error("Failed to load ledger")
     }
-    const raw: any = data ?? {}
+    const raw = (data ?? {}) as JsonObject
     return {
         all: num(raw.all),
         needs_review: num(raw.needs_review),
@@ -277,14 +285,18 @@ export async function getLedgerPage(filters: LedgerFilters) {
         supabase.from("funds").select("id, name").eq("organization_id", orgId),
         supabase.from("categories").select("id, name").eq("organization_id", orgId),
     ])
-    const fundNames = new Map<string, string>((fundsRes.data ?? []).map((f: any) => [f.id, f.name]))
-    const catNames = new Map<string, string>((catsRes.data ?? []).map((c: any) => [c.id, c.name]))
+    const fundNames = new Map<string, string>(((fundsRes.data ?? []) as IdName[]).map((f) => [f.id, f.name]))
+    const catNames = new Map<string, string>(((catsRes.data ?? []) as IdName[]).map((c) => [c.id, c.name]))
 
-    const documents = ((res.data ?? []) as any[]).map((d) => ({
-        ...d,
-        funds: d.fund_id && fundNames.has(d.fund_id) ? { id: d.fund_id, name: fundNames.get(d.fund_id) } : null,
-        categories: d.category_id && catNames.has(d.category_id) ? { id: d.category_id, name: catNames.get(d.category_id) } : null,
-    }))
+    const documents = ((res.data ?? []) as DocumentRow[]).map((d) => {
+        const fundName = d.fund_id ? fundNames.get(d.fund_id) : undefined
+        const catName = d.category_id ? catNames.get(d.category_id) : undefined
+        return {
+            ...d,
+            funds: d.fund_id && fundName !== undefined ? { id: d.fund_id, name: fundName } : null,
+            categories: d.category_id && catName !== undefined ? { id: d.category_id, name: catName } : null,
+        }
+    })
 
     return { documents, total: res.count ?? documents.length, page, pageSize: LEDGER_PAGE_SIZE }
 }

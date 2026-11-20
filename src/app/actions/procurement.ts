@@ -1,5 +1,7 @@
 "use server"
 
+import type { QuoteRow } from "@/utils/procurement-types"
+
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { getOrganizationId } from "./ledger"
@@ -31,15 +33,23 @@ async function requireProTier(): Promise<void> {
 
     const isPro = org?.subscription_status === "pro" || org?.subscription_tier === "growth";
     if (!isPro) {
-        const err: any = new Error(
-            "This feature requires a Outlayd Pro subscription. Please upgrade to access Procurement."
+        throw Object.assign(
+            new Error("This feature requires a Outlayd Pro subscription. Please upgrade to access Procurement."),
+            { code: "FORBIDDEN" }
         )
-        err.code = "FORBIDDEN"
-        throw err
     }
 }
 
-export async function createProcurementProject(projectData: any) {
+// What the New Project form sends
+interface NewProjectInput {
+    title: string
+    budget_ceiling: number
+    required_deadline: string
+    mandatory_requirements: string[]
+    status: string
+}
+
+export async function createProcurementProject(projectData: NewProjectInput) {
     await requireProTier()
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
@@ -86,7 +96,7 @@ export async function deleteProcurementProject(projectId: string) {
     return { success: true }
 }
 
-export async function addManualQuote(projectId: string, quoteData: any) {
+export async function addManualQuote(projectId: string, quoteData: { vendor_name: string; total_amount: number; payment_terms?: string; notes?: string }) {
     await requireProTier()
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
@@ -327,7 +337,7 @@ export async function extractQuoteData(quoteId: string, projectId: string, mimeT
     }
 }
 
-async function updateQuote(id: string, updates: any) {
+async function updateQuote(id: string, updates: Record<string, unknown>) {
     const supabase = await createClient()
     const { error } = await supabase
         .from("quotes")
@@ -421,7 +431,7 @@ export async function evaluateQuotes(projectId: string) {
         }
     })
 
-    function escapeXml(unsafe: any): string {
+    function escapeXml(unsafe: unknown): string {
         if (unsafe === null || unsafe === undefined) return "";
         const str = typeof unsafe === 'string' ? unsafe : String(unsafe);
         return str.replace(/[<>&'"]/g, (c) => {
@@ -439,9 +449,9 @@ export async function evaluateQuotes(projectId: string) {
     // 4. Construct Prompt
     const escapedTitle = escapeXml(project.title);
     const escapedDeadline = escapeXml(project.required_deadline);
-    const escapedRequirements = (project.mandatory_requirements || []).map((req: any) => escapeXml(req)).join(", ");
+    const escapedRequirements = (project.mandatory_requirements || []).map((req: unknown) => escapeXml(req)).join(", ");
 
-    const formattedQuotes = quotes.map((q: any) => {
+    const formattedQuotes = (quotes as QuoteRow[]).map((q) => {
         return `
 <QUOTE id="${escapeXml(q.id)}">
   <VENDOR_NAME>${escapeXml(q.vendor_name)}</VENDOR_NAME>

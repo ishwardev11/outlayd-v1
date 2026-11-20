@@ -1,7 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
+import type { DocumentRow } from "@/utils/row-types";
 
-export function RecentActivity({ documents }: { documents: any[] }) {
+// Documents as loaded for the dashboard always carry their creation time
+type ActivityDoc = DocumentRow & { created_at: string };
+
+export function RecentActivity({ documents }: { documents: ActivityDoc[] }) {
     // Sort by updated_at if available, else created_at. Take top 3.
     const recentDocs = [...documents]
         .sort((a, b) => {
@@ -11,7 +15,7 @@ export function RecentActivity({ documents }: { documents: any[] }) {
         })
         .slice(0, 3);
 
-    const getActivityMessage = (doc: any) => {
+    const getActivityMessage = (doc: ActivityDoc) => {
         const vendor = doc.vendor_name || "A document";
         if (doc.status === 'paid') return `${vendor} was marked as paid.`;
         if (doc.status === 'awaiting_payment') return `${vendor} was approved and is awaiting payment.`;

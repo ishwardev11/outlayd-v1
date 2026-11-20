@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { handleCheckoutCompleted, handleSubscriptionChange } from '@/utils/stripe-sync';
+import { errorMessage } from "@/utils/row-types";
 
 export const dynamic = 'force-dynamic';
 
@@ -35,9 +36,9 @@ export async function POST(req: Request) {
 
     try {
         event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
-    } catch (err: any) {
-        console.error(`Webhook signature verification failed: ${err.message}`);
-        return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
+    } catch (err) {
+        console.error(`Webhook signature verification failed: ${errorMessage(err)}`);
+        return NextResponse.json({ error: `Webhook Error: ${errorMessage(err)}` }, { status: 400 });
     }
 
     try {

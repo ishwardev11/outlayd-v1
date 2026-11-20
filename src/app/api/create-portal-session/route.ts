@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { getOrganizationId, getCurrentUserRole } from '@/app/actions/document-utils';
+import { errorMessage, errorProp } from "@/utils/row-types";
 
 export async function POST(req: Request) {
     try {
@@ -139,8 +140,8 @@ export async function POST(req: Request) {
             if (customer.deleted) {
                 customerMissing = true;
             }
-        } catch (custErr: any) {
-            if (custErr?.code === 'resource_missing' || custErr?.statusCode === 404) {
+        } catch (custErr) {
+            if (errorProp(custErr, "code") === 'resource_missing' || errorProp(custErr, "statusCode") === 404) {
                 customerMissing = true;
             } else {
                 console.error(`Could not verify Stripe customer ${stripeCustomerId}; leaving the plan unchanged:`, custErr);
@@ -188,8 +189,8 @@ export async function POST(req: Request) {
         const portalSession = await stripe.billingPortal.sessions.create(portalParams);
 
         return NextResponse.json({ url: portalSession.url });
-    } catch (err: any) {
+    } catch (err) {
         console.error('Stripe portal session error:', err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: errorMessage(err) }, { status: 500 });
     }
 }

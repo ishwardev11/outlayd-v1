@@ -279,14 +279,17 @@ function DocumentPicker({ transaction, baseCurrency, onClose, onSelect }: {
     const [results, setResults] = useState<DocSummary[]>([])
     const [loading, setLoading] = useState(false)
 
-    useEffect(() => {
-        if (!transaction) return
-        setQuery("")
-    }, [transaction])
+    // Opening the picker for another payment clears the search box
+    const [pickerFor, setPickerFor] = useState(transaction)
+    if (transaction !== pickerFor) {
+        setPickerFor(transaction)
+        if (transaction) setQuery("")
+    }
 
     useEffect(() => {
         if (!transaction) return
         let cancelled = false
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- shows the spinner as soon as a server search starts
         setLoading(true)
         const timer = setTimeout(async () => {
             try {

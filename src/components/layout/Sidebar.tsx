@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 
@@ -23,6 +22,7 @@ import {
 } from "lucide-react";
 import { signOutAction } from "@/app/actions/auth";
 import { createClient } from "@/utils/supabase/client";
+import type { User } from "@supabase/supabase-js";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
 
@@ -41,7 +41,7 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
     const [showPaywall, setShowPaywall] = useState(false);
 
     // Helper to get the active organization ID
-    const getActiveOrgId = (user: any) => {
+    const getActiveOrgId = (user: User | null) => {
         if (typeof document === "undefined") return user?.user_metadata?.organization_id;
 
         const cookies = document.cookie.split("; ");
@@ -55,6 +55,7 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
     useEffect(() => {
         // Fast optimistic path
         if (typeof window !== "undefined" && sessionStorage.getItem("optimistic_is_pro") === "true") {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage only exists in the browser; reading it during render would not match the server HTML
             setIsPro(true);
         }
 

@@ -1,10 +1,11 @@
 import { BASE_CURRENCY_CODES, isBaseCurrencyCode } from "./currency"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
 // Every amount is stored in the base currency. Changing it after money has been recorded would
 // silently change what every existing amount means, so a change is only allowed on an empty
 // organization, and only to a supported currency. Returns a message if blocked, otherwise null.
 // Keeping the current value is always allowed, even if it is an older, no-longer-offered currency.
-export async function baseCurrencyChangeBlocked(supabase: any, organizationId: string, newCurrency: string): Promise<string | null> {
+export async function baseCurrencyChangeBlocked(supabase: SupabaseClient, organizationId: string, newCurrency: string): Promise<string | null> {
     const next = String(newCurrency || "").trim().toUpperCase()
 
     const { data: org, error } = await supabase

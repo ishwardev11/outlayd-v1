@@ -10,9 +10,15 @@ import { type AuditEntry, auditActionLabel, auditActorLabel } from "@/utils/audi
 export function DocumentHistory({ documentId }: { documentId: string }) {
     const [entries, setEntries] = useState<AuditEntry[] | null>(null);
 
+    // A different document clears the old history straight away, before its own history loads
+    const [loadedFor, setLoadedFor] = useState(documentId);
+    if (documentId !== loadedFor) {
+        setLoadedFor(documentId);
+        setEntries(null);
+    }
+
     useEffect(() => {
         let cancelled = false;
-        setEntries(null);
         getDocumentAuditLog(documentId)
             .then((rows) => { if (!cancelled) setEntries(rows); })
             .catch(() => { if (!cancelled) setEntries([]); });

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Mail, User, MessageSquare, Clock, CheckCircle2, ArrowLeft, Tag, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { errorMessage as messageOf } from "@/utils/row-types";
 
 export default function ContactPage() {
     const [name, setName] = useState("");
@@ -25,6 +26,7 @@ export default function ContactPage() {
             const params = new URLSearchParams(window.location.search);
             const sub = params.get("subject");
             if (sub) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect -- the URL is only readable in the browser; reading it during render would not match the prerendered page
                 setSubject(sub);
             }
         }
@@ -51,8 +53,8 @@ export default function ContactPage() {
             }
 
             setIsSubmitted(true);
-        } catch (error: any) {
-            setErrorMessage(error.message || "An unexpected error occurred.");
+        } catch (error) {
+            setErrorMessage(messageOf(error) || "An unexpected error occurred.");
         } finally {
             setIsLoading(false);
         }

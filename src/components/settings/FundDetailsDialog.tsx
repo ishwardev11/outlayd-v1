@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { updateFundDetails } from "@/app/actions/settings"
 import { Fund } from "./SettingsLayout"
+import { errorMessage } from "@/utils/row-types";
 
 export function FundDetailsDialog({ fund, disabled }: { fund: Fund; disabled?: boolean }) {
     const [open, setOpen] = useState(false)
@@ -42,8 +43,8 @@ export function FundDetailsDialog({ fund, disabled }: { fund: Fund; disabled?: b
             })
             toast.success("Fund details saved")
             setOpen(false)
-        } catch (e: any) {
-            toast.error("Could not save fund details", { description: e?.message })
+        } catch (e) {
+            toast.error("Could not save fund details", { description: errorMessage(e) })
         } finally {
             setSaving(false)
         }

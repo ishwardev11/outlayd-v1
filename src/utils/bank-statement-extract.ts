@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, SchemaType, type GenerationConfig } from "@google/generative-ai"
 import { createClient } from "@/utils/supabase/server"
 import { parseStatement, type RawStatement } from "@/utils/bank-statement-parse"
+import { errorMessage, errorProp } from "@/utils/row-types";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>
 
@@ -80,9 +81,9 @@ async function readStatementWithAI(base64Pdf: string): Promise<RawStatement> {
         try {
             result = await model.generateContent([PROMPT, { inlineData: { data: base64Pdf, mimeType: "application/pdf" } }])
             break
-        } catch (error: any) {
-            const status = error?.status || error?.response?.status
-            const busy = status === 503 || status === 429 || /503|429/.test(String(error?.message))
+        } catch (error) {
+            const status = errorProp(error, "status") || errorProp(errorProp(error, "response"), "status")
+            const busy = status === 503 || status === 429 || /503|429/.test(String(errorMessage(error)))
             if (busy && attempt < 1) {
                 await new Promise((r) => setTimeout(r, 2000))
                 continue
@@ -186,11 +187,11 @@ export async function processBankStatement(statementId: string, organizationId: 
             console.error(`Statement ${statementId} passed ${STATEMENT_DEADLINE_MS}ms`)
             await failStatement(supabase, statementId, "Reading this statement took too long. Try a shorter period, or upload it again.")
         }
-    } catch (error: any) {
+    } catch (error) {
         console.error("Statement extraction failed:", error)
         const message = error instanceof StatementError
-            ? error.message
-            : /abort|timed? ?out/i.test(String(error?.message))
+            ? errorMessage(error)
+            : /abort|timed? ?out/i.test(String(errorMessage(error)))
                 ? "Reading this statement took too long. Try a shorter period, or upload it again."
                 : "The statement could not be read. Check that it is a bank statement PDF and try again."
         await failStatement(supabase, statementId, message)

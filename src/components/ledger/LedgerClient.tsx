@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, CheckCircle, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import type { LedgerFilters, LedgerStatusCounts } from "@/utils/aggregate-types";
+import type { CategoryRow, DocumentRow, FundRow } from "@/utils/row-types";
 import {
     Dialog,
     DialogContent,
@@ -22,14 +23,14 @@ import {
 import { useRole } from "@/components/RoleProvider";
 
 interface LedgerClientProps {
-    documents: any[];
+    documents: DocumentRow[];
     total: number;
     page: number;
     pageSize: number;
     counts: LedgerStatusCounts;
     filters: LedgerFilters;
-    funds: any[];
-    categories: any[];
+    funds: FundRow[];
+    categories: CategoryRow[];
 }
 
 export function LedgerClient({ documents, total, page, pageSize, counts, filters, funds, categories }: LedgerClientProps) {

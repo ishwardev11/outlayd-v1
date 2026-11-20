@@ -11,6 +11,7 @@ import { startOfMonthInstant, isValidTimezone, DEFAULT_TIMEZONE } from "@/utils/
 import { sanitizeVendorUpdates, assertOwnedIds, UpdateValidationError } from "@/utils/sanitize-updates"
 import { runExtraction } from "./ai"
 import { toStoragePath } from "@/utils/storage-paths"
+import { errorMessage, type ExtractionFlagRow } from "@/utils/row-types";
 export { getOrganizationId, updateDocument }
 
 
@@ -237,7 +238,7 @@ export async function updateVendor(id: string, rawUpdates: unknown) {
         await assertOwnedIds(supabase, "funds", [updates.default_fund_id])
     } catch (e) {
         if (e instanceof UpdateValidationError) {
-            throw new Error(e.message)
+            throw new Error(errorMessage(e))
         }
         throw e
     }
@@ -274,7 +275,7 @@ export async function mergeVendors(primaryId: string, secondaryId: string) {
         .single()
 
     // 1. Reassign documents from secondary -> primary and sync vendor_name
-    const updatePayload: Record<string, any> = { vendor_id: primaryId }
+    const updatePayload: Record<string, string> = { vendor_id: primaryId }
     if (primaryVendor?.name) {
         updatePayload.vendor_name = primaryVendor.name
     }
@@ -546,9 +547,9 @@ export async function processUpload(formData: FormData) {
         revalidatePath("/ledger")
         revalidatePath("/")
         return docData
-    } catch (error: any) {
+    } catch (error) {
         console.error("processUpload failed:", error)
-        throw new Error(error.message || "Unknown error during processUpload")
+        throw new Error(errorMessage(error) || "Unknown error during processUpload")
     }
 }
 
@@ -576,7 +577,7 @@ async function retryExtractionOrThrow(documentId: string) {
 
     // Only documents whose extraction actually failed can be retried, so this cannot be used to
     // run repeated paid AI extractions on documents that were read fine.
-    const flags: any[] = Array.isArray(doc.extraction_flags) ? doc.extraction_flags : []
+    const flags: (ExtractionFlagRow | null)[] = Array.isArray(doc.extraction_flags) ? doc.extraction_flags : []
     const failed = flags.some((f) => f?.code === "EXTRACTION_FAILED" || f?.code === "EXTRACTION_TIMED_OUT")
     if (doc.status !== "needs_review" || !failed) {
         throw new Error("This document does not need to be read again.")
@@ -643,7 +644,7 @@ export async function retryExtraction(documentId: string): Promise<{ success: tr
     try {
         await retryExtractionOrThrow(documentId)
         return { success: true }
-    } catch (e: any) {
-        return { success: false, error: e?.message || "Could not read the document again." }
+    } catch (e) {
+        return { success: false, error: errorMessage(e) || "Could not read the document again." }
     }
 }

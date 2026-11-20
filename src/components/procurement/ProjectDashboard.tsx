@@ -24,6 +24,7 @@ import { createClient } from "@/utils/supabase/client"
 import { runSingleEvaluation } from "@/app/actions/procurement"
 import { useRole } from "@/components/RoleProvider"
 import { useCurrency } from "@/components/CurrencyProvider"
+import type { ProcurementProject, QuoteRow } from "@/utils/procurement-types"
 
 export type BidStatus = 'uploaded' | 'evaluating' | 'evaluated' | 'awarded' | 'rejected'
 
@@ -38,15 +39,15 @@ export interface Bid {
     paymentTerms: string
     aiRecommendationStatus: string | null
     aiRationale: string | null
-    extractedData: any
+    extractedData: unknown
     notes: string | null
     fileUrl: string | null
     isRecommended: boolean | null
     /** Keep the original server object for passing to EvaluationResults */
-    _raw: any
+    _raw: Partial<QuoteRow>
 }
 
-function deriveBidStatus(q: any): BidStatus {
+function deriveBidStatus(q: QuoteRow): BidStatus {
     if (q.status) return q.status as BidStatus
     if (q.is_awarded) return 'awarded'
     if (q.ai_recommendation_status && q.payment_terms !== 'Processing...') return 'evaluated'
@@ -54,7 +55,7 @@ function deriveBidStatus(q: any): BidStatus {
     return 'uploaded'
 }
 
-function quoteToBid(q: any): Bid {
+function quoteToBid(q: QuoteRow): Bid {
     return {
         id: q.id,
         vendorName: q.vendor_name || 'Unknown Vendor',
@@ -73,7 +74,7 @@ function quoteToBid(q: any): Bid {
     }
 }
 
-export function ProjectDashboard({ project, quotes }: { project: any, quotes: any[] }) {
+export function ProjectDashboard({ project, quotes }: { project: ProcurementProject, quotes: QuoteRow[] }) {
     const supabase = createClient()
     const { isViewer } = useRole()
     const { symbol } = useCurrency()
@@ -84,9 +85,11 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
     const [bids, setBids] = useState<Bid[]>(() => quotes.map(quoteToBid))
 
     // Sync when server props change (e.g. after revalidatePath)
-    useEffect(() => {
+    const [syncedQuotes, setSyncedQuotes] = useState(quotes)
+    if (quotes !== syncedQuotes) {
+        setSyncedQuotes(quotes)
         setBids(quotes.map(quoteToBid))
-    }, [quotes])
+    }
 
     // Derived columns
     const uploadedBids = useMemo(() => bids.filter(b => b.status === 'uploaded' || b.status === 'evaluating'), [bids])
@@ -267,14 +270,14 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
         try {
             await editQuote(editTarget.id, project.id, {
                 vendor_name: editForm.vendor_name,
-                total_amount: parseFloat(editForm.total_amount as any),
+                total_amount: parseFloat(editForm.total_amount),
                 payment_terms: editForm.payment_terms
             })
             // Optimistic update in state
             setBids(prev => prev.map(b => b.id === editTarget.id ? {
                 ...b,
                 vendorName: editForm.vendor_name,
-                totalAmount: parseFloat(editForm.total_amount as any),
+                totalAmount: parseFloat(editForm.total_amount),
                 paymentTerms: editForm.payment_terms,
             } : b))
             setEditTarget(null)
@@ -398,7 +401,7 @@ export function ProjectDashboard({ project, quotes }: { project: any, quotes: an
                         {symbol}{Number(project.budget_ceiling).toLocaleString()}
                     </span>
                     <span className="text-xs text-muted-foreground mt-2">
-                        Due: {new Date(project.required_deadline).toLocaleDateString('en-GB', { timeZone: 'UTC' })}
+                        Due: {new Date(project.required_deadline ?? 0).toLocaleDateString('en-GB', { timeZone: 'UTC' })}
                     </span>
                 </div>
             </div>

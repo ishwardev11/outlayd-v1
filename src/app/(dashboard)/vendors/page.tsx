@@ -1,20 +1,48 @@
 import { getDocuments, getVendors, getCategories } from "@/app/actions/ledger";
 import { VendorsClient } from "@/components/vendors/VendorsClient";
+import type { PayeeListItem } from "@/utils/payee-types";
+import type { CategoryRow, SplitRow } from "@/utils/row-types";
+
+// The document fields this page reads. Money columns arrive from the database as numbers.
+interface PayeeDoc {
+    vendor_id: string | null;
+    status: string | null;
+    amount: number | null;
+    document_date: string | null;
+    created_at: string;
+    category_id: string | null;
+    splits: (SplitRow | null)[] | null;
+}
+
+// The payee fields this page reads
+interface PayeeRow {
+    id: string;
+    name: string;
+    payee_type: string | null;
+    email: string | null;
+    phone: string | null;
+    address: string | null;
+    registration_number: string | null;
+    notes: string | null;
+    archived_at: string | null;
+    is_system: boolean | null;
+    default_category_id: string | null;
+}
 
 export const dynamic = "force-dynamic";
 
 export default async function VendorsPage() {
-    const documents = await getDocuments();
-    const vendors = await getVendors();
-    const categories = await getCategories();
+    const documents = (await getDocuments()) as PayeeDoc[];
+    const vendors = (await getVendors()) as PayeeRow[];
+    const categories = (await getCategories()) as CategoryRow[];
 
-    const categoriesMap = new Map(categories.map((c: any) => [c.id, c.name]));
+    const categoriesMap = new Map(categories.map((c) => [c.id, c.name]));
 
-    const vendorsList = vendors.map((v: any) => {
-        const vendorDocs = documents.filter((d: any) => d.vendor_id === v.id);
+    const vendorsList: PayeeListItem[] = vendors.map((v) => {
+        const vendorDocs = documents.filter((d) => d.vendor_id === v.id);
 
-        const totalPaid = vendorDocs.filter((d: any) => d.status === 'paid').reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
-        const totalUnpaid = vendorDocs.filter((d: any) => d.status === 'needs_review' || d.status === 'awaiting_payment').reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
+        const totalPaid = vendorDocs.filter((d) => d.status === 'paid').reduce((sum: number, d) => sum + (d.amount || 0), 0);
+        const totalUnpaid = vendorDocs.filter((d) => d.status === 'needs_review' || d.status === 'awaiting_payment').reduce((sum: number, d) => sum + (d.amount || 0), 0);
 
         let lastActivity = "—";
         if (vendorDocs.length > 0) {
@@ -30,7 +58,7 @@ export default async function VendorsPage() {
             }
             if (doc.splits && Array.isArray(doc.splits)) {
                 for (const split of doc.splits) {
-                    if (split.category_id) {
+                    if (split?.category_id) {
                         categoryCounts.set(split.category_id, (categoryCounts.get(split.category_id) || 0) + 1);
                     }
                 }
@@ -66,7 +94,7 @@ export default async function VendorsPage() {
             lastActivity,
             topCategory: v.default_category_id ? categoriesMap.get(v.default_category_id) || "Configured" : null
         };
-    }).sort((a: any, b: any) => b.totalPaid + b.totalUnpaid - (a.totalPaid + a.totalUnpaid));
+    }).sort((a, b) => b.totalPaid + b.totalUnpaid - (a.totalPaid + a.totalUnpaid));
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in">

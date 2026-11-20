@@ -31,7 +31,7 @@ export default async function AccountingExportPage() {
                     heading="The Accounting Export is a Growth feature"
                     features={[
                         "A CSV of approved documents that opens in Excel or imports into your accounting software",
-                        "A Xero bills layout, with an accounting code per category",
+                        "An accounting code per category, so each expense posts to the right account",
                         "A preview that warns about missing account codes and splits that do not add up",
                     ]}
                     context="accounting_export"

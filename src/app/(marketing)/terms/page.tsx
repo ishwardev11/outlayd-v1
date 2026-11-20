@@ -24,7 +24,7 @@ export default function TermsOfServicePage() {
                         <div className="max-w-none text-slate-300 space-y-6 text-lg leading-relaxed">
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">1. Acceptance of Terms</h2>
                             <p>
-                                Welcome to Outlayd ("Company," "we," "us," or "our"). These Terms of Service ("Terms") govern your access to and use of the Outlayd website, application, and any related expense management, AI extraction, and procurement services (collectively, the "Services").
+                                Welcome to Outlayd (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Outlayd website, application, and any related expense management, AI extraction, and procurement services (collectively, the &quot;Services&quot;).
                             </p>
                             <p>
                                 By registering for an account or using the Services, you agree to be bound by these Terms. If you are accepting these Terms on behalf of a company or other legal entity, you represent that you have the authority to bind that entity to these Terms. If you do not agree with these Terms, you may not use the Services.
@@ -57,14 +57,14 @@ export default function TermsOfServicePage() {
 
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">6. User Data and Content</h2>
                             <ul className="list-disc pl-6 space-y-2 mt-4 text-slate-300">
-                                <li><strong>Your Data:</strong> You retain all ownership rights to the receipts, invoices, vendor quotes, and financial data you upload ("User Content").</li>
+                                <li><strong>Your Data:</strong> You retain all ownership rights to the receipts, invoices, vendor quotes, and financial data you upload (&quot;User Content&quot;).</li>
                                 <li><strong>License to Process:</strong> By uploading User Content, you grant Outlayd a worldwide, non-exclusive, royalty-free license to host, copy, process, and transmit such content solely as necessary to provide the Services to you (including routing it through our secure AI sub-processors).</li>
                                 <li><strong>Prohibited Content:</strong> You agree not to upload any documents containing highly sensitive personal data (e.g., medical records, government IDs) unless strictly required for a vendor invoice, or any illegal or fraudulent materials.</li>
                             </ul>
 
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">7. Intellectual Property Rights</h2>
                             <p>
-                                Outlayd and its original content, features, functionality, codebase, and branding (including the Outlayd logo and "Indigo/Amber" UI design) are owned by us and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws. You may not copy, modify, reverse engineer, or create derivative works from the Services.
+                                Outlayd and its original content, features, functionality, codebase, and branding (including the Outlayd logo and &quot;Indigo/Amber&quot; UI design) are owned by us and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws. You may not copy, modify, reverse engineer, or create derivative works from the Services.
                             </p>
 
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">8. Prohibited Activities</h2>
@@ -80,7 +80,7 @@ export default function TermsOfServicePage() {
 
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">9. Disclaimer of Warranties</h2>
                             <p className="uppercase">
-                                THE SERVICES ARE PROVIDED ON AN "AS-IS" AND "AS-AVAILABLE" BASIS. OUTLAYD DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICES WILL BE UNINTERRUPTED, ERROR-FREE, OR COMPLETELY SECURE.
+                                THE SERVICES ARE PROVIDED ON AN &quot;AS-IS&quot; AND &quot;AS-AVAILABLE&quot; BASIS. OUTLAYD DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICES WILL BE UNINTERRUPTED, ERROR-FREE, OR COMPLETELY SECURE.
                             </p>
 
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">10. Limitation of Liability</h2>

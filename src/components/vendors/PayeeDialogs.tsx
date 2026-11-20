@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createPayee, updateVendor } from "@/app/actions/ledger";
-import { PAYEE_TYPES } from "@/utils/payee-types";
+import { PAYEE_TYPES, type PayeeListItem } from "@/utils/payee-types";
+import { errorMessage } from "@/utils/row-types";
 
 function TypeSelect({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
     return (
@@ -41,8 +42,8 @@ export function AddPayeeDialog({ open, onOpenChange }: { open: boolean; onOpenCh
             setName("");
             setType("vendor");
             onOpenChange(false);
-        } catch (e: any) {
-            toast.error(e?.message || "Failed to add payee");
+        } catch (e) {
+            toast.error(errorMessage(e) || "Failed to add payee");
         } finally {
             setSaving(false);
         }
@@ -77,7 +78,7 @@ export function AddPayeeDialog({ open, onOpenChange }: { open: boolean; onOpenCh
     );
 }
 
-export function PayeeDetailsDialog({ payee, onOpenChange, disabled }: { payee: any | null; onOpenChange: (open: boolean) => void; disabled?: boolean }) {
+export function PayeeDetailsDialog({ payee, onOpenChange, disabled }: { payee: PayeeListItem | null; onOpenChange: (open: boolean) => void; disabled?: boolean }) {
     // The form is remounted per payee (key) so each one starts from its own saved values
     return (
         <Dialog open={!!payee} onOpenChange={onOpenChange}>
@@ -88,7 +89,7 @@ export function PayeeDetailsDialog({ payee, onOpenChange, disabled }: { payee: a
     );
 }
 
-function DetailsForm({ payee, onClose, disabled }: { payee: any; onClose: () => void; disabled?: boolean }) {
+function DetailsForm({ payee, onClose, disabled }: { payee: PayeeListItem; onClose: () => void; disabled?: boolean }) {
     const [name, setName] = useState<string>(payee.name ?? "");
     const [type, setType] = useState<string>(payee.payee_type ?? "vendor");
     const [email, setEmail] = useState<string>(payee.email ?? "");
@@ -110,7 +111,7 @@ function DetailsForm({ payee, onClose, disabled }: { payee: any; onClose: () => 
             await updateVendor(payee.id, updates);
             toast.success("Payee saved");
             onClose();
-        } catch (e: any) {
+        } catch (e) {
             // A duplicate name comes back from the database as a generic failure
             toast.error("Could not save. Check that no other payee already has this name.");
         } finally {

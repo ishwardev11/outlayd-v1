@@ -1,5 +1,6 @@
 import type { createClient } from "@/utils/supabase/server"
 import type { ExportDocument, ExportLookups, ExportParams } from "@/utils/accounting-export"
+import type { CategoryRow, IdName } from "@/utils/row-types"
 
 type Supabase = Awaited<ReturnType<typeof createClient>>
 
@@ -9,7 +10,7 @@ const PAGE_SIZE = 1000
 export const EXPORT_MAX_DOCUMENTS = 20000
 
 const COLUMNS =
-    "id, vendor_name, amount, document_date, due_date, paid_date, document_type, status, fund_id, category_id, splits, invoice_number, reference_number, original_currency, original_amount, exchange_rate"
+    "id, vendor_name, amount, document_date, due_date, paid_date, document_type, status, fund_id, category_id, splits, invoice_number, reference_number, original_currency, original_amount, exchange_rate, remarks"
 
 // Reads approved documents for the export through the user's own session, so row-level security
 // limits it to their organisation.
@@ -47,8 +48,8 @@ export async function loadExportData(
         supabase.from("categories").select("id, name, account_code").eq("organization_id", organizationId),
     ])
     const lookups: ExportLookups = {
-        funds: new Map((fundsRes.data ?? []).map((f: any) => [f.id, { name: f.name }])),
-        categories: new Map((catsRes.data ?? []).map((c: any) => [c.id, { name: c.name, account_code: c.account_code ?? null }])),
+        funds: new Map((fundsRes.data ?? []).map((f: IdName) => [f.id, { name: f.name }])),
+        categories: new Map((catsRes.data ?? []).map((c: CategoryRow) => [c.id, { name: c.name, account_code: c.account_code ?? null }])),
     }
     return { docs, lookups }
 }

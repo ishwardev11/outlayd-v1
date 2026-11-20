@@ -11,14 +11,15 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { mergeVendors, deleteVendor, updateVendor, restorePayee } from "@/app/actions/ledger";
 import { AddPayeeDialog, PayeeDetailsDialog } from "@/components/vendors/PayeeDialogs";
-import { PAYEE_TYPES, payeeTypeLabel } from "@/utils/payee-types";
+import { PAYEE_TYPES, payeeTypeLabel, type PayeeListItem } from "@/utils/payee-types";
+import type { CategoryRow } from "@/utils/row-types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useRole } from "@/components/RoleProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { toast } from "sonner";
 
-export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: any[]; categories?: any[] }) {
-    const [vendors, setVendors] = useState<any[]>(vendorsList);
+export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: PayeeListItem[]; categories?: CategoryRow[] }) {
+    const [vendors, setVendors] = useState<PayeeListItem[]>(vendorsList);
     const [updatingVendorId, setUpdatingVendorId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
@@ -31,13 +32,16 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
     const [typeFilter, setTypeFilter] = useState("all");
     const [showArchived, setShowArchived] = useState(false);
     const [addOpen, setAddOpen] = useState(false);
-    const [detailsPayee, setDetailsPayee] = useState<any | null>(null);
+    const [detailsPayee, setDetailsPayee] = useState<PayeeListItem | null>(null);
     const { isViewer } = useRole();
     const { symbol } = useCurrency();
 
-    useEffect(() => {
+    // Take the fresh list when the server sends one (e.g. after revalidatePath)
+    const [syncedList, setSyncedList] = useState(vendorsList);
+    if (vendorsList !== syncedList) {
+        setSyncedList(vendorsList);
         setVendors(vendorsList);
-    }, [vendorsList]);
+    }
 
     const handleCategoryChange = async (vendorId: string, categoryId: string) => {
         const targetCategory = categoryId === "none" ? null : categoryId;
@@ -61,7 +65,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
             await updateVendor(vendorId, { default_category_id: targetCategory });
             const catName = categories.find(c => c.id === targetCategory)?.name;
             toast.success(catName ? `Default category set to "${catName}"` : "Default category cleared");
-        } catch (error: any) {
+        } catch (error) {
             console.error("Failed to update vendor default category:", error);
             toast.error("Failed to update default category");
             setVendors(previousVendors);
@@ -309,7 +313,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                                                     <SelectValue>
                                                         {vendor.default_category_id ? (
                                                             <span className="truncate">
-                                                                {categories.find((c: any) => c.id === vendor.default_category_id)?.name || vendor.topCategory}
+                                                                {categories.find((c) => c.id === vendor.default_category_id)?.name || vendor.topCategory}
                                                             </span>
                                                         ) : vendor.suggestedCategoryName ? (
                                                             <span className="flex items-center gap-1.5 truncate" title={`Suggested from past invoices: ${vendor.suggestedCategoryName}`}>
@@ -331,7 +335,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: a
                                                         ⚡ Set to &ldquo;{vendor.suggestedCategoryName}&rdquo; (Suggested)
                                                     </SelectItem>
                                                 )}
-                                                {categories.map((c: any) => (
+                                                {categories.map((c) => (
                                                     <SelectItem key={c.id} value={c.id} className="text-xs cursor-pointer">
                                                         {c.name}
                                                     </SelectItem>

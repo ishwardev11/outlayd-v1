@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
+import { useIsClient } from "@/lib/use-is-client";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
@@ -8,10 +9,7 @@ import { useCurrency } from "@/components/CurrencyProvider";
 
 export function CashFlowChart({ data, hasPendingDocuments }: { data: { displayDate: string; amount: number; }[], hasPendingDocuments?: boolean }) {
     const { symbol } = useCurrency();
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    const mounted = useIsClient();
 
     const total = useMemo(() => data.reduce((sum, d) => sum + d.amount, 0), [data]);
 
@@ -81,7 +79,7 @@ export function CashFlowChart({ data, hasPendingDocuments }: { data: { displayDa
                                 <Tooltip
                                     contentStyle={{ borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)', background: 'var(--card)', color: 'var(--foreground)' }}
                                     itemStyle={{ color: 'var(--foreground)', fontWeight: 'bold' }}
-                                    formatter={(value: any) => [`${symbol}${Number(value).toFixed(2)}`, 'Amount']}
+                                    formatter={(value) => [`${symbol}${Number(value).toFixed(2)}`, 'Amount']}
                                     labelStyle={{ color: 'var(--muted-foreground)', marginBottom: '4px', fontWeight: 500 }}
                                     cursor={{ stroke: 'var(--border)', strokeWidth: 1, strokeDasharray: '4 4' }}
                                 />

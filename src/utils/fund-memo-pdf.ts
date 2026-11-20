@@ -1,20 +1,17 @@
 import jsPDF from "jspdf"
-import autoTable from "jspdf-autotable"
+import autoTable, { type RowInput } from "jspdf-autotable"
 import type { FundMemoData } from "./fund-memo"
+import { pdfSafeText } from "./pdf-text"
 
 const INDIGO: [number, number, number] = [79, 70, 229]
 const SLATE: [number, number, number] = [51, 65, 85]
 const LIGHT: [number, number, number] = [241, 245, 249]
 const MARGIN = 14
 
-// jsPDF's built-in fonts only cover Latin characters. Replace anything else so the PDF never shows garbage.
+// jsPDF's built-in fonts only cover Latin characters. Replace anything else so the PDF never shows
+// garbage. Single-line fields also turn a line break into "?", as they always have.
 function t(value: string | null | undefined): string {
-    return (value ?? "")
-        .normalize("NFC")
-        .replace(/[\u2018\u2019]/g, "'")
-        .replace(/[\u201C\u201D]/g, '"')
-        .replace(/[\u2013\u2014]/g, "-")
-        .replace(/[^\x20-\x7E\u00A0-\u00FF]/g, "?")
+    return pdfSafeText(value).replace(/\n/g, "?")
 }
 
 const numberFormat = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -41,7 +38,7 @@ export function generateFundMemoPdf(memo: FundMemoData): void {
             y = 20
         }
     }
-    const lastTableY = () => (doc as any).lastAutoTable?.finalY ?? y
+    const lastTableY = () => (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y
     const heading = (text: string) => {
         ensureSpace(14)
         doc.setFont("helvetica", "bold")
@@ -166,11 +163,21 @@ export function generateFundMemoPdf(memo: FundMemoData): void {
         autoTable(doc, {
             startY: y,
             head: [["No.", "Date", "Vendor", "Invoice / ref", "Category", "Status", "Receipt", `Amount (${cur})`]],
-            body: memo.transactions.map((x) => [
-                x.txnNo, x.date, t(x.vendor), t(x.reference) || "-", t(x.category),
-                x.status === "paid" ? "Paid" : "Committed", x.hasReceipt ? "Yes" : "No",
-                numberFormat.format(x.amount),
-            ]),
+            // A transaction with remarks gets a full-width line underneath it, so the existing columns
+            // keep their widths and long remarks can wrap
+            body: memo.transactions.flatMap((x): RowInput[] => {
+                const rowCells: RowInput = [
+                    x.txnNo, x.date, t(x.vendor), t(x.reference) || "-", t(x.category),
+                    x.status === "paid" ? "Paid" : "Committed", x.hasReceipt ? "Yes" : "No",
+                    numberFormat.format(x.amount),
+                ]
+                if (!x.remarks) return [rowCells]
+                return [rowCells, [{
+                    content: `Remarks: ${pdfSafeText(x.remarks)}`,
+                    colSpan: 8,
+                    styles: { fontStyle: "italic", fontSize: 7.5, textColor: [100, 116, 139], cellPadding: { top: 0.6, bottom: 1.8, left: 1.8, right: 1.8 } },
+                }]]
+            }),
             foot: [["", "", "", "", "", "", "Total", numberFormat.format(s.periodTotal)]],
             showFoot: "lastPage",
             theme: "grid",

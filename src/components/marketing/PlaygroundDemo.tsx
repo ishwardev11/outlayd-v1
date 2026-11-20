@@ -59,11 +59,14 @@ export function PlaygroundDemo() {
 
     const activeDoc = templates.find(t => t.id === activeTab) || templates[0];
 
-    useEffect(() => {
+    // Switching sample document resets the demo
+    const [shownTab, setShownTab] = useState(activeTab);
+    if (activeTab !== shownTab) {
+        setShownTab(activeTab);
         setScanState("idle");
         setProgress(0);
         setTypedData({ vendor: "", date: "", category: "", amount: "" });
-    }, [activeTab]);
+    }
 
     const handleStartScan = () => {
         if (scanState !== "idle") return;

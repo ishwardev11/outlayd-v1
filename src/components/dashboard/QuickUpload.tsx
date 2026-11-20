@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { processUpload } from "@/app/actions/ledger";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
 import { useRole } from "@/components/RoleProvider";
+import { errorMessage } from "@/utils/row-types";
 
 const UploadingStatus = () => {
     const [statusIndex, setStatusIndex] = useState(0);
@@ -46,6 +47,7 @@ export function QuickUpload() {
         const sessionId = searchParams.get("session_id");
 
         if (upgrade === "success") {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- part of handling the return from Stripe checkout, which also writes sessionStorage and verifies the session
             setShowPaywall(false);
             
             // OPTIMISTIC UI UPDATE
@@ -90,9 +92,9 @@ export function QuickUpload() {
                 setShowPaywall(true);
                 return;
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error("Upload failed:", error);
-            alert(`Failed to upload document: ${error.message || 'Unknown error'}`);
+            alert(`Failed to upload document: ${errorMessage(error) || 'Unknown error'}`);
         } finally {
             setIsUploading(false);
         }

@@ -10,6 +10,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import type { DocumentRow } from "@/utils/row-types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Trash2, Image as ImageIcon, SearchX, Loader2, Receipt, HelpCircle } from "lucide-react";
@@ -18,6 +19,7 @@ import { processUpload } from "@/app/actions/ledger";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
 import { useRole } from "@/components/RoleProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
+import { errorMessage } from "@/utils/row-types";
 
 // What the person sees while the AI reads a document. The stages are time-based (the AI does not
 // report real progress), so the wording stays honest: it says what is happening, not "37% done".
@@ -39,6 +41,7 @@ function ExtractingVendorCell({ startedAt }: { startedAt?: string | null }) {
     useEffect(() => {
         const started = startedAt ? Date.parse(startedAt) : NaN;
         if (Number.isNaN(started)) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- a live clock: it reads the current time, which must not happen during render
             setElapsed(null);
             return;
         }
@@ -71,7 +74,7 @@ function ExtractingVendorCell({ startedAt }: { startedAt?: string | null }) {
 }
 
 interface LedgerTableProps {
-    documents: any[];
+    documents: DocumentRow[];
     onRowClick: (id: string) => void;
     onDelete?: (id: string) => void;
     selectedDocs: string[];
@@ -98,9 +101,9 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                 setShowPaywall(true);
                 return;
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error("Upload failed:", error);
-            alert(`Failed to upload document: ${error.message || 'Unknown error'}`);
+            alert(`Failed to upload document: ${errorMessage(error) || 'Unknown error'}`);
         } finally {
             setIsUploading(false);
         }
@@ -292,12 +295,12 @@ export function LedgerTable({ documents, onRowClick, onDelete, selectedDocs, onT
                                         }>
                                             {doc.status === "extracting"
                                                 ? <><Loader2 className="animate-spin" />Reading</>
-                                                : doc.status.replace("_", " ")}
+                                                : doc.status?.replace("_", " ")}
                                         </Badge>
 
                                         {typeof doc.confidence_score === 'number' && doc.status === "needs_review" && (
                                             <span
-                                                title={Array.isArray(doc.extraction_flags) && doc.extraction_flags.length > 0 ? doc.extraction_flags.map((f: any) => f.message).join('\n') : 'Extraction checks passed'}
+                                                title={Array.isArray(doc.extraction_flags) && doc.extraction_flags.length > 0 ? doc.extraction_flags.map((f) => f.message).join('\n') : 'Extraction checks passed'}
                                                 className={`text-[10px] font-mono ${doc.confidence_score >= 90 ? 'text-indigo-500' : 'text-amber-500'}`}
                                             >
                                                 ({Math.round(doc.confidence_score)}%)

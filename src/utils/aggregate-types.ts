@@ -1,3 +1,4 @@
+import type { DocumentRow } from "@/utils/row-types"
 /** Shared types and query-string parsing for the dashboard, reports and ledger. */
 
 export const LEDGER_PAGE_SIZE = 25
@@ -45,7 +46,7 @@ export interface ReportSummary {
 
 export interface LargeTransactions {
     total: number
-    rows: any[]
+    rows: DocumentRow[]
 }
 
 export function parseReportFilters(sp: SearchParams, defaultYear: string): ReportFilters {

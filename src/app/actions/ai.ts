@@ -4,6 +4,7 @@ import { getCurrencyDetails } from "@/utils/currency"
 import { createClient } from "@/utils/supabase/server"
 import { assessExtraction } from "@/utils/extraction-checks"
 import { convertAmount, fetchExchangeRate } from "@/utils/fx"
+import { errorMessage, errorProp } from "@/utils/row-types";
 
 // NOTE: deliberately NOT a "use server" file. Its only caller is processUpload (server side), and a
 // "use server" export can be invoked directly by any signed-in browser, which would let someone run
@@ -59,6 +60,23 @@ Your task is to extract all key financial, vendor, line item, and tax metadata f
 
 6. UNREADABLE / MISSING FIELDS:
 - Never fabricate or guess values. If a field (e.g., "po_number", "tax_rate", or "due_date") is not explicitly present on the document, return null.`;
+
+// One line item as the AI returns it (the response schema asks for these fields)
+interface RawLineItem {
+    description?: string
+    quantity?: number | string | null
+    unit_price?: number | string | null
+    amount?: number | string | null
+}
+
+// A line item as stored: "total" duplicates "amount" for older screens that read it
+interface NormalizedLineItem {
+    description: string
+    quantity: number
+    unit_price: number
+    total: number
+    amount: number
+}
 
 // Finds the vendor by name or creates it. Returns its id and default fund/category, or null.
 async function findOrCreateVendor(
@@ -241,9 +259,9 @@ export async function extractDocumentData(
 
                 // If successful, break out of the retry loop
                 break;
-            } catch (error: any) {
-                const status = error?.status || error?.response?.status;
-                const isRateLimitOrUnavailable = status === 503 || status === 429 || error.message?.includes("503") || error.message?.includes("429");
+            } catch (error) {
+                const status = errorProp(error, "status") || errorProp(errorProp(error, "response"), "status");
+                const isRateLimitOrUnavailable = status === 503 || status === 429 || errorMessage(error).includes("503") || errorMessage(error).includes("429");
 
                 // Only "busy" errors are retried. A request that timed out is not retried: it already
                 // used its 30s, and a second attempt would run into the overall deadline.
@@ -286,12 +304,13 @@ export async function extractDocumentData(
             : "invoice";
 
         // Normalize Line Items with UI compatibility (providing both total and amount)
-        const normalizedLineItems = (data.line_items || []).map((item: any) => ({
+        // parseFloat converts its argument to text first, so String() here changes nothing
+        const normalizedLineItems: NormalizedLineItem[] = ((data.line_items || []) as RawLineItem[]).map((item) => ({
             description: item.description || "",
-            quantity: typeof item.quantity === 'number' ? item.quantity : parseFloat(item.quantity) || 1,
-            unit_price: typeof item.unit_price === 'number' ? item.unit_price : parseFloat(item.unit_price) || 0,
-            total: typeof item.amount === 'number' ? item.amount : parseFloat(item.amount) || 0,
-            amount: typeof item.amount === 'number' ? item.amount : parseFloat(item.amount) || 0,
+            quantity: typeof item.quantity === 'number' ? item.quantity : parseFloat(String(item.quantity)) || 1,
+            unit_price: typeof item.unit_price === 'number' ? item.unit_price : parseFloat(String(item.unit_price)) || 0,
+            total: typeof item.amount === 'number' ? item.amount : parseFloat(String(item.amount)) || 0,
+            amount: typeof item.amount === 'number' ? item.amount : parseFloat(String(item.amount)) || 0,
         }));
 
         // 1b. Currency. Everything stored in amount, subtotal, tax_amount, line_items and splits is in the
@@ -318,7 +337,7 @@ export async function extractDocumentData(
         const taxRaw = numberOrNull(data.financial_summary?.tax_amount);
         const totalBase = toBase(totalAmount);
         const taxBase = taxRaw === null ? null : toBase(taxRaw);
-        const baseLineItems = normalizedLineItems.map((item: any) => ({
+        const baseLineItems = normalizedLineItems.map((item) => ({
             ...item,
             unit_price: toBase(item.unit_price),
             total: toBase(item.total),
@@ -330,7 +349,7 @@ export async function extractDocumentData(
         const defaultCategoryId = vendor?.defaultCategoryId ?? null;
         const defaultFundId = vendor?.defaultFundId ?? null;
 
-        let splits: any[] = [];
+        let splits: { amount: number; category_id: string | null; fund_id: string | null }[] = [];
         if (defaultCategoryId || defaultFundId) {
             splits = [{
                 amount: totalBase,
@@ -431,9 +450,9 @@ export async function extractDocumentData(
         }
 
         return data;
-    } catch (error: any) {
+    } catch (error) {
         console.error("CRITICAL error in extractDocumentData:", error)
-        console.error("Error stack trace:", error.stack)
+        console.error("Error stack trace:", errorProp(error, "stack"))
         // runExtraction() records the failure on the document
         throw error
     }
@@ -483,10 +502,10 @@ export async function runExtraction(
             console.error(`Extraction of ${documentId} passed ${EXTRACTION_DEADLINE_MS}ms; marking it for manual review`)
             await markExtractionFailed(documentId, "EXTRACTION_TIMED_OUT", `no result within ${EXTRACTION_DEADLINE_MS / 1000}s`)
         }
-    } catch (error: any) {
+    } catch (error) {
         console.error("Extraction failed:", error)
-        const message = String(error?.message ?? "")
-        const timedOut = error?.name === "AbortError" || /abort|timed? ?out/i.test(message)
+        const message = String(errorMessage(error) ?? "")
+        const timedOut = errorProp(error, "name") === "AbortError" || /abort|timed? ?out/i.test(message)
         await markExtractionFailed(documentId, timedOut ? "EXTRACTION_TIMED_OUT" : "EXTRACTION_FAILED", message)
     } finally {
         clearTimeout(timer)

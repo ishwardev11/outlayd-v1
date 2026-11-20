@@ -3,6 +3,9 @@
 import { useEffect } from "react";
 import Lenis from "lenis";
 
+// The smooth-scroll instance replaces the version info Lenis itself puts on window.lenis
+const lenisHolder = (): { lenis?: unknown } => window as unknown as { lenis?: unknown };
+
 export function SmoothScrollProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const lenis = new Lenis({
@@ -16,7 +19,7 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
             infinite: false,
         });
 
-        (window as any).lenis = lenis;
+        lenisHolder().lenis = lenis;
 
         function raf(time: number) {
             lenis.raf(time);
@@ -27,7 +30,7 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
 
         return () => {
             lenis.destroy();
-            delete (window as any).lenis;
+            delete lenisHolder().lenis;
         };
     }, []);
 

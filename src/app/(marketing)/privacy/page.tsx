@@ -24,7 +24,7 @@ export default function PrivacyPolicyPage() {
                         <div className="max-w-none text-slate-300 space-y-6 text-lg leading-relaxed">
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">1. Introduction</h2>
                             <p>
-                                Welcome to Outlayd ("we," "our," or "us"). We are committed to protecting your personal and corporate information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or use our B2B expense management and procurement software (collectively, the "Services").
+                                Welcome to Outlayd (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your personal and corporate information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or use our B2B expense management and procurement software (collectively, the &quot;Services&quot;).
                             </p>
                             <p>
                                 By accessing or using the Services, you agree to the collection and use of information in accordance with this Privacy Policy.
@@ -87,7 +87,7 @@ export default function PrivacyPolicyPage() {
 
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">8. Updates to This Policy</h2>
                             <p>
-                                We may update this Privacy Policy from time to time to reflect changes in our practices or for other operational, legal, or regulatory reasons. The updated version will be indicated by an updated "Last Updated" date at the top of this document.
+                                We may update this Privacy Policy from time to time to reflect changes in our practices or for other operational, legal, or regulatory reasons. The updated version will be indicated by an updated &quot;Last Updated&quot; date at the top of this document.
                             </p>
 
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">9. Contact Us</h2>

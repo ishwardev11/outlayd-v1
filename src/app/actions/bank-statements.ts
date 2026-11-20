@@ -21,6 +21,26 @@ const DOC_COLUMNS =
 type Supabase = Awaited<ReturnType<typeof createClient>>
 interface Access { supabase: Supabase; organizationId: string; userId: string }
 
+// A bank_transactions row as selected in getStatementDetail
+interface TxnRow {
+    id: string
+    txn_date: string
+    description: string
+    amount: number | string
+    balance: number | string | null
+    match_status: BankTransactionView["status"]
+    matched_document_id: string | null
+    ignore_reason: string | null
+}
+
+// One row of the bank_statement_stats() database function
+interface StatementStats {
+    statement_id: string
+    money_out?: number
+    matched?: number
+    needs_attention?: number
+}
+
 // Every action checks the plan on the server, so a free organisation cannot call them directly.
 async function access(write: boolean): Promise<Access | { error: string }> {
     const supabase = await createClient()
@@ -46,7 +66,7 @@ const toCents = (v: unknown): number => {
     return Number.isFinite(n) ? Math.round(n * 100) : 0
 }
 
-function summarise(d: any): DocSummary {
+function summarise(d: MatchDocument): DocSummary {
     return {
         id: d.id,
         vendor: (d.vendor_name ?? "").trim() || "Unknown vendor",
@@ -95,7 +115,7 @@ export async function getBankStatements(): Promise<BankStatementListItem[]> {
         console.error("Supabase Error (getBankStatements):", error)
         return []
     }
-    const byId = new Map<string, any>(((stats ?? []) as any[]).map((s) => [s.statement_id, s]))
+    const byId = new Map<string, StatementStats>(((stats ?? []) as StatementStats[]).map((s) => [s.statement_id, s]))
     return ((statements ?? []) as BankStatement[]).map((s) => ({
         ...s,
         money_out: byId.get(s.id)?.money_out ?? 0,
@@ -104,7 +124,7 @@ export async function getBankStatements(): Promise<BankStatementListItem[]> {
     }))
 }
 
-async function pageAll<T>(fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>, maxRows: number): Promise<T[]> {
+async function pageAll<T>(fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>, maxRows: number): Promise<T[]> {
     const out: T[] = []
     for (let from = 0; from < maxRows; from += PAGE) {
         const { data, error } = await fetchPage(from, from + PAGE - 1)
@@ -125,7 +145,7 @@ export async function getStatementDetail(statementId: string): Promise<Statement
     if (!statement) return null
     const baseCurrency = await getOrganizationCurrency()
 
-    const txns = await pageAll<any>(
+    const txns = await pageAll<TxnRow>(
         (from, to) => supabase.from("bank_transactions")
             .select("id, txn_date, description, amount, balance, match_status, matched_document_id, ignore_reason")
             .eq("statement_id", statementId).eq("organization_id", organizationId)
@@ -135,7 +155,7 @@ export async function getStatementDetail(statementId: string): Promise<Statement
 
     // Documents already matched to a payment (on any statement) are not offered again
     const matchedIds = new Set<string>(
-        (await pageAll<any>(
+        (await pageAll<{ matched_document_id: string }>(
             (from, to) => supabase.from("bank_transactions").select("matched_document_id")
                 .eq("organization_id", organizationId).eq("match_status", "matched").not("matched_document_id", "is", null)
                 .order("id", { ascending: true }).range(from, to),
@@ -145,12 +165,12 @@ export async function getStatementDetail(statementId: string): Promise<Statement
 
     // Approved documents dated shortly before or after the statement period
     const dates = txns.map((t) => t.txn_date as string).sort()
-    const start = (statement as any).period_start ?? dates[0]
-    const end = (statement as any).period_end ?? dates[dates.length - 1]
-    let candidates: any[] = []
+    const start = (statement as BankStatement).period_start ?? dates[0]
+    const end = (statement as BankStatement).period_end ?? dates[dates.length - 1]
+    let candidates: MatchDocument[] = []
     if (start && end) {
         const shift = (iso: string, days: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10)
-        candidates = (await pageAll<any>(
+        candidates = (await pageAll<MatchDocument>(
             (from, to) => supabase.from("documents").select(DOC_COLUMNS)
                 .eq("organization_id", organizationId).in("status", APPROVED)
                 .gte("document_date", shift(start, -120)).lte("document_date", shift(end, 14))
@@ -162,22 +182,24 @@ export async function getStatementDetail(statementId: string): Promise<Statement
     const unmatchedOut = txns.filter((t) => t.match_status === "unmatched" && Number(t.amount) < 0)
     const suggestions = suggestMatches(
         unmatchedOut.map((t) => ({ id: t.id, date: t.txn_date, description: t.description, cents: toCents(t.amount) })),
-        candidates as MatchDocument[],
-        { baseCurrency, statementCurrency: (statement as any).currency }
+        candidates,
+        { baseCurrency, statementCurrency: (statement as BankStatement).currency }
     )
-    const docById = new Map<string, any>(candidates.map((d) => [d.id, d]))
+    const docById = new Map<string, MatchDocument>(candidates.map((d) => [d.id, d]))
 
     // Details of documents that are already matched
     const matchedDocIds = [...new Set(txns.filter((t) => t.matched_document_id).map((t) => t.matched_document_id as string))]
-    const matchedDocs = new Map<string, any>()
+    const matchedDocs = new Map<string, MatchDocument>()
     for (let i = 0; i < matchedDocIds.length; i += 200) {
         const { data } = await supabase.from("documents").select(DOC_COLUMNS).eq("organization_id", organizationId).in("id", matchedDocIds.slice(i, i + 200))
-        for (const d of data ?? []) matchedDocs.set(d.id, d)
+        for (const d of (data ?? []) as MatchDocument[]) matchedDocs.set(d.id, d)
     }
 
     const transactions: BankTransactionView[] = txns.map((t) => {
         const result = suggestions.get(t.id)
         const sug = result?.suggestion
+        const matched = t.matched_document_id ? matchedDocs.get(t.matched_document_id) : undefined
+        const suggested = sug ? docById.get(sug.documentId) : undefined
         return {
             id: t.id,
             date: t.txn_date,
@@ -186,9 +208,9 @@ export async function getStatementDetail(statementId: string): Promise<Statement
             balanceCents: t.balance === null ? null : toCents(t.balance),
             status: t.match_status,
             ignoreReason: t.ignore_reason ?? null,
-            matchedDoc: t.matched_document_id && matchedDocs.get(t.matched_document_id) ? summarise(matchedDocs.get(t.matched_document_id)) : null,
-            suggestion: sug && docById.get(sug.documentId)
-                ? { doc: summarise(docById.get(sug.documentId)), score: sug.score, strong: sug.strong, reasons: sug.reasons, alternatives: result?.alternatives ?? 0 }
+            matchedDoc: matched ? summarise(matched) : null,
+            suggestion: sug && suggested
+                ? { doc: summarise(suggested), score: sug.score, strong: sug.strong, reasons: sug.reasons, alternatives: result?.alternatives ?? 0 }
                 : null,
         }
     })
@@ -214,12 +236,12 @@ export async function searchMatchableDocuments(query: string, transactionId?: st
         return []
     }
     const { data } = await q.order("document_date", { ascending: false }).limit(40)
-    const docs = data ?? []
+    const docs = (data ?? []) as MatchDocument[]
     if (docs.length === 0) return []
 
     const { data: taken } = await supabase.from("bank_transactions").select("matched_document_id")
         .eq("organization_id", organizationId).eq("match_status", "matched").in("matched_document_id", docs.map((d) => d.id))
-    const takenIds = new Set((taken ?? []).map((r: any) => r.matched_document_id))
+    const takenIds = new Set(((taken ?? []) as { matched_document_id: string | null }[]).map((r) => r.matched_document_id))
     return docs.filter((d) => !takenIds.has(d.id)).slice(0, 15).map(summarise)
 }
 
@@ -257,10 +279,10 @@ async function applyMatch(a: Access, transactionId: string, documentId: string, 
             .eq("id", transactionId).eq("organization_id", organizationId)
 
         // Goes through the normal path, so the audit log records who marked it paid
-        const res: any = await updateDocument(documentId, { status: "paid" })
+        const res = await updateDocument(documentId, { status: "paid" })
         if (!res?.success) {
             await release()
-            return { ok: false, error: res?.error || "Could not mark the document as paid." }
+            return { ok: false, error: (res && "error" in res ? res.error : "") || "Could not mark the document as paid." }
         }
         // The payment date is the day the money left the bank, not today
         const { error: dateError } = await supabase.from("documents").update({ paid_date: txn.txn_date }).eq("id", documentId).eq("organization_id", organizationId)

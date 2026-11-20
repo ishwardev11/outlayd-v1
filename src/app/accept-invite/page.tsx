@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Lock, User, CheckCircle2, ShieldAlert } from "lucide-react"
 import { toast } from "sonner"
+import { errorMessage } from "@/utils/row-types";
 
 export default function AcceptInvitePage() {
     const [fullName, setFullName] = useState("")
@@ -39,6 +40,7 @@ export default function AcceptInvitePage() {
         }
 
         if (errorParam || errorDesc) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- the invite link's error is in the URL hash, which only exists in the browser
             setErrorMsg(errorDesc || errorParam || "An error occurred during verification.")
             setIsVerifyingUser(false)
             return
@@ -146,9 +148,9 @@ export default function AcceptInvitePage() {
             } else {
                 setErrorMsg(res.message || "Failed to accept invite.")
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error("Invite acceptance error:", error)
-            setErrorMsg(error.message || "Something went wrong.")
+            setErrorMsg(errorMessage(error) || "Something went wrong.")
         } finally {
             setIsLoading(false)
         }

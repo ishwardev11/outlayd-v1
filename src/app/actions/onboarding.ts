@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import { BASE_CURRENCY_CODES, isBaseCurrencyCode } from "@/utils/currency"
 import { isValidTimezone } from "@/utils/dates"
+import { errorMessage } from "@/utils/row-types";
 
 export interface OnboardingData {
     orgName: string;
@@ -153,8 +154,8 @@ export async function completeOnboardingSetup(data: OnboardingData) {
 
 
         return { success: true, organization_id };
-    } catch (error: any) {
+    } catch (error) {
         console.error("Onboarding failed:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: errorMessage(error) };
     }
 }

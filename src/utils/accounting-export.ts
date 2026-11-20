@@ -1,11 +1,15 @@
+import type { SplitRow } from "@/utils/row-types"
+import { CSV_BOM, csvRow, csvText } from "@/utils/csv"
 // Turns approved documents into rows an accounting package can import.
 // Pure functions only (no database or request code), so they are easy to test.
 
-export type ExportFormat = "generic" | "xero_bills"
+// Only the generic CSV for now. A Xero bills layout existed but was removed on purpose (its
+// template has no remarks column); it is in the git history (commit 8457913) if it is wanted back.
+export type ExportFormat = "generic"
 export type ExportScope = "paid" | "approved"
 export type ExportDateField = "document_date" | "paid_date"
 
-export const EXPORT_FORMATS: ExportFormat[] = ["generic", "xero_bills"]
+export const EXPORT_FORMATS: ExportFormat[] = ["generic"]
 
 export interface ExportParams {
     format: ExportFormat
@@ -32,6 +36,8 @@ export interface ExportDocument {
     original_currency: string | null
     original_amount: number | string | null
     exchange_rate: number | string | null
+    // What a person wrote about the entry. Never documents.notes, which holds AI error messages.
+    remarks: string | null
 }
 
 export interface ExportLine {
@@ -53,6 +59,7 @@ export interface ExportLine {
     originalCurrency: string
     originalCents: number | null
     exchangeRate: string
+    remarks: string
 }
 
 export interface ExportLookups {
@@ -91,15 +98,8 @@ export function parseExportParams(q: URLSearchParams): { ok: true; value: Export
 
 // ------------------------------------------------------------------ CSV helpers
 
-// A cell that starts with = + - @ is run as a formula by Excel and Google Sheets. A vendor name
-// printed on a receipt is untrusted text, so such cells get a leading apostrophe.
-const FORMULA_START = /^[=+\-@\t\r]/
-
-export function csvText(value: string | null | undefined): string {
-    let s = String(value ?? "").replace(/\r\n|\r/g, "\n")
-    if (FORMULA_START.test(s)) s = `'${s}`
-    return /[",\n]/.test(s) || s !== s.trim() ? `"${s.replace(/"/g, '""')}"` : s
-}
+// csvText lives in utils/csv so every export shares it; re-exported for existing imports
+export { csvText }
 
 export function csvMoney(cents: number | null): string {
     if (cents === null) return ""
@@ -113,18 +113,12 @@ function toCents(value: unknown): number {
     return Number.isFinite(n) ? Math.round(n * 100) : 0
 }
 
-function isoToDmy(iso: string): string {
-    if (!ISO_DATE.test(iso)) return ""
-    const [y, m, d] = iso.split("-")
-    return `${d}/${m}/${y}`
-}
-
 // ------------------------------------------------------------------ Lines
 
 // One line per fund/category allocation. A document without splits is one line.
 export function buildLines(doc: ExportDocument, lookups: ExportLookups): { lines: ExportLine[]; splitsMismatch: boolean } {
     const docCents = toCents(doc.amount)
-    const rawSplits = Array.isArray(doc.splits) ? (doc.splits as any[]) : []
+    const rawSplits = Array.isArray(doc.splits) ? (doc.splits as (SplitRow | null)[]) : []
     const parts = rawSplits.length > 0
         ? rawSplits.map((s) => ({ fundId: s?.fund_id ?? null, categoryId: s?.category_id ?? null, cents: toCents(s?.amount) }))
         : [{ fundId: doc.fund_id, categoryId: doc.category_id, cents: docCents }]
@@ -135,6 +129,7 @@ export function buildLines(doc: ExportDocument, lookups: ExportLookups): { lines
     const vendor = (doc.vendor_name ?? "").trim() || "Unknown vendor"
     const documentNumber = (doc.invoice_number ?? "").trim()
     const reference = (doc.reference_number ?? "").trim()
+    const remarks = (doc.remarks ?? "").trim()
     const foreign = !!doc.original_currency && doc.original_amount !== null && doc.original_amount !== undefined
     const originalTotal = foreign ? toCents(doc.original_amount) : null
 
@@ -172,6 +167,7 @@ export function buildLines(doc: ExportDocument, lookups: ExportLookups): { lines
             originalCurrency: foreign ? String(doc.original_currency) : "",
             originalCents,
             exchangeRate: foreign && doc.exchange_rate != null ? String(Number(doc.exchange_rate)) : "",
+            remarks,
         }
     })
     return { lines, splitsMismatch }
@@ -213,55 +209,22 @@ export function buildExport(docs: ExportDocument[], lookups: ExportLookups): { l
 
 // ------------------------------------------------------------------ Files
 
-const BOM = "\uFEFF" // lets Excel open the file as UTF-8, so names like "Café" or Malay/Chinese text survive
-
-function row(cells: string[]): string {
-    return cells.join(",")
-}
+const BOM = CSV_BOM
+const row = csvRow
 
 export function toGenericCsv(lines: ExportLine[], baseCurrency: string): string {
     const header = [
         "Date", "Due date", "Paid date", "Type", "Status", "Document no.", "Reference", "Vendor", "Description",
         "Category", "Account code", `Fund`, `Amount (${baseCurrency})`, "Original currency", "Original amount",
         "Exchange rate", "Line", "Document ID",
+        // Added last so existing column positions (and any import mappings built on them) stay the same
+        "Remarks",
     ]
     const body = lines.map((l) => row([
         l.date, l.dueDate, l.paidDate, l.type, l.status, csvText(l.documentNumber), csvText(l.reference), csvText(l.vendor),
         csvText(l.description), csvText(l.category), csvText(l.accountCode), csvText(l.fund), csvMoney(l.cents),
         l.originalCurrency, csvMoney(l.originalCents), l.exchangeRate, String(l.lineNumber), l.documentId,
-    ]))
-    return BOM + [row(header), ...body].join("\r\n") + "\r\n"
-}
-
-// Xero's bill import: one row per line, rows with the same InvoiceNumber become one bill.
-// AccountCode and TaxType are left as the organisation set them (blank if unset); Xero rejects
-// codes that are not in its chart of accounts, so nothing is guessed here.
-export function toXeroBillsCsv(lines: ExportLine[]): string {
-    // Two documents can share a number (different vendors, or a receipt with no number). Xero would
-    // merge them into one bill, so every document gets its own number inside the file.
-    const numberOf = new Map<string, string>()
-    const used = new Set<string>()
-    for (const l of lines) {
-        if (numberOf.has(l.documentId)) continue
-        const base = l.documentNumber || l.reference || `OUT-${l.documentId.slice(0, 8).toUpperCase()}`
-        let candidate = base
-        for (let n = 2; used.has(candidate.toLowerCase()); n++) candidate = `${base}-${n}`
-        used.add(candidate.toLowerCase())
-        numberOf.set(l.documentId, candidate)
-    }
-
-    const header = ["ContactName", "InvoiceNumber", "InvoiceDate", "DueDate", "Description", "Quantity", "UnitAmount", "AccountCode", "TaxType", "Currency"]
-    const body = lines.map((l) => row([
-        csvText(l.vendor),
-        csvText(numberOf.get(l.documentId) ?? ""),
-        isoToDmy(l.date),
-        isoToDmy(l.dueDate),
-        csvText(l.fund && l.fund !== "Unassigned" ? `${l.description} [${l.fund}]` : l.description),
-        "1",
-        csvMoney(l.cents),
-        csvText(l.accountCode),
-        "",
-        "",
+        csvText(l.remarks),
     ]))
     return BOM + [row(header), ...body].join("\r\n") + "\r\n"
 }

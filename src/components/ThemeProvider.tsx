@@ -28,6 +28,7 @@ export function ThemeProvider({
     useEffect(() => {
         const savedTheme = localStorage.getItem("app-theme") as Theme | null
         if (savedTheme) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage only exists in the browser; reading it during render would not match the server HTML
             setTheme(savedTheme)
         }
     }, [])

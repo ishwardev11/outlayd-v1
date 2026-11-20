@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 import { foreignApprovalProblem } from "@/utils/fx"
 import { DEFAULT_TIMEZONE, isValidTimezone, todayInTimezone } from "@/utils/dates"
+import { errorMessage, errorProp, type SplitRow } from "@/utils/row-types";
 import {
     sanitizeDocumentUpdates,
     assertOwnedIds,
@@ -74,9 +75,10 @@ export async function getOrganizationId() {
         }
 
         return null;
-    } catch (e: any) {
+    } catch (e) {
         // Rethrow Next.js redirect exceptions so they aren't swallowed by our try-catch block
-        if (e && e.digest && e.digest.startsWith("NEXT_REDIRECT")) {
+        const digest = errorProp(e, "digest");
+        if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
             throw e;
         }
         console.error("Error in getOrganizationId:", e);
@@ -116,7 +118,7 @@ export async function getCurrentUserRole() {
         }
 
         return null;
-    } catch (e: any) {
+    } catch (e) {
         console.error("Error in getCurrentUserRole:", e);
         return null;
     }
@@ -127,17 +129,17 @@ export async function updateDocument(id: string, rawUpdates: unknown) {
     await checkWriteAccess();
     const supabase = await createClient()
 
-    let updates: Record<string, any>
+    let updates: Record<string, unknown>
     try {
         updates = sanitizeDocumentUpdates(rawUpdates)
 
         const splits = Array.isArray(updates.splits) ? updates.splits : []
         await assertOwnedIds(supabase, "vendors", [updates.vendor_id])
-        await assertOwnedIds(supabase, "funds", [updates.fund_id, ...splits.map((s: any) => s?.fund_id)])
-        await assertOwnedIds(supabase, "categories", [updates.category_id, ...splits.map((s: any) => s?.category_id)])
+        await assertOwnedIds(supabase, "funds", [updates.fund_id, ...splits.map((s: SplitRow | null) => s?.fund_id)])
+        await assertOwnedIds(supabase, "categories", [updates.category_id, ...splits.map((s: SplitRow | null) => s?.category_id)])
     } catch (e) {
         if (e instanceof UpdateValidationError) {
-            return { success: false, error: e.message }
+            return { success: false, error: errorMessage(e) }
         }
         throw e
     }
@@ -163,7 +165,7 @@ export async function updateDocument(id: string, rawUpdates: unknown) {
         // re-saving an already-paid document doesn't move its date.
         if (updates.status === "paid") {
             if (current.status !== "paid") {
-                const merged: Record<string, any> = { ...current, ...updates }
+                const merged: Record<string, unknown> = { ...current, ...updates }
                 // A receipt is proof the payment already happened, so its own date is the payment date.
                 const receiptDate =
                     merged.document_type === "receipt" &&

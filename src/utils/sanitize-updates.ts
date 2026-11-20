@@ -1,4 +1,5 @@
 import { PAYEE_TYPE_VALUES } from "@/utils/payee-types"
+import type { SupabaseClient } from "@supabase/supabase-js"
 // Allowlists for fields the browser may change on documents and vendors.
 // Anything not listed here (organization_id, image_url, file_hash, created_at, ...) is dropped.
 
@@ -150,7 +151,7 @@ export function sanitizeVendorUpdates(input: unknown): Record<string, unknown> {
 // Every referenced id must belong to the caller's organisation. Reads go through the user's
 // own session, so row-level security only returns rows from their active organisation.
 export async function assertOwnedIds(
-    supabase: { from: (table: string) => any },
+    supabase: Pick<SupabaseClient, "from">,
     table: "funds" | "categories" | "vendors",
     ids: unknown[]
 ) {

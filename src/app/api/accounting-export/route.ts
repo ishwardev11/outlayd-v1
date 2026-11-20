@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 import { getOrganizationId, getOrganizationCurrency } from "@/app/actions/document-utils"
-import { buildExport, parseExportParams, toGenericCsv, toXeroBillsCsv } from "@/utils/accounting-export"
+import { buildExport, parseExportParams, toGenericCsv } from "@/utils/accounting-export"
 import { organizationIsPro } from "@/utils/plan"
 import { EXPORT_MAX_DOCUMENTS, loadExportData } from "@/utils/accounting-export-data"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-// GET /api/accounting-export?format=generic|xero_bills&from=YYYY-MM-DD&to=YYYY-MM-DD
+// GET /api/accounting-export?[format=generic&]from=YYYY-MM-DD&to=YYYY-MM-DD
 //     &scope=paid|approved&dateField=document_date|paid_date[&preview=1]
 // Without preview it downloads the CSV; with preview=1 it returns counts and warnings as JSON.
 export async function GET(request: NextRequest) {
@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ ...summary, currency }, { headers: { "Cache-Control": "no-store" } })
         }
 
-        const csv = params.format === "xero_bills" ? toXeroBillsCsv(lines) : toGenericCsv(lines, currency)
-        const name = `outlayd-${params.format === "xero_bills" ? "xero-bills" : "accounting"}-${params.from}-to-${params.to}.csv`
+        const csv = toGenericCsv(lines, currency)
+        const name = `outlayd-accounting-${params.from}-to-${params.to}.csv`
         return new NextResponse(csv, {
             headers: {
                 "Content-Type": "text/csv; charset=utf-8",

@@ -1,3 +1,4 @@
+import type { SplitRow } from "@/utils/row-types"
 // Pure logic for the Donor & Audit Memo. No database or UI code here, so it is easy to test.
 //
 // Rules (also printed on the memo under "Basis of preparation"):
@@ -35,6 +36,8 @@ export interface MemoDocInput {
     original_amount?: number | string | null
     exchange_rate?: number | string | null
     exchange_rate_source?: string | null
+    // What a person wrote about the entry. Never documents.notes, which holds AI error messages.
+    remarks?: string | null
 }
 
 export interface MemoTransaction {
@@ -47,6 +50,7 @@ export interface MemoTransaction {
     status: "paid" | "committed"
     amount: number
     hasReceipt: boolean
+    remarks: string // "" when there are none
     // Original currency details, when the document was converted into the base currency
     foreign: { currency: string; originalAmount: number; rate: number; source: "ecb" | "manual" | null } | null
 }
@@ -120,13 +124,13 @@ interface Line {
 
 // Which part of this document belongs to the fund? Uses the splits when the document has any.
 function allocateToFund(doc: MemoDocInput, fundId: string): { lines: Line[]; splitMismatch: boolean } {
-    const splits = Array.isArray(doc.splits) ? (doc.splits as any[]) : []
+    const splits = Array.isArray(doc.splits) ? (doc.splits as (SplitRow | null)[]) : []
     const docCents = toCents(toNumber(doc.amount))
 
     if (splits.length > 0) {
         const splitTotal = splits.reduce((sum, s) => sum + toCents(toNumber(s?.amount)), 0)
         const lines: Line[] = splits
-            .filter((s) => s && s.fund_id === fundId)
+            .filter((s): s is SplitRow => !!s && s.fund_id === fundId)
             .map((s) => ({
                 amountCents: toCents(toNumber(s.amount)),
                 categoryId: typeof s.category_id === "string" ? s.category_id : null,
@@ -235,6 +239,7 @@ export function buildFundMemo(input: {
         status: p.kind,
         amount: fromCents(p.line.amountCents),
         hasReceipt: !!p.doc.image_url,
+        remarks: (p.doc.remarks ?? "").trim(),
         foreign: foreignDetails(p.doc),
     }))
 

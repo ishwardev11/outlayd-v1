@@ -24,31 +24,42 @@ import { useRole } from "@/components/RoleProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { CurrencyConversionPanel, convertedAmount, type FxState } from "./CurrencyConversionPanel";
 import { DocumentHistory } from "./DocumentHistory";
+import { errorMessage, type CategoryRow, type DocumentRow, type FundRow, type LineItemRow, type SplitRow } from "@/utils/row-types";
 
 interface Split {
     id: string; // temporary UI id
-    amount: number | "";
+    amount: number | string; // "" while empty; a stored split's amount can arrive as text
     fund_id: string;
     category_id: string;
     customFundName?: string;
     customCategoryName?: string;
 }
 
+// The editable fields of the Review form (empty until a document is loaded)
+interface DrawerForm {
+    vendor_name?: string;
+    invoice_number?: string;
+    remarks?: string;
+    document_date?: string;
+    amount?: number | string;
+    document_type?: string;
+}
+
 interface ProcessingDrawerProps {
     isOpen: boolean;
     onClose: () => void;
-    document?: any;
-    funds: any[];
-    categories: any[];
+    document?: DocumentRow | null;
+    funds: FundRow[];
+    categories: CategoryRow[];
     onNext?: () => void;
 }
 
 export function ProcessingDrawer({ isOpen, onClose, document, funds, categories, onNext }: ProcessingDrawerProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isRetrying, setIsRetrying] = useState(false);
-    const [formData, setFormData] = useState<any>({});
+    const [formData, setFormData] = useState<DrawerForm>({});
     const [splits, setSplits] = useState<Split[]>([]);
-    const [lineItems, setLineItems] = useState<any[]>([]);
+    const [lineItems, setLineItems] = useState<LineItemRow[]>([]);
     const { isViewer } = useRole();
     const { symbol, currency: baseCurrency } = useCurrency();
     const [fx, setFx] = useState<FxState>({ currency: baseCurrency, originalAmount: "", rate: "", source: null });
@@ -56,6 +67,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
 
     useEffect(() => {
         if (document) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- loads the opened document into the form; split ids use Math.random, which must not run during render, and the currency effect below depends on this running first
             setFormData({
                 vendor_name: document.vendor_name || "",
                 invoice_number: document.invoice_number || "",
@@ -77,7 +89,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
             }
             // Load existing splits or generate single default split
             if (document.splits && document.splits.length > 0) {
-                setSplits(document.splits.map((s: any) => ({ ...s, id: Math.random().toString(36).substring(7) })));
+                setSplits(document.splits.map((s: SplitRow) => ({ ...s, amount: s.amount ?? "", fund_id: s.fund_id ?? "", category_id: s.category_id ?? "", id: Math.random().toString(36).substring(7) })));
             } else {
                 setSplits([{
                     id: "initial",
@@ -98,7 +110,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         setSplits(splits.filter(s => s.id !== id));
     };
 
-    const updateSplit = (id: string, field: keyof Split, value: any) => {
+    const updateSplit = (id: string, field: keyof Split, value: Split[keyof Split]) => {
         setSplits(splits.map(s => s.id === id ? { ...s, [field]: value } : s));
     };
 
@@ -107,7 +119,8 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         if (!isForeign) return;
         const converted = convertedAmount(fx);
         if (converted === null) return;
-        setFormData((f: any) => (f.amount === converted ? f : { ...f, amount: converted }));
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- the total must follow every change to the amount or rate, from several different inputs
+        setFormData((f) => (f.amount === converted ? f : { ...f, amount: converted }));
         // A single split simply follows the total
         setSplits((prev) => (prev.length === 1 && prev[0].amount !== converted ? [{ ...prev[0], amount: converted }] : prev));
     }, [isForeign, fx.originalAmount, fx.rate]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -116,6 +129,8 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
     const isValidAmount = Math.abs(totalSplitAmount - (Number(formData.amount) || 0)) < 0.01;
 
     const handleSave = useCallback(async () => {
+        if (!document) return; // the form is only shown for an open document
+
         // --- 1. Form Validation with Visible Errors ---
         const validationErrors: string[] = [];
 
@@ -180,16 +195,16 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                     try {
                         const newFund = await createFund(split.customFundName.trim());
                         fId = newFund.id;
-                    } catch (fundErr: any) {
-                        throw new Error(`Failed to create fund "${split.customFundName}": ${fundErr.message}`);
+                    } catch (fundErr) {
+                        throw new Error(`Failed to create fund "${split.customFundName}": ${errorMessage(fundErr)}`);
                     }
                 }
                 if (cId === "custom" && split.customCategoryName) {
                     try {
                         const newCategory = await createCategory(split.customCategoryName.trim());
                         cId = newCategory.id;
-                    } catch (catErr: any) {
-                        throw new Error(`Failed to create category "${split.customCategoryName}": ${catErr.message}`);
+                    } catch (catErr) {
+                        throw new Error(`Failed to create category "${split.customCategoryName}": ${errorMessage(catErr)}`);
                     }
                 }
                 return {
@@ -245,10 +260,10 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
 
             if (onNext) onNext();
             else onClose();
-        } catch (e: any) {
+        } catch (e) {
             console.error("Submission Error:", e);
             toast.error("Save Failed", {
-                description: e?.message || "An unexpected error occurred while saving. Please try again.",
+                description: errorMessage(e) || "An unexpected error occurred while saving. Please try again.",
                 duration: 6000,
             });
         } finally {
@@ -279,7 +294,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                 onClose();
             } catch (error) {
                 console.error(error);
-                toast.error(error instanceof Error ? error.message : "Failed to delete document");
+                toast.error(error instanceof Error ? errorMessage(error) : "Failed to delete document");
             } finally {
                 setIsSubmitting(false);
             }
@@ -291,7 +306,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         !isViewer &&
         document?.status === "needs_review" &&
         Array.isArray(document?.extraction_flags) &&
-        document.extraction_flags.some((f: any) => f?.code === "EXTRACTION_FAILED" || f?.code === "EXTRACTION_TIMED_OUT");
+        document.extraction_flags.some((f) => f?.code === "EXTRACTION_FAILED" || f?.code === "EXTRACTION_TIMED_OUT");
 
     const handleRetryExtraction = async () => {
         if (!document) return;
@@ -304,8 +319,8 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
             }
             toast.success("Reading the document again", { description: "The details will appear in the ledger in a moment." });
             onClose();
-        } catch (e: any) {
-            toast.error("Could not read the document again", { description: e?.message });
+        } catch (e) {
+            toast.error("Could not read the document again", { description: errorMessage(e) });
         } finally {
             setIsRetrying(false);
         }
@@ -334,7 +349,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                         <div>
                             <p className="font-semibold mb-1">Worth a second look before you approve:</p>
                             <ul className="list-disc pl-4 space-y-0.5">
-                                {document.extraction_flags.map((f: any) => <li key={f.code}>{f.message}</li>)}
+                                {document.extraction_flags.map((f) => <li key={f.code}>{f.message}</li>)}
                             </ul>
                         </div>
                         {canRetryExtraction && (
@@ -507,8 +522,8 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                     <SelectTrigger className="w-full dark:bg-slate-900 dark:border-slate-800 [&>span]:truncate text-left"><SelectValue placeholder="Fund..." /></SelectTrigger>
                                                     <SelectContent>
                                                         {funds
-                                                            .filter((f: any) => !f.archived_at || f.id === split.fund_id)
-                                                            .map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}{f.archived_at ? " (archived)" : ""}</SelectItem>)}
+                                                            .filter((f) => !f.archived_at || f.id === split.fund_id)
+                                                            .map((f) => <SelectItem key={f.id} value={f.id}>{f.name}{f.archived_at ? " (archived)" : ""}</SelectItem>)}
                                                         <SelectItem value="custom" className="text-indigo-600 dark:text-indigo-400 font-medium">+ Custom</SelectItem>
                                                     </SelectContent>
                                                 </Select>
@@ -521,7 +536,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                 <Select value={split.category_id || undefined} onValueChange={v => updateSplit(split.id, "category_id", v)}>
                                                     <SelectTrigger className="w-full dark:bg-slate-900 dark:border-slate-800 [&>span]:truncate text-left"><SelectValue placeholder="Category..." /></SelectTrigger>
                                                     <SelectContent>
-                                                        {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                                        {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                                         <SelectItem value="custom" className="text-indigo-600 dark:text-indigo-400 font-medium">+ Custom</SelectItem>
                                                     </SelectContent>
                                                 </Select>
@@ -568,7 +583,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                     onChange={e => {
                                                         const newItems = [...lineItems];
                                                         newItems[idx].quantity = parseFloat(e.target.value) || 0;
-                                                        newItems[idx].total = newItems[idx].quantity * newItems[idx].unit_price;
+                                                        newItems[idx].total = Number(newItems[idx].quantity) * Number(newItems[idx].unit_price);
                                                         setLineItems(newItems);
                                                     }}
                                                     className="bg-transparent border border-transparent rounded-[6px] h-9 px-1 text-[14px] text-center text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"
@@ -590,7 +605,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                     onChange={e => {
                                                         const newItems = [...lineItems];
                                                         newItems[idx].unit_price = parseFloat(e.target.value) || 0;
-                                                        newItems[idx].total = newItems[idx].quantity * newItems[idx].unit_price;
+                                                        newItems[idx].total = Number(newItems[idx].quantity) * Number(newItems[idx].unit_price);
                                                         setLineItems(newItems);
                                                     }}
                                                     className="bg-transparent border border-transparent rounded-[6px] h-9 px-1 text-[14px] text-right text-[#1e293b] dark:text-slate-300 outline-none hover:border-[#e2e8f0] dark:hover:border-slate-700 focus:border-[#cbd5e1] dark:focus:border-slate-600 focus:ring-1 focus:ring-[#e2e8f0] dark:focus:ring-slate-700 transition-colors"

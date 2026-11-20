@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Download, CheckCircle2 } from "lucide-react"
 import jsPDF from "jspdf"
 import { useCurrency } from "@/components/CurrencyProvider"
+import type { ProcurementProject, QuoteRow } from "@/utils/procurement-types"
 
-export function EvaluationResults({ project, quotes }: { project: any, quotes: any[] }) {
+export function EvaluationResults({ project, quotes }: { project: ProcurementProject, quotes: QuoteRow[] }) {
     const { symbol } = useCurrency();
     // Only show evaluated quotes
     const evaluatedQuotes = quotes.filter(q => q.ai_recommendation_status)
@@ -30,7 +31,7 @@ export function EvaluationResults({ project, quotes }: { project: any, quotes: a
         doc.setFontSize(11)
         doc.setFont("helvetica", "normal")
         doc.text(`Budget Ceiling: ${symbol}${Number(project.budget_ceiling).toLocaleString()}`, 20, 43)
-        doc.text(`Required Deadline: ${new Date(project.required_deadline).toLocaleDateString()}`, 20, 50)
+        doc.text(`Required Deadline: ${new Date(project.required_deadline ?? 0).toLocaleDateString()}`, 20, 50)
 
         let yPos = 65
 

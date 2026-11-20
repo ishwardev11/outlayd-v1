@@ -104,7 +104,7 @@ export async function POST(req: Request) {
         const session = await stripe.checkout.sessions.create(sessionParams);
 
         return NextResponse.json({ url: session.url });
-    } catch (err: any) {
+    } catch (err) {
         console.error('Stripe checkout error:', err);
         return NextResponse.json({ error: 'Could not start checkout. Please try again.' }, { status: 500 });
     }

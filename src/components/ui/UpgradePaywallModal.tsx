@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useIsClient } from "@/lib/use-is-client";
 import { createPortal } from "react-dom";
 import { CheckCircle2, LockKeyhole } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 type PaywallContext = "upload_limit" | "procurement" | "team_limit" | "donor_memo" | "accounting_export" | "bank_statements";
 
@@ -33,7 +35,7 @@ const COPY: Record<PaywallContext, { heading: string; subtext: string }> = {
     accounting_export: {
         heading: "The Accounting Export is a Growth Feature",
         subtext:
-            "Download approved documents as a CSV your accountant or accounting software can import, including a Xero bills layout and account codes per category. Upgrade to Outlayd Growth to unlock it.",
+            "Download approved documents as a CSV your accountant or accounting software can import, with account codes per category. Upgrade to Outlayd Growth to unlock it.",
     },
     bank_statements: {
         heading: "Bank Statement Import is a Growth Feature",
@@ -49,11 +51,7 @@ const COPY: Record<PaywallContext, { heading: string; subtext: string }> = {
 
 export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upload_limit" }: UpgradePaywallModalProps) {
     const [isLoading, setIsLoading] = useState(false);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    const mounted = useIsClient();
 
     if (!isOpen) return null;
     if (!mounted) return null;
@@ -65,7 +63,7 @@ export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upl
         try {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
-            const getActiveOrgId = (u: any) => {
+            const getActiveOrgId = (u: User | null) => {
                 if (typeof document === "undefined") return u?.user_metadata?.organization_id;
                 const cookies = document.cookie.split("; ");
                 const activeOrgCookie = cookies.find((row) => row.trim().startsWith("active_org_id="));

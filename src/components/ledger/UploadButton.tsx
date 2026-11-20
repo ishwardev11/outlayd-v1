@@ -6,6 +6,7 @@ import { Upload, Loader2 } from "lucide-react";
 import { processUpload } from "@/app/actions/ledger";
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
 import { useRole } from "@/components/RoleProvider";
+import { errorMessage } from "@/utils/row-types";
 
 export function UploadButton() {
     const [isUploading, setIsUploading] = useState(false);
@@ -31,9 +32,9 @@ export function UploadButton() {
                 return;
             }
 
-        } catch (error: any) {
+        } catch (error) {
             console.error("Upload failed:", error);
-            alert(`Failed to upload document: ${error.message || 'Unknown error'}`);
+            alert(`Failed to upload document: ${errorMessage(error) || 'Unknown error'}`);
         } finally {
             setIsUploading(false);
             // Reset file input

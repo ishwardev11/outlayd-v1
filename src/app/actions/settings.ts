@@ -19,6 +19,16 @@ import { createAdminClient } from "@/utils/supabase/admin"
 import { toStoragePath } from "@/utils/storage-paths"
 import { sanitizeFundDetails, UpdateValidationError } from "@/utils/sanitize-updates"
 import { baseCurrencyChangeBlocked } from "@/utils/base-currency"
+import { errorMessage, errorProp, type IdName } from "@/utils/row-types";
+
+// A workspace_invites row (only the fields read here)
+interface InviteRow {
+    id: string
+    organization_id: string
+    email?: string
+    role: string
+    created_at: string | null
+}
 
 // --- Organization Profile ---
 
@@ -43,7 +53,16 @@ export async function getOrganizationSettings() {
     return data
 }
 
-export async function updateOrganizationSettings(updates: any) {
+// The organisation fields the Settings > Organization tab can change
+interface OrganizationSettingsUpdate {
+    name?: string
+    registration_id?: string | null
+    base_currency?: string
+    fiscal_year_start?: number | string
+    timezone?: string
+}
+
+export async function updateOrganizationSettings(updates: OrganizationSettingsUpdate) {
     const role = await checkWriteAccess();
     if (role !== 'Admin') {
         throw new Error("Unauthorized: Only Admins can change organization settings.");
@@ -124,7 +143,7 @@ export async function getFundBudgetSummary() {
         console.error("Supabase Error (getFundBudgetSummary):", error)
         return []
     }
-    return ((data ?? []) as any[]).map((r) => ({
+    return ((data ?? []) as { fund_id: string; spent: unknown; committed: unknown }[]).map((r) => ({
         fund_id: String(r.fund_id),
         spent: Number(r.spent) || 0,
         committed: Number(r.committed) || 0,
@@ -200,7 +219,7 @@ export async function updateFundDetails(id: string, rawDetails: unknown) {
     try {
         updates = sanitizeFundDetails(rawDetails)
     } catch (e) {
-        if (e instanceof UpdateValidationError) throw new Error(e.message)
+        if (e instanceof UpdateValidationError) throw new Error(errorMessage(e))
         throw e
     }
     if (Object.keys(updates).length === 0) {
@@ -296,8 +315,8 @@ export async function updateCategoryAccountCode(id: string, code: string): Promi
     try {
         await updateCategoryAccountCodeOrThrow(id, code)
         return { success: true }
-    } catch (e: any) {
-        return { success: false, error: e?.message || "Failed to save the account code" }
+    } catch (e) {
+        return { success: false, error: errorMessage(e) || "Failed to save the account code" }
     }
 }
 
@@ -355,7 +374,7 @@ export async function getTeamMembers() {
     }
 
     const activeList = activeMembers || []
-    const pendingList = (pendingInvites || []).map((invite: any) => ({
+    const pendingList = ((pendingInvites || []) as InviteRow[]).map((invite) => ({
         id: invite.id,
         organization_id: invite.organization_id,
         email: invite.email,
@@ -520,11 +539,11 @@ export async function inviteTeamMember(email: string, full_name: string, role: s
                 throw new Error(authInviteError.message)
             }
         }
-    } catch (inviteErr: any) {
-        if (inviteErr.message.toLowerCase().includes("already") && inviteErr.message.toLowerCase().includes("registered")) {
+    } catch (inviteErr) {
+        if (errorMessage(inviteErr).toLowerCase().includes("already") && errorMessage(inviteErr).toLowerCase().includes("registered")) {
             isAlreadyRegistered = true
         } else {
-            throw new Error("Failed to dispatch auth invitation email: " + inviteErr.message)
+            throw new Error("Failed to dispatch auth invitation email: " + errorMessage(inviteErr))
         }
     }
 
@@ -703,16 +722,16 @@ export async function getMyPendingInvites() {
     if (error || !invites || invites.length === 0) return []
 
     const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
-    const live = invites.filter((i: any) => i.created_at && Date.now() - new Date(i.created_at).getTime() <= INVITE_TTL_MS)
+    const live = (invites as InviteRow[]).filter((i) => i.created_at && Date.now() - new Date(i.created_at).getTime() <= INVITE_TTL_MS)
     if (live.length === 0) return []
 
     const { data: orgs } = await adminClient
         .from("organizations")
         .select("id, name")
-        .in("id", live.map((i: any) => i.organization_id))
-    const orgNames = new Map<string, string>((orgs ?? []).map((o: any) => [o.id, o.name]))
+        .in("id", live.map((i) => i.organization_id))
+    const orgNames = new Map<string, string>(((orgs ?? []) as IdName[]).map((o) => [o.id, o.name]))
 
-    return live.map((i: any) => ({
+    return live.map((i) => ({
         id: i.id as string,
         role: i.role as string,
         organization_name: orgNames.get(i.organization_id) || "a workspace",
@@ -804,14 +823,15 @@ export async function getMyWorkspaces() {
         .eq("email", user.email)
         .order("created_at", { ascending: true })
 
-    const ids = (roles ?? []).map((r: any) => r.organization_id)
+    const roleRows = (roles ?? []) as { organization_id: string; role: string }[]
+    const ids = roleRows.map((r) => r.organization_id)
     if (ids.length === 0) return { workspaces: [], activeId: null }
 
     const { data: orgs } = await adminClient.from("organizations").select("id, name").in("id", ids)
-    const names = new Map<string, string>((orgs ?? []).map((o: any) => [o.id, o.name]))
+    const names = new Map<string, string>(((orgs ?? []) as IdName[]).map((o) => [o.id, o.name]))
 
     return {
-        workspaces: (roles ?? []).map((r: any) => ({
+        workspaces: roleRows.map((r) => ({
             id: r.organization_id as string,
             name: names.get(r.organization_id) || "Workspace",
             role: r.role as string,
@@ -854,7 +874,7 @@ export async function verifyCheckoutSession(sessionId: string) {
         const session = await stripe.checkout.sessions.retrieve(sessionId);
 
         if (session.payment_status === 'paid' && session.metadata?.organization_id === organization_id) {
-            const customerId = typeof session.customer === 'string' ? session.customer : (session.customer as any)?.id || null;
+            const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id || null;
             const tier = session.metadata?.tier || 'growth';
             // Billing changes are server-only: the RPC is no longer callable with the user's session.
             const adminClient = createAdminClient();
@@ -916,7 +936,7 @@ export async function deleteOrganizationAccount() {
             throw new Error("Billing is not configured, so the subscription cannot be cancelled. Nothing was deleted.");
         }
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-            apiVersion: '2026-02-25.clover' as any,
+            apiVersion: '2026-02-25.clover',
         });
         try {
             const subscriptions = await stripe.subscriptions.list({
@@ -930,9 +950,9 @@ export async function deleteOrganizationAccount() {
                     console.log(`Cancelled Stripe subscription ${sub.id}`);
                 }
             }
-        } catch (stripeError: any) {
+        } catch (stripeError) {
             // A customer from another Stripe environment (test vs live) has nothing to cancel here
-            if (stripeError?.code !== 'resource_missing') {
+            if (errorProp(stripeError, "code") !== 'resource_missing') {
                 console.error("Stripe subscription cancellation failed during account deletion:", stripeError);
                 throw new Error("Could not cancel the subscription. Nothing was deleted. Please try again.");
             }
@@ -950,7 +970,7 @@ export async function deleteOrganizationAccount() {
 
     const candidates = [...new Set(
         [...(memberRows ?? []), ...(inviteRows ?? [])]
-            .map((r: any) => String(r.email || "").trim().toLowerCase())
+            .map((r: { email: string | null }) => String(r.email || "").trim().toLowerCase())
             .filter(Boolean)
     )];
     // Anything unusual is left alone rather than risk deleting the wrong login
@@ -968,7 +988,7 @@ export async function deleteOrganizationAccount() {
         }
         const keep = new Set(
             [...(otherRoles.data ?? []), ...(otherInvites.data ?? [])]
-                .map((r: any) => String(r.email || "").trim().toLowerCase())
+                .map((r: { email: string | null }) => String(r.email || "").trim().toLowerCase())
         );
         emailsToDelete = safeCandidates.filter((e) => !keep.has(e));
     }
@@ -988,7 +1008,7 @@ export async function deleteOrganizationAccount() {
             if (error) {
                 throw new Error("Could not list uploaded files. Nothing was deleted.");
             }
-            for (const row of (data ?? []) as any[]) {
+            for (const row of (data ?? []) as Record<string, unknown>[]) {
                 const path = row[column] ? toStoragePath(String(row[column])) : null;
                 if (path && !path.includes("..")) filePaths.add(path);
             }

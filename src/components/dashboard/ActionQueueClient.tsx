@@ -7,6 +7,10 @@ import { Check, Eye, Loader2, Info } from "lucide-react";
 import { updateDocument } from "@/app/actions/ledger";
 import { useRole } from "@/components/RoleProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
+import type { DocumentRow } from "@/utils/row-types";
+
+// Queue documents are always needs_review or awaiting_payment, and the database sends amounts as numbers
+type QueueDoc = Omit<DocumentRow, "amount" | "status"> & { amount: number | null; status: string };
 import {
     Dialog,
     DialogContent,
@@ -14,10 +18,10 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 
-export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
+export function ActionQueueClient({ initialQueue }: { initialQueue: QueueDoc[] }) {
     const [queue, setQueue] = useState(initialQueue);
     const [isMarking, setIsMarking] = useState<string | null>(null);
-    const [previewDoc, setPreviewDoc] = useState<any | null>(null);
+    const [previewDoc, setPreviewDoc] = useState<QueueDoc | null>(null);
     const { isViewer } = useRole();
     const { symbol } = useCurrency();
 
@@ -55,7 +59,7 @@ export function ActionQueueClient({ initialQueue }: { initialQueue: any[] }) {
     return (
         <>
             <div className="divide-y divide-border dark:divide-slate-800">
-                {queue.map((item: any) => (
+                {queue.map((item) => (
                     <div key={item.id} className="group flex items-center justify-between p-4 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors relative">
                         <div className="flex items-center gap-4">
                             <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-center text-sm font-bold text-slate-700 dark:text-slate-300 shrink-0 uppercase">

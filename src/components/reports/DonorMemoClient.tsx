@@ -365,7 +365,12 @@ export function DonorMemoClient({ funds, fiscalYearStart, today }: { funds: Memo
                                                 <TableRow key={t.txnNo} className={flags.length ? "bg-amber-50/60 dark:bg-amber-950/20" : ""}>
                                                     <TableCell className="font-mono text-xs">{t.txnNo}</TableCell>
                                                     <TableCell className="whitespace-nowrap">{t.date}</TableCell>
-                                                    <TableCell className="font-medium">{t.vendor}</TableCell>
+                                                    <TableCell className="font-medium">
+                                                        {t.vendor}
+                                                        {t.remarks && (
+                                                            <div className="text-[11px] font-normal italic text-slate-500 dark:text-slate-400 whitespace-pre-line max-w-xs">{t.remarks}</div>
+                                                        )}
+                                                    </TableCell>
                                                     <TableCell>{t.reference || "-"}</TableCell>
                                                     <TableCell>{t.category}</TableCell>
                                                     <TableCell>{t.status === "paid" ? "Paid" : "Committed"}</TableCell>
