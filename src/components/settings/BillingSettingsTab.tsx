@@ -7,13 +7,15 @@ import { createClient } from "@/utils/supabase/client"
 import { useRole } from "@/components/RoleProvider"
 
 import { OrgSettings } from "./SettingsLayout"
+import { usePlan } from "@/components/PlanProvider";
 
 export function BillingSettingsTab({ orgSettings }: { orgSettings: OrgSettings | null }) {
     const [isLoading, setIsLoading] = useState(false)
     const [isPortalLoading, setIsPortalLoading] = useState(false)
     const { isAdmin } = useRole()
 
-    const isPro = orgSettings?.subscription_status === 'pro';
+    // Same paid rule as everywhere else (status pro, or tier growth/nonprofit)
+    const { paid: isPro } = usePlan();
 
     const handleUpgrade = async () => {
         setIsLoading(true);

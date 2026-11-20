@@ -11,7 +11,9 @@ GRANT ALL ON g_ctx TO authenticated;
 DO $$
 DECLARE o uuid; u uuid;
 BEGIN
-  INSERT INTO public.organizations (name) VALUES ('Guard Test Org') RETURNING id INTO o;
+  -- On a paid plan: since plan flags (step 5), creating funds and accounts is a paid feature, and this
+  -- test checks that the guards do not stop a signed-in Admin from creating them.
+  INSERT INTO public.organizations (name, subscription_status, subscription_tier) VALUES ('Guard Test Org', 'pro', 'growth') RETURNING id INTO o;
   INSERT INTO auth.users (id, email) VALUES (gen_random_uuid(), 'guard-admin@example.com') RETURNING id INTO u;
   INSERT INTO public.user_roles (organization_id, email, role) VALUES (o, 'guard-admin@example.com', 'Admin');
   INSERT INTO g_ctx VALUES (o, u);

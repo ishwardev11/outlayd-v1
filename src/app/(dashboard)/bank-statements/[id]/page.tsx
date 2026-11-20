@@ -4,7 +4,8 @@ import { ArrowLeft, Landmark } from "lucide-react"
 import { createClient } from "@/utils/supabase/server"
 import { getCurrentUserRole, getOrganizationId } from "@/app/actions/document-utils"
 import { getStatementDetail } from "@/app/actions/bank-statements"
-import { organizationIsPro } from "@/utils/plan"
+import { getPlanState } from "@/utils/plan"
+import { ReadOnlyPlanBanner } from "@/components/ui/ReadOnlyPlanBanner"
 import { FeatureLocked } from "@/components/ui/FeatureLocked"
 import { StatementReconciliation } from "@/components/bank/StatementReconciliation"
 
@@ -16,7 +17,9 @@ export default async function BankStatementPage({ params }: { params: Promise<{ 
 
     const supabase = await createClient()
     const organizationId = await getOrganizationId()
-    if (!organizationId || !(await organizationIsPro(supabase, organizationId))) {
+    // A downgraded organisation can still open its existing statements, read-only
+    const plan = await getPlanState(supabase, organizationId)
+    if (!organizationId || (!plan.paid && !plan.hasBeenPaid)) {
         return (
             <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-4xl mx-auto">
                 <FeatureLocked
@@ -39,7 +42,8 @@ export default async function BankStatementPage({ params }: { params: Promise<{ 
             <Link href="/bank-statements" className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                 <ArrowLeft className="h-4 w-4" /> Bank statements
             </Link>
-            <StatementReconciliation detail={detail} canEdit={role === "Admin" || role === "Editor"} />
+            {!plan.paid && <ReadOnlyPlanBanner feature="Bank statements" />}
+            <StatementReconciliation detail={detail} canEdit={(role === "Admin" || role === "Editor") && plan.paid} />
         </div>
     )
 }

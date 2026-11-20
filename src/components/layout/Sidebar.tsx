@@ -38,6 +38,7 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [openAccordion, setOpenAccordion] = useState<number | null>(null);
     const [isPro, setIsPro] = useState<boolean | null>(null);
+    const [hasBeenPaid, setHasBeenPaid] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
 
     // Helper to get the active organization ID
@@ -78,15 +79,14 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                     return;
                 }
 
-                const { data: org, error } = await supabase
-                    .from("organizations")
-                    .select("subscription_status, subscription_tier")
-                    .eq("id", orgId)
-                    .single();
+                // The database's plan answer (same rule as every server check and row-level security)
+                const { data: planRows, error } = await supabase.rpc("org_plan_state", { p_org: orgId });
 
                 if (error) throw error;
-                const isOrgPro = org?.subscription_status === "pro" || org?.subscription_tier === "growth";
+                const planRow = (Array.isArray(planRows) ? planRows[0] : planRows) as { paid?: boolean; has_been_paid?: boolean } | null;
+                const isOrgPro = planRow?.paid === true;
                 setIsPro(isOrgPro);
+                setHasBeenPaid(planRow?.has_been_paid === true);
                 
                 if (isOrgPro && typeof window !== "undefined") {
                     sessionStorage.setItem("optimistic_is_pro", "true");
@@ -108,7 +108,8 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
 
     const handleProcurementClick = () => {
         if (isPro === null) return; // Still loading
-        if (isPro) {
+        // A downgraded organisation can still open its existing projects read-only
+        if (isPro || hasBeenPaid) {
             router.push("/procurement");
         } else {
             setShowPaywall(true);
@@ -150,7 +151,8 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                 <Link id="sidebar-link-donor-memo" href="/reports/donor-memo" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/reports/donor-memo' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <FileCheck size={20} />
                     <span className="flex-1">Donor Memo</span>
-                    {isPro === false && (
+                    {/* An organisation that has been on a paid plan keeps the memo for its existing data */}
+                    {isPro === false && !hasBeenPaid && (
                         <span className="ml-auto bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1 shrink-0">
                             <Lock size={9} strokeWidth={2.5} />
                             Pro

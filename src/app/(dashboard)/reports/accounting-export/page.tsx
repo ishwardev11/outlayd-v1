@@ -1,7 +1,7 @@
 import { FileSpreadsheet } from "lucide-react"
 import { createClient } from "@/utils/supabase/server"
 import { getOrganizationId, getOrganizationTimezone } from "@/app/actions/document-utils"
-import { organizationIsPro } from "@/utils/plan"
+import { featureAllowed } from "@/utils/plan"
 import { todayInTimezone } from "@/utils/dates"
 import { AccountingExportClient } from "@/components/reports/AccountingExportClient"
 import { FeatureLocked } from "@/components/ui/FeatureLocked"
@@ -19,10 +19,10 @@ function lastMonthRange(today: string): { from: string; to: string } {
 }
 
 export default async function AccountingExportPage() {
-    // Paid plans only (same rule as the Donor & Audit Memo)
+    // Paid plans, and organisations that have been on one (an export of existing data)
     const supabase = await createClient()
     const organizationId = await getOrganizationId()
-    if (!organizationId || !(await organizationIsPro(supabase, organizationId))) {
+    if (!(await featureAllowed(supabase, organizationId, "accounting_export", "read"))) {
         return (
             <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-3xl mx-auto">
                 <FeatureLocked

@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { updateDocument, createFund, createCategory, deleteDocument, retryExtraction } from "@/app/actions/ledger";
 import { Loader2, Plus, Trash2, RefreshCw } from "lucide-react";
 import { useRole } from "@/components/RoleProvider";
+import { usePlan } from "@/components/PlanProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { CurrencyConversionPanel, convertedAmount, type FxState } from "./CurrencyConversionPanel";
 import { DocumentHistory } from "./DocumentHistory";
@@ -61,6 +62,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
     const [splits, setSplits] = useState<Split[]>([]);
     const [lineItems, setLineItems] = useState<LineItemRow[]>([]);
     const { isViewer } = useRole();
+    const { paid } = usePlan();
     const { symbol, currency: baseCurrency } = useCurrency();
     const [fx, setFx] = useState<FxState>({ currency: baseCurrency, originalAmount: "", rate: "", source: null });
     const isForeign = fx.currency !== baseCurrency;
@@ -524,7 +526,8 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                         {funds
                                                             .filter((f) => !f.archived_at || f.id === split.fund_id)
                                                             .map((f) => <SelectItem key={f.id} value={f.id}>{f.name}{f.archived_at ? " (archived)" : ""}</SelectItem>)}
-                                                        <SelectItem value="custom" className="text-indigo-600 dark:text-indigo-400 font-medium">+ Custom</SelectItem>
+                                                        {/* Creating a fund is a paid feature; free plans pick from their existing funds */}
+                                                        {paid && <SelectItem value="custom" className="text-indigo-600 dark:text-indigo-400 font-medium">+ Custom</SelectItem>}
                                                     </SelectContent>
                                                 </Select>
                                                 {split.fund_id === "custom" && (

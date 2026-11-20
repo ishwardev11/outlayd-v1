@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { getOrganizationId, getCurrentUserRole, getOrganizationCurrency } from "./document-utils"
 import { buildFundMemo, type FundMemoData, type MemoDocInput } from "@/utils/fund-memo"
+import { featureAllowed, planGateMessage } from "@/utils/plan"
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -38,19 +39,9 @@ export async function getFundMemoData(input: {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
-        // Paid plans only (same rule as Procurement)
-        const { data: plan } = await supabase
-            .from("organizations")
-            .select("subscription_status, subscription_tier")
-            .eq("id", organizationId)
-            .maybeSingle()
-        const isPro = plan?.subscription_status === "pro" || plan?.subscription_tier === "growth"
-        if (!isPro) {
-            return {
-                success: false,
-                upgradeRequired: true,
-                error: "The Donor & Audit Memo is available on the Growth and Nonprofit plans. Please upgrade to use it.",
-            }
+        // Paid plans, and organisations that have been on one (a memo of existing data)
+        if (!(await featureAllowed(supabase, organizationId, "donor_memo", "read"))) {
+            return { success: false, upgradeRequired: true, error: planGateMessage("donor_memo", "read") }
         }
 
         const { data: fund, error: fundError } = await supabase

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { checkWriteAccess, getOrganizationCurrency, getOrganizationId, updateDocument } from "./document-utils"
-import { organizationIsPro } from "@/utils/plan"
+import { featureAllowed, planGateMessage } from "@/utils/plan"
 import { suggestMatches, type MatchDocument } from "@/utils/bank-matching"
 import type {
     ActionResult, BankStatement, BankStatementListItem, BankTransactionView, DocSummary, StatementDetail,
@@ -42,14 +42,17 @@ interface StatementStats {
 }
 
 // Every action checks the plan on the server, so a free organisation cannot call them directly.
+// Reading is open to every plan (a downgraded organisation keeps read-only access to its own
+// statements); importing, matching and deleting need a paid plan.
 async function access(write: boolean): Promise<Access | { error: string }> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: "You are signed out. Please sign in again." }
     const organizationId = await getOrganizationId()
     if (!organizationId) return { error: "No active organization." }
-    if (!(await organizationIsPro(supabase, organizationId))) {
-        return { error: "Bank statement import is available on the Growth and Nonprofit plans." }
+    const level = write ? "use" : "read"
+    if (!(await featureAllowed(supabase, organizationId, "bank_statements", level))) {
+        return { error: planGateMessage("bank_statements", level) }
     }
     if (write) {
         try {

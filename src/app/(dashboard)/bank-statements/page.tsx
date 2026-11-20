@@ -3,7 +3,8 @@ import { Landmark, FileText } from "lucide-react"
 import { createClient } from "@/utils/supabase/server"
 import { getCurrentUserRole, getOrganizationId } from "@/app/actions/document-utils"
 import { getBankStatements } from "@/app/actions/bank-statements"
-import { organizationIsPro } from "@/utils/plan"
+import { getPlanState } from "@/utils/plan"
+import { ReadOnlyPlanBanner } from "@/components/ui/ReadOnlyPlanBanner"
 import { FeatureLocked } from "@/components/ui/FeatureLocked"
 import { BankStatementUpload } from "@/components/bank/BankStatementUpload"
 import { StatementsPoller } from "@/components/bank/StatementsPoller"
@@ -12,10 +13,13 @@ import { DeleteStatementButton } from "@/components/bank/DeleteStatementButton"
 export const dynamic = "force-dynamic"
 
 export default async function BankStatementsPage() {
-    // Paid plans only (same rule as Procurement and the Donor & Audit Memo)
+    // Paid plans use bank statements. A downgraded organisation keeps read-only access to the
+    // statements it already has; with none, it sees the same locked screen as a free organisation.
     const supabase = await createClient()
     const organizationId = await getOrganizationId()
-    if (!organizationId || !(await organizationIsPro(supabase, organizationId))) {
+    const plan = await getPlanState(supabase, organizationId)
+    const statements = plan.paid || plan.hasBeenPaid ? await getBankStatements() : []
+    if (!organizationId || (!plan.paid && statements.length === 0)) {
         return (
             <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-4xl mx-auto">
                 <FeatureLocked
@@ -34,8 +38,8 @@ export default async function BankStatementsPage() {
         )
     }
 
-    const [statements, role] = await Promise.all([getBankStatements(), getCurrentUserRole()])
-    const canEdit = role === "Admin" || role === "Editor"
+    const role = await getCurrentUserRole()
+    const canEdit = (role === "Admin" || role === "Editor") && plan.paid
     const reading = statements.some((s) => s.status === "extracting")
 
     return (
@@ -48,6 +52,7 @@ export default async function BankStatementsPage() {
                 </p>
             </div>
 
+            {!plan.paid && <ReadOnlyPlanBanner feature="Bank statements" />}
             {canEdit && <BankStatementUpload />}
 
             <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">

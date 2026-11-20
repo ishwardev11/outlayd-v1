@@ -11,6 +11,7 @@ import { startOfMonthInstant, isValidTimezone, DEFAULT_TIMEZONE } from "@/utils/
 import { sanitizeVendorUpdates, assertOwnedIds, UpdateValidationError } from "@/utils/sanitize-updates"
 import { runExtraction } from "./ai"
 import { toStoragePath } from "@/utils/storage-paths"
+import { getPlanState, requireFeature } from "@/utils/plan"
 import { errorMessage, type ExtractionFlagRow } from "@/utils/row-types";
 export { getOrganizationId, updateDocument }
 
@@ -84,6 +85,7 @@ export async function createFund(name: string) {
     await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
+    await requireFeature(supabase, organization_id, "funds", "use")
 
     const { data, error } = await supabase
         .from("funds")
@@ -336,10 +338,10 @@ export async function processUpload(formData: FormData) {
         // other, so they are fetched together. The timezone comes from the same organisation row,
         // which also saves a second slow organisation lookup.
         const ONE_MINUTE_AGO = new Date(Date.now() - 60 * 1000).toISOString();
-        const [orgRes, recentRes] = await Promise.all([
+        const [orgRes, recentRes, plan] = await Promise.all([
             supabase
                 .from("organizations")
-                .select("subscription_status, timezone")
+                .select("timezone")
                 .eq("id", organization_id)
                 .single(),
             // Global Rate Limit (per Organization): Max 5 uploads per minute to prevent AI spam
@@ -348,6 +350,7 @@ export async function processUpload(formData: FormData) {
                 .select("*", { count: "exact", head: true })
                 .eq("organization_id", organization_id)
                 .gt("created_at", ONE_MINUTE_AGO),
+            getPlanState(supabase, organization_id),
         ]);
         const { data: orgData, error: orgError } = orgRes;
 
@@ -356,7 +359,8 @@ export async function processUpload(formData: FormData) {
             throw new Error("Failed to verify organization status")
         }
 
-        const isPro = orgData?.subscription_status === 'pro';
+        // Same rule as every other paid feature (status pro, or tier growth/nonprofit)
+        const isPro = plan.paid;
 
         if (!isPro) {
             // Enforce Free Tier Limit: 5 AI extractions per calendar month (in the organisation's timezone)

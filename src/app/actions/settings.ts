@@ -19,6 +19,7 @@ import { createAdminClient } from "@/utils/supabase/admin"
 import { toStoragePath } from "@/utils/storage-paths"
 import { sanitizeFundDetails, UpdateValidationError } from "@/utils/sanitize-updates"
 import { baseCurrencyChangeBlocked } from "@/utils/base-currency"
+import { getPlanState, requireFeature } from "@/utils/plan"
 import { errorMessage, errorProp, type IdName } from "@/utils/row-types";
 
 // A workspace_invites row (only the fields read here)
@@ -154,6 +155,7 @@ export async function addSettingFund(name: string, code?: string) {
     await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
+    await requireFeature(supabase, organization_id, "funds", "use")
 
     const { error } = await supabase
         .from("funds")
@@ -175,6 +177,8 @@ export async function archiveSettingFund(id: string) {
     await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
+    // Checked here as well as by the database: a refused update changes no rows without an error
+    await requireFeature(supabase, organization_id, "funds", "use")
 
     const { error } = await supabase
         .from("funds")
@@ -195,6 +199,7 @@ export async function restoreSettingFund(id: string) {
     await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
+    await requireFeature(supabase, organization_id, "funds", "use")
 
     const { error } = await supabase
         .from("funds")
@@ -214,6 +219,7 @@ export async function updateFundDetails(id: string, rawDetails: unknown) {
     await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
+    await requireFeature(supabase, organization_id, "funds", "use")
 
     let updates: Record<string, unknown>
     try {
@@ -442,18 +448,8 @@ export async function inviteTeamMember(email: string, full_name: string, role: s
     }
 
     // 3. Determine tier and seat limits
-    const { data: org, error: orgError } = await supabase
-        .from("organizations")
-        .select("subscription_tier, subscription_status")
-        .eq("id", organization_id)
-        .single()
-
-    if (orgError) {
-        console.error("Failed to verify subscription status:", orgError)
-        throw new Error("Failed to verify subscription status")
-    }
-
-    const isGrowth = org?.subscription_tier === 'growth' || org?.subscription_status === 'pro';
+    // Same paid rule as every other feature (status pro, or tier growth/nonprofit)
+    const isGrowth = (await getPlanState(supabase, organization_id)).paid;
 
     const limit = isGrowth ? 5 : 1;
 

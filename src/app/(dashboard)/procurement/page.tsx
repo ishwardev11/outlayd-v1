@@ -9,6 +9,8 @@ import { getCurrentUserRole, getOrganizationCurrency } from "@/app/actions/docum
 import { getCurrencyDetails } from "@/utils/currency"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DeleteProjectButton } from "@/components/procurement/DeleteProjectButton"
+import { ReadOnlyPlanBanner } from "@/components/ui/ReadOnlyPlanBanner"
+import { getPlanState } from "@/utils/plan"
 
 export default async function ProcurementPage() {
     const supabase = await createClient()
@@ -18,24 +20,25 @@ export default async function ProcurementPage() {
     const currency = await getOrganizationCurrency()
     const { symbol } = getCurrencyDetails(currency)
 
-    // --- Pro-tier gate ---
-    const { data: org } = await supabase
-        .from("organizations")
-        .select("subscription_status, subscription_tier")
-        .eq("id", organization_id)
-        .single()
-
-    const isPro = org?.subscription_status === "pro" || org?.subscription_tier === "growth";
-    if (!isPro) {
+    // --- Plan gate: paid plans use Procurement; a downgraded organisation keeps read-only access ---
+    const plan = await getPlanState(supabase, organization_id)
+    if (!plan.paid && !plan.hasBeenPaid) {
         redirect("/dashboard")
     }
-    // -------------------
 
     const { data: projects } = await supabase
         .from("procurement_projects")
         .select("*")
         .eq("organization_id", organization_id)
         .order("created_at", { ascending: false })
+
+    // Nothing to show read-only: same as never having had the feature
+    if (!plan.paid && (!projects || projects.length === 0)) {
+        redirect("/dashboard")
+    }
+    const cannotCreate = isViewer || !plan.paid
+    const createBlockedReason = isViewer ? "Viewers cannot create projects" : "Creating projects is part of the Growth and Nonprofit plans"
+    // -------------------
 
     return (
         <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-4 sm:space-y-6">
@@ -44,17 +47,19 @@ export default async function ProcurementPage() {
                     <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Procurement</h1>
                     <p className="text-gray-500 mt-1 sm:mt-2 dark:text-slate-400">Manage Requests for Proposals (RFPs) and active quote evaluations.</p>
                 </div>
-                <Link href="/procurement/new" className={isViewer ? "pointer-events-none" : ""}>
+                <Link href="/procurement/new" className={cannotCreate ? "pointer-events-none" : ""}>
                     <Button
                         className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
-                        disabled={isViewer}
-                        title={isViewer ? "Viewers cannot create projects" : ""}
+                        disabled={cannotCreate}
+                        title={cannotCreate ? createBlockedReason : ""}
                     >
                         <Plus className="w-4 h-4" />
                         New Project
                     </Button>
                 </Link>
             </div>
+
+            {!plan.paid && <ReadOnlyPlanBanner feature="Procurement" />}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8">
                 {projects?.map(project => (
@@ -106,12 +111,12 @@ export default async function ProcurementPage() {
                         <Target className="w-12 h-12 text-gray-300 dark:text-slate-500 mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No active procurement projects</h3>
                         <p className="text-gray-500 dark:text-slate-400 max-w-sm mx-auto mb-6">Create a new project to start collecting vendor bids and quotes.</p>
-                        <Link href="/procurement/new" className={isViewer ? "pointer-events-none" : ""}>
+                        <Link href="/procurement/new" className={cannotCreate ? "pointer-events-none" : ""}>
                             <Button
                                 variant="outline"
                                 className="border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:bg-slate-700 dark:text-indigo-300 dark:hover:bg-slate-600 dark:border-slate-600"
-                                disabled={isViewer}
-                                title={isViewer ? "Viewers cannot create projects" : ""}
+                                disabled={cannotCreate}
+                                title={cannotCreate ? createBlockedReason : ""}
                             >
                                 Create your first project
                             </Button>

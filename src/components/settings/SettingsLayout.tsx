@@ -116,7 +116,6 @@ export function SettingsLayout({ orgSettings, initialFunds, fundSpend = [], init
                     {activeTab === 'team' && (
                         <TeamManagementTab
                             initialTeam={initialTeam}
-                            orgSettings={orgSettings}
                             currentUserEmail={currentUserEmail}
                         />
                     )}

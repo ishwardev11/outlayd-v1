@@ -4,7 +4,7 @@ import crypto from "crypto"
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { getCurrentUserRole, getOrganizationId } from "@/app/actions/document-utils"
-import { organizationIsPro } from "@/utils/plan"
+import { featureAllowed, planGateMessage } from "@/utils/plan"
 import { processBankStatement } from "@/utils/bank-statement-extract"
 
 export const dynamic = "force-dynamic"
@@ -29,10 +29,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "You do not have permission to import statements." }, { status: 403 })
     }
 
-    // Paid plans only
-    if (!(await organizationIsPro(supabase, organizationId))) {
+    // Paid plans only (a downgraded organisation keeps read-only access to its statements)
+    if (!(await featureAllowed(supabase, organizationId, "bank_statements", "use"))) {
         return NextResponse.json(
-            { error: "Bank statement import is available on the Growth and Nonprofit plans. Please upgrade to use it.", upgradeRequired: true },
+            { error: planGateMessage("bank_statements", "use"), upgradeRequired: true },
             { status: 403 }
         )
     }

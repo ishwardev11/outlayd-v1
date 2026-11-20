@@ -7,37 +7,20 @@ import { revalidatePath } from "next/cache"
 import { getOrganizationId } from "./ledger"
 import { checkWriteAccess, getOrganizationCurrency } from "./document-utils"
 import { getCurrencyDetails } from "@/utils/currency"
+import { requireFeature } from "@/utils/plan"
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai"
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
 /**
- * Throws a structured error if the calling user's organization is not on the Pro tier.
- * Call this at the top of every write action in this file.
+ * Throws if the user may not write, or the organisation's plan does not include Procurement
+ * (a downgraded organisation keeps read-only access). Call this at the top of every write action.
  */
 async function requireProTier(): Promise<void> {
     await checkWriteAccess();
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
-
-    const { data: org, error } = await supabase
-        .from("organizations")
-        .select("subscription_status, subscription_tier")
-        .eq("id", organization_id)
-        .single()
-
-    if (error) {
-        console.error("requireProTier: failed to fetch org:", error)
-        throw new Error("Failed to verify subscription status")
-    }
-
-    const isPro = org?.subscription_status === "pro" || org?.subscription_tier === "growth";
-    if (!isPro) {
-        throw Object.assign(
-            new Error("This feature requires a Outlayd Pro subscription. Please upgrade to access Procurement."),
-            { code: "FORBIDDEN" }
-        )
-    }
+    await requireFeature(supabase, organization_id, "procurement", "use")
 }
 
 // What the New Project form sends

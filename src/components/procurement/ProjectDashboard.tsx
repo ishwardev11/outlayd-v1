@@ -24,6 +24,8 @@ import { createClient } from "@/utils/supabase/client"
 import { runSingleEvaluation } from "@/app/actions/procurement"
 import { useRole } from "@/components/RoleProvider"
 import { useCurrency } from "@/components/CurrencyProvider"
+import { usePlan } from "@/components/PlanProvider"
+import { ReadOnlyPlanBanner } from "@/components/ui/ReadOnlyPlanBanner"
 import type { ProcurementProject, QuoteRow } from "@/utils/procurement-types"
 
 export type BidStatus = 'uploaded' | 'evaluating' | 'evaluated' | 'awarded' | 'rejected'
@@ -76,7 +78,10 @@ function quoteToBid(q: QuoteRow): Bid {
 
 export function ProjectDashboard({ project, quotes }: { project: ProcurementProject, quotes: QuoteRow[] }) {
     const supabase = createClient()
-    const { isViewer } = useRole()
+    const { isViewer: isRoleViewer } = useRole()
+    const { paid } = usePlan()
+    // On a free plan the project is read-only, exactly like it is for a Viewer
+    const isViewer = isRoleViewer || !paid
     const { symbol } = useCurrency()
     // ── Project state ──
     const [projectStatus, setProjectStatus] = useState(project.status)
@@ -368,6 +373,7 @@ export function ProjectDashboard({ project, quotes }: { project: ProcurementProj
 
     return (
         <div className="space-y-8">
+            {!paid && <ReadOnlyPlanBanner feature="Procurement" />}
             {/* Header Section */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>

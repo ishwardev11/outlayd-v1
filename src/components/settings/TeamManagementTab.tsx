@@ -19,15 +19,14 @@ import {
 } from "@/components/ui/dialog"
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal"
 import { useRole } from "@/components/RoleProvider"
-import { OrgSettings, TeamMember } from "./SettingsLayout"
+import { TeamMember } from "./SettingsLayout"
+import { usePlan } from "@/components/PlanProvider";
 
 export function TeamManagementTab({ 
     initialTeam, 
-    orgSettings,
     currentUserEmail
 }: { 
     initialTeam: TeamMember[], 
-    orgSettings: OrgSettings | null,
     currentUserEmail: string | null
 }) {
     const [isInviting, setIsInviting] = useState(false)
@@ -46,7 +45,8 @@ export function TeamManagementTab({
     const [memberToRevoke, setMemberToRevoke] = useState<TeamMember | null>(null)
     const [isRevoking, setIsRevoking] = useState(false)
 
-    const isGrowth = orgSettings?.subscription_tier === 'growth' || orgSettings?.subscription_status === 'pro';
+    // Same paid rule as everywhere else (status pro, or tier growth/nonprofit)
+    const { paid: isGrowth } = usePlan();
     const limit = isGrowth ? 5 : 1;
     const usedSeats = initialTeam.length;
     const isLimitReached = usedSeats >= limit;

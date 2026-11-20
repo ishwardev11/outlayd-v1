@@ -1,8 +1,11 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { RoleProvider } from "@/components/RoleProvider";
+import { PlanProvider } from "@/components/PlanProvider";
+import { createClient } from "@/utils/supabase/server";
+import { getPlanState } from "@/utils/plan";
 import { CurrencyProvider } from "@/components/CurrencyProvider";
-import { getCurrentUserRole, getOrganizationCurrency } from "@/app/actions/document-utils";
+import { getCurrentUserRole, getOrganizationCurrency, getOrganizationId } from "@/app/actions/document-utils";
 import { getMyPendingInvites } from "@/app/actions/settings";
 import { PendingInviteBanner } from "@/components/layout/PendingInviteBanner";
 
@@ -14,9 +17,11 @@ export default async function DashboardLayout({
     const role = await getCurrentUserRole();
     const currency = await getOrganizationCurrency();
     const pendingInvites = await getMyPendingInvites();
+    const plan = await getPlanState(await createClient(), await getOrganizationId());
 
     return (
         <RoleProvider role={role}>
+            <PlanProvider paid={plan.paid} hasBeenPaid={plan.hasBeenPaid}>
             <CurrencyProvider currency={currency}>
                 <div className="flex flex-col md:flex-row min-h-screen bg-gray-50 dark:bg-slate-950">
                     {/* Desktop Persistent Sidebar */}
@@ -34,6 +39,7 @@ export default async function DashboardLayout({
                     </main>
                 </div>
             </CurrencyProvider>
+            </PlanProvider>
         </RoleProvider>
     );
 }

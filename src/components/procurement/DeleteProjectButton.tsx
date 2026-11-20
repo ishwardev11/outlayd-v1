@@ -5,10 +5,14 @@ import { Trash2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { deleteProcurementProject } from "@/app/actions/procurement"
 import { useRole } from "@/components/RoleProvider"
+import { usePlan } from "@/components/PlanProvider"
 
 export function DeleteProjectButton({ projectId }: { projectId: string }) {
     const [isDeleting, setIsDeleting] = useState(false)
-    const { isViewer } = useRole()
+    const { isViewer: isRoleViewer } = useRole()
+    const { paid } = usePlan()
+    // Deleting is a change, so it is not available on a free plan (nothing is ever deleted on downgrade)
+    const isViewer = isRoleViewer || !paid
 
     const handleDelete = async (e: React.MouseEvent) => {
         // Prevent the click from bubbling up to the Link component
