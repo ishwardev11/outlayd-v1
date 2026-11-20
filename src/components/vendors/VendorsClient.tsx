@@ -335,7 +335,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
                                                         ⚡ Set to &ldquo;{vendor.suggestedCategoryName}&rdquo; (Suggested)
                                                     </SelectItem>
                                                 )}
-                                                {categories.map((c) => (
+                                                {categories.filter((c) => !c.archived_at || c.id === vendor.default_category_id).map((c) => (
                                                     <SelectItem key={c.id} value={c.id} className="text-xs cursor-pointer">
                                                         {c.name}
                                                     </SelectItem>

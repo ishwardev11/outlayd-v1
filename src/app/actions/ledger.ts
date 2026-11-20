@@ -371,6 +371,8 @@ export async function processUpload(formData: FormData) {
                 .select("*", { count: "exact", head: true })
                 .eq("organization_id", organization_id)
                 .neq("status", "DUPLICATE_WARNING")
+                // Only uploads count: an expense entered by hand (money out, no file) uses no AI reading
+                .not("image_url", "is", null)
                 .gte("created_at", startOfMonth)
 
             if (countError) {

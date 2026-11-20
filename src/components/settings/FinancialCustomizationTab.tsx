@@ -1,19 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { addSettingFund, archiveSettingFund, restoreSettingFund, addSettingCategory, deleteSettingCategory } from "@/app/actions/settings"
+import { addSettingFund, archiveSettingFund, restoreSettingFund } from "@/app/actions/settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Plus, Trash2, Archive, ArchiveRestore } from "lucide-react"
+import { Loader2, Plus, Archive, ArchiveRestore } from "lucide-react"
 import { useRole } from "@/components/RoleProvider"
 import { usePlan } from "@/components/PlanProvider"
 import { useCurrency } from "@/components/CurrencyProvider"
 import { Fund, FundSpend, Category } from "./SettingsLayout"
-import { CategoryAccountCode } from "./CategoryAccountCode"
+import { CategorySettings } from "./CategorySettings"
 import { FundDetailsDialog } from "./FundDetailsDialog"
 
-export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initialCategories }: { initialFunds: Fund[], fundSpend?: FundSpend[], initialCategories: Category[] }) {
+export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initialCategories, orgType = null }: { initialFunds: Fund[], fundSpend?: FundSpend[], initialCategories: Category[], orgType?: string | null }) {
     const { isViewer } = useRole()
     const { paid } = usePlan()
     // Free plans keep using existing funds on expenses; creating and editing funds is a paid feature
@@ -22,9 +22,7 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
     const { formatAmount } = useCurrency()
     const spendByFund = new Map(fundSpend.map((s) => [s.fund_id, s]))
     const [isSavingFund, setIsSavingFund] = useState(false)
-    const [isSavingCategory, setIsSavingCategory] = useState(false)
     const [newFundName, setNewFundName] = useState("")
-    const [newCategoryName, setNewCategoryName] = useState("")
 
     const handleAddFund = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -38,21 +36,6 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
             alert("Failed to add fund")
         } finally {
             setIsSavingFund(false)
-        }
-    }
-
-    const handleAddCategory = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!newCategoryName.trim()) return
-        setIsSavingCategory(true)
-        try {
-            await addSettingCategory(newCategoryName)
-            setNewCategoryName("")
-        } catch (error) {
-            console.error(error)
-            alert("Failed to add category")
-        } finally {
-            setIsSavingCategory(false)
         }
     }
 
@@ -72,16 +55,6 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
         } catch (error) {
             console.error(error)
             alert("Failed to restore fund")
-        }
-    }
-
-    const handleDeleteCategory = async (id: string, name: string) => {
-        if (!window.confirm(`Are you sure you want to delete the category "${name}"? This action cannot be undone.`)) return
-        try {
-            await deleteSettingCategory(id)
-        } catch (error) {
-            console.error(error)
-            alert("Failed to delete category")
         }
     }
 
@@ -197,64 +170,8 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
                 )}
             </div>
 
-            {/* Categories Section */}
-            <div>
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">Expense Categories</h2>
-                <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">A category answers &quot;what was the money spent on?&quot; (for example Rent or Printing). Every expense has both: a fund and a category.</p>
-                <form onSubmit={handleAddCategory} className="flex gap-4 items-end mb-6">
-                    <div className="flex-1 space-y-2">
-                        <Label htmlFor="newCategory" className="sr-only">New Category Name</Label>
-                        <Input
-                            id="newCategory"
-                            placeholder="e.g. Travel Stipends"
-                            value={newCategoryName}
-                            onChange={(e) => setNewCategoryName(e.target.value)}
-                            className="bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
-                        />
-                    </div>
-                    <Button type="submit" disabled={isSavingCategory || isViewer} title={isViewer ? "Viewers cannot add categories" : ""} className="bg-indigo-600 hover:bg-indigo-700">
-                        {isSavingCategory ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                        Add Category
-                    </Button>
-                </form>
-
-                <div className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                    <table className="w-full text-sm text-left align-middle border-collapse">
-                        <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
-                            <tr>
-                                <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200">Category Name</th>
-                                <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200 w-40" title="The account code from your accounting software, used by the accounting export">Accounting code</th>
-                                <th className="px-4 py-3 font-medium text-gray-900 dark:text-slate-200 w-24 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-slate-700/50">
-                            {initialCategories.map(cat => (
-                                <tr key={cat.id}>
-                                    <td className="px-4 py-3">
-                                        <span className="font-medium text-gray-900 dark:text-white">{cat.name}</span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <CategoryAccountCode key={`${cat.id}-${cat.account_code ?? ""}`} id={cat.id} initial={cat.account_code} disabled={isViewer} />
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                                            disabled={isViewer}
-                                            title={isViewer ? "Viewers cannot delete categories" : ""}
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <Trash2 className="w-4 h-4 mr-2" />
-                                            Delete
-                                        </Button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            {/* Categories: expense and income (spec 3.3) */}
+            <CategorySettings categories={initialCategories} orgType={orgType} />
 
         </div>
     )

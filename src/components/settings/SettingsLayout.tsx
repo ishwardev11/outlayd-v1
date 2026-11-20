@@ -15,6 +15,7 @@ export interface OrgSettings {
     base_currency?: string | null;
     fiscal_year_start?: number | null;
     timezone?: string | null;
+    org_type?: string | null;
     subscription_status?: string | null;
     subscription_tier?: string | null;
     cancel_at_period_end?: boolean | null;
@@ -50,6 +51,10 @@ export interface Category {
     account_code?: string | null;
     kind?: "income" | "expense";
     is_system?: boolean;
+    nature?: string | null;
+    group_name?: string | null;
+    sort_order?: number;
+    archived_at?: string | null;
 }
 
 export interface TeamMember {
@@ -111,7 +116,7 @@ export function SettingsLayout({ orgSettings, initialFunds, fundSpend = [], init
                         <OrganizationProfileTab orgSettings={orgSettings} />
                     )}
                     {activeTab === 'financial' && (
-                        <FinancialCustomizationTab initialFunds={initialFunds} fundSpend={fundSpend} initialCategories={initialCategories} />
+                        <FinancialCustomizationTab initialFunds={initialFunds} fundSpend={fundSpend} initialCategories={initialCategories} orgType={orgSettings?.org_type ?? null} />
                     )}
                     {activeTab === 'team' && (
                         <TeamManagementTab

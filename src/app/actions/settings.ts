@@ -21,6 +21,7 @@ import { sanitizeFundDetails, UpdateValidationError } from "@/utils/sanitize-upd
 import { baseCurrencyChangeBlocked } from "@/utils/base-currency"
 import { getPlanState, requireFeature } from "@/utils/plan"
 import { errorMessage, errorProp, type IdName } from "@/utils/row-types";
+import { isExpenseGroup, isIncomeNature, OTHER_GROUP } from "@/utils/category-options";
 
 // A workspace_invites row (only the fields read here)
 interface InviteRow {
@@ -260,29 +261,155 @@ export async function getSettingsCategories() {
         .from("categories")
         .select("*")
         .eq("organization_id", organization_id)
-        .eq("kind", "expense")
         .eq("is_system", false)
+        .order("kind")
+        .order("sort_order")
         .order("name")
 
     if (error) return []
     return data
 }
 
-export async function addSettingCategory(name: string) {
-    await checkWriteAccess();
+type CategoryResult = { success: true } | { success: false; error: string }
+
+// Income categories belong to income tracking (a paid feature); expense categories are free
+async function categoryWriteCheck(kind: string): Promise<{ supabase: Awaited<ReturnType<typeof createClient>>; organization_id: string } | { error: string }> {
+    try {
+        await checkWriteAccess()
+    } catch {
+        return { error: "Only Admins and Editors can change categories." }
+    }
     const supabase = await createClient()
     const organization_id = await getOrganizationId()
+    if (!organization_id) return { error: "No active organization" }
+    if (kind === "income") {
+        try {
+            await requireFeature(supabase, organization_id, "income", "use")
+        } catch (e) {
+            return { error: errorMessage(e) }
+        }
+    }
+    return { supabase, organization_id }
+}
 
-    const { error } = await supabase
+async function categoryKind(id: string): Promise<string | null> {
+    const supabase = await createClient()
+    const { data } = await supabase.from("categories").select("kind").eq("id", id).maybeSingle()
+    return (data?.kind as string | undefined) ?? null
+}
+
+function dbCategoryMessage(error: { code?: string; message?: string }, fallback: string): string {
+    if (error.code === "23505") return "A category with this name already exists."
+    const m = error.message ?? ""
+    if (/in use|cannot be (edited|deleted|archived)/i.test(m)) return m
+    return fallback
+}
+
+// Rename, or set the expense group / income nature. System categories are refused by the database.
+export async function updateCategory(id: string, raw: unknown): Promise<CategoryResult> {
+    const kind = await categoryKind(id)
+    if (!kind) return { success: false, error: "That category was not found." }
+    const ctx = await categoryWriteCheck(kind)
+    if ("error" in ctx) return { success: false, error: ctx.error }
+
+    const input = (raw ?? {}) as Record<string, unknown>
+    const updates: Record<string, unknown> = {}
+    if (input.name !== undefined) {
+        const name = typeof input.name === "string" ? input.name.trim() : ""
+        if (!name || name.length > 100) return { success: false, error: "Enter a name of up to 100 characters." }
+        updates.name = name
+    }
+    if (input.group_name !== undefined) {
+        if (kind !== "expense") return { success: false, error: "Only expense categories have a group." }
+        if (input.group_name === OTHER_GROUP || input.group_name === null || input.group_name === "") updates.group_name = null
+        else if (isExpenseGroup(input.group_name)) updates.group_name = input.group_name
+        else return { success: false, error: "Choose a valid group." }
+    }
+    if (input.nature !== undefined) {
+        if (kind !== "income") return { success: false, error: "Only income categories have a type of income." }
+        if (!isIncomeNature(input.nature)) return { success: false, error: "Choose a valid type of income." }
+        updates.nature = input.nature
+    }
+    if (Object.keys(updates).length === 0) return { success: true }
+
+    const { error } = await ctx.supabase.from("categories").update(updates).eq("id", id).eq("organization_id", ctx.organization_id)
+    if (error) return { success: false, error: dbCategoryMessage(error, "Could not save the category.") }
+    revalidatePath("/", "layout")
+    return { success: true }
+}
+
+// Archived categories disappear from pickers but stay on old entries and in every report
+export async function setCategoryArchived(id: string, archived: boolean): Promise<CategoryResult> {
+    const kind = await categoryKind(id)
+    if (!kind) return { success: false, error: "That category was not found." }
+    const ctx = await categoryWriteCheck(kind)
+    if ("error" in ctx) return { success: false, error: ctx.error }
+    const { data, error } = await ctx.supabase
         .from("categories")
-        .insert({
-            organization_id,
-            name
-        })
+        .update({ archived_at: archived ? new Date().toISOString() : null })
+        .eq("id", id)
+        .eq("organization_id", ctx.organization_id)
+        .select("id")
+    if (error) return { success: false, error: dbCategoryMessage(error, "Could not update the category.") }
+    if (!data || data.length === 0) return { success: false, error: "That category was not found." }
+    revalidatePath("/", "layout")
+    return { success: true }
+}
 
+// Moves a category one place up or down within its kind (expense or income)
+export async function moveCategory(id: string, direction: "up" | "down"): Promise<CategoryResult> {
+    const kind = await categoryKind(id)
+    if (!kind) return { success: false, error: "That category was not found." }
+    const ctx = await categoryWriteCheck(kind)
+    if ("error" in ctx) return { success: false, error: ctx.error }
+    const { data: list, error } = await ctx.supabase
+        .from("categories")
+        .select("id, sort_order")
+        .eq("organization_id", ctx.organization_id)
+        .eq("kind", kind)
+        .eq("is_system", false)
+        .order("sort_order")
+        .order("name")
+    if (error || !list) return { success: false, error: "Could not reorder the categories." }
+    const ids = list.map((c) => c.id as string)
+    const i = ids.indexOf(id)
+    const j = direction === "up" ? i - 1 : i + 1
+    if (i < 0 || j < 0 || j >= ids.length) return { success: true }
+    ;[ids[i], ids[j]] = [ids[j], ids[i]]
+    // Renumber 10, 20, 30... and save only the rows whose position changed
+    const before = new Map(list.map((c) => [c.id as string, c.sort_order as number]))
+    for (const [n, cid] of ids.entries()) {
+        const order = (n + 1) * 10
+        if (before.get(cid) === order) continue
+        const { error: e } = await ctx.supabase.from("categories").update({ sort_order: order }).eq("id", cid).eq("organization_id", ctx.organization_id)
+        if (e) return { success: false, error: "Could not reorder the categories." }
+    }
+    revalidatePath("/", "layout")
+    return { success: true }
+}
+
+// Adds a category. Expense categories may have a group; income categories need a type of income
+// (nature), which drives the "Donation / Other income" choice and the Income & Expenditure grouping.
+export async function addSettingCategory(name: string, options: { kind?: "income" | "expense"; nature?: string | null; group_name?: string | null } = {}): Promise<CategoryResult> {
+    const kind = options.kind === "income" ? "income" : "expense"
+    const ctx = await categoryWriteCheck(kind)
+    if ("error" in ctx) return { success: false, error: ctx.error }
+
+    const cleanName = (name ?? "").trim()
+    if (!cleanName || cleanName.length > 100) return { success: false, error: "Enter a name of up to 100 characters." }
+    const row: Record<string, unknown> = { organization_id: ctx.organization_id, name: cleanName, kind, sort_order: 1000 }
+    if (kind === "income") {
+        if (!isIncomeNature(options.nature)) return { success: false, error: "Choose a type of income." }
+        row.nature = options.nature
+    } else if (options.group_name && options.group_name !== OTHER_GROUP) {
+        if (!isExpenseGroup(options.group_name)) return { success: false, error: "Choose a valid group." }
+        row.group_name = options.group_name
+    }
+
+    const { error } = await ctx.supabase.from("categories").insert(row)
     if (error) {
-        console.error("Supabase Error (addSettingCategory):", error)
-        throw new Error("Failed to add category")
+        if (error.code !== "23505") console.error("Supabase Error (addSettingCategory):", error)
+        return { success: false, error: dbCategoryMessage(error, "Could not add the category.") }
     }
     revalidatePath("/", "layout")
     return { success: true }
@@ -326,22 +453,26 @@ export async function updateCategoryAccountCode(id: string, code: string): Promi
     }
 }
 
-export async function deleteSettingCategory(id: string) {
-    await checkWriteAccess();
-    const supabase = await createClient()
-    const organization_id = await getOrganizationId()
+// Deletes a category nothing uses. One in use is refused by the database (archive it instead).
+export async function deleteSettingCategory(id: string): Promise<CategoryResult> {
+    const kind = await categoryKind(id)
+    if (!kind) return { success: false, error: "That category was not found." }
+    const ctx = await categoryWriteCheck(kind)
+    if ("error" in ctx) return { success: false, error: ctx.error }
 
-    const { error } = await supabase
+    const { data, error } = await ctx.supabase
         .from("categories")
         .delete()
         .eq("id", id)
-        .eq("organization_id", organization_id)
+        .eq("organization_id", ctx.organization_id)
         .eq("is_system", false)
+        .select("id")
 
     if (error) {
-        console.error("Supabase Error (deleteSettingCategory):", error)
-        throw new Error("Failed to delete category")
+        if (error.code !== "P0001") console.error("Supabase Error (deleteSettingCategory):", error)
+        return { success: false, error: dbCategoryMessage(error, "Could not delete the category.") }
     }
+    if (!data || data.length === 0) return { success: false, error: "That category was not found." }
     revalidatePath("/", "layout")
     return { success: true }
 }

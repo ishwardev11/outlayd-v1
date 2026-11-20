@@ -319,6 +319,38 @@ BEGIN
 END $$;
 RESET ROLE;
 
+-- ---------------------------------------------------------------- attachments and running balance (stage 3b)
+DO $$
+DECLARE c record; n int; v_acct uuid; v_last uuid;
+BEGIN
+  SELECT * INTO c FROM m_ctx;
+  PERFORM pg_temp.sign_in(c.u_editor, 'mi-editor@example.com');
+  SET LOCAL ROLE authenticated;
+  UPDATE transactions SET attachment_url = c.org || '/transactions/slip.pdf' WHERE id = c.tx_grant; GET DIAGNOSTICS n = ROW_COUNT;
+  ASSERT n = 1, 'an Editor can attach a file to money in';
+  PERFORM pg_temp.expect_error(format($q$UPDATE transactions SET attachment_url = '../escape.pdf' WHERE id = '%s'$q$, c.tx_grant), 'attachment_url_check', 'a path that climbs out of the folder');
+
+  SELECT id INTO v_acct FROM accounts WHERE organization_id = c.org AND is_default;
+  SELECT id INTO v_last FROM transactions WHERE account_id = v_acct ORDER BY tx_date DESC, created_at DESC, id DESC LIMIT 1;
+  -- opening 0, paid bill -200, then money in 170 + 30 + 25 + 500
+  ASSERT (SELECT balance FROM account_running_balance(v_acct, ARRAY[v_last])) = 525,
+    format('running balance after the last entry should be 525, got %s', (SELECT balance FROM account_running_balance(v_acct, ARRAY[v_last])));
+  RAISE NOTICE 'PASS attachments on money in, and the account running balance';
+END $$;
+RESET ROLE;
+
+DO $$
+DECLARE c record; n int;
+BEGIN
+  SELECT * INTO c FROM m_ctx;
+  PERFORM pg_temp.sign_in(c.u_viewer, 'mi-viewer@example.com');
+  SET LOCAL ROLE authenticated;
+  UPDATE transactions SET attachment_url = NULL WHERE id = c.tx_grant; GET DIAGNOSTICS n = ROW_COUNT;
+  ASSERT n = 0, 'a Viewer changed an attachment';
+  RAISE NOTICE 'PASS a Viewer cannot change attachments';
+END $$;
+RESET ROLE;
+
 -- ---------------------------------------------------------------- Income & Expenditure and dashboard
 DO $$
 DECLARE c record; v jsonb;

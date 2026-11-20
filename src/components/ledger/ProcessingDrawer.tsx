@@ -255,9 +255,11 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
             }
 
             toast.success(
-                document.status === "awaiting_payment"
-                    ? "Invoice marked as paid."
-                    : "Document approved successfully."
+                document.status === "paid"
+                    ? "Changes saved."
+                    : document.status === "awaiting_payment"
+                        ? "Invoice marked as paid."
+                        : "Document approved successfully."
             );
 
             if (onNext) onNext();
@@ -334,7 +336,12 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="w-[95vw] sm:max-w-5xl h-[90vh] p-0 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden dark:border-slate-800">
                 <DialogHeader className="px-6 py-4 border-b dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 flex flex-row items-center justify-between">
-                    <DialogTitle className="dark:text-white">{document.status === "awaiting_payment" ? "Settle Invoice" : "Review Document"}: {document.id.split('-')[0]}</DialogTitle>
+                    <DialogTitle className="dark:text-white">{document.status === "paid" ? "Paid Document" : document.status === "awaiting_payment" ? "Settle Invoice" : "Review Document"}: {document.id.split('-')[0]}
+                        {document.status === "paid" && (
+                            <span className="ml-3 align-middle text-xs font-medium rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 px-2.5 py-1">
+                                Paid{document.paid_date ? ` on ${document.paid_date}` : ""}
+                            </span>
+                        )}</DialogTitle>
                     <div className="flex items-center gap-2">
                         {typeof document.confidence_score === 'number' && (
                             document.confidence_score >= 90 ? (
@@ -491,8 +498,9 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="receipt">Receipt (Paid)</SelectItem>
-                                            <SelectItem value="invoice">Invoice (Unpaid)</SelectItem>
+                                            {/* Before approval the label says what approving does; once paid it is just the type */}
+                                            <SelectItem value="receipt">{document.status === "paid" ? "Receipt" : "Receipt (Paid)"}</SelectItem>
+                                            <SelectItem value="invoice">{document.status === "paid" ? "Invoice" : "Invoice (Unpaid)"}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -539,7 +547,9 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                                 <Select value={split.category_id || undefined} onValueChange={v => updateSplit(split.id, "category_id", v)}>
                                                     <SelectTrigger className="w-full dark:bg-slate-900 dark:border-slate-800 [&>span]:truncate text-left"><SelectValue placeholder="Category..." /></SelectTrigger>
                                                     <SelectContent>
-                                                        {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                                        {categories
+                                                            .filter((c) => !c.archived_at || c.id === split.category_id)
+                                                            .map((c) => <SelectItem key={c.id} value={c.id}>{c.name}{c.archived_at ? " (archived)" : ""}</SelectItem>)}
                                                         <SelectItem value="custom" className="text-indigo-600 dark:text-indigo-400 font-medium">+ Custom</SelectItem>
                                                     </SelectContent>
                                                 </Select>
@@ -671,7 +681,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                     title={isViewer ? "Viewers cannot edit documents" : "Cmd/Ctrl + Enter to Save"}
                                 >
                                     {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                                    {document.status === "awaiting_payment" ? "Mark as Paid" : "Approve & Next"}
+                                    {document.status === "paid" ? "Save changes" : document.status === "awaiting_payment" ? "Mark as Paid" : "Approve & Next"}
                                     <span className="ml-2 py-0.5 px-1.5 bg-indigo-800 text-indigo-100 rounded text-[10px] font-mono opacity-80 border border-indigo-900 shadow-inner tracking-wider">⌘↵</span>
                                 </Button>
                             </div>

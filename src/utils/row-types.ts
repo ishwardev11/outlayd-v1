@@ -52,6 +52,7 @@ export interface FundRow extends IdName {
 
 export interface CategoryRow extends IdName {
     account_code?: string | null
+    archived_at?: string | null
 }
 
 export interface DocumentRow {
