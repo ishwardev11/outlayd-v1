@@ -88,14 +88,12 @@ BEGIN
   ASSERT (SELECT remarks FROM public.transactions WHERE document_id = doc) = 'edited by editor', 'remarks follow the document remarks';
   RAISE NOTICE 'PASS a signed-in Editor''s edit is mirrored (total and remarks)';
 
-  BEGIN
-    UPDATE public.transactions SET remarks = 'x';
-    RAISE EXCEPTION 'update should have been refused';
-  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
-  BEGIN
-    DELETE FROM public.transactions;
-    RAISE EXCEPTION 'delete should have been refused';
-  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  -- Since money in (stage 3a) signed-in users may write MANUAL money-in entries only. Mirrored
+  -- entries (source = 'document') are invisible to their update and delete: nothing changes.
+  UPDATE public.transactions SET remarks = 'x' WHERE source = 'document'; GET DIAGNOSTICS n = ROW_COUNT;
+  ASSERT n = 0, 'a signed-in user changed a mirrored transaction';
+  DELETE FROM public.transactions WHERE source = 'document'; GET DIAGNOSTICS n = ROW_COUNT;
+  ASSERT n = 0, 'a signed-in user deleted a mirrored transaction';
   BEGIN
     INSERT INTO public.transactions (organization_id, tx_type, tx_date, account_id, total)
       SELECT organization_id, 'money_out', current_date, account_id, 1 FROM public.transactions LIMIT 1;
