@@ -1,4 +1,7 @@
-import { getDashboardSummary, getActionQueue, getRecentDocuments, getExtractingCount } from "@/app/actions/aggregates";
+import { getDashboardSummary, getActionQueue, getRecentDocuments, getExtractingCount, getCashThisMonth } from "@/app/actions/aggregates";
+import { createClient } from "@/utils/supabase/server";
+import { featureAllowed } from "@/utils/plan";
+import Link from "next/link";
 import { getOrganizationId, getOrganizationCurrency } from "@/app/actions/document-utils";
 import { getCurrencyDetails } from "@/utils/currency";
 import { redirect } from "next/navigation";
@@ -8,7 +11,21 @@ import { QuickUpload } from "@/components/dashboard/QuickUpload";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { ExtractionPoller } from "@/components/ExtractionPoller";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, FileText, Banknote, Info } from "lucide-react";
+import { AlertCircle, FileText, ArrowDownLeft, ArrowUpRight, Info } from "lucide-react";
+
+const money = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// A small hover note next to a card title
+function CardNote({ text }: { text: string }) {
+  return (
+    <>
+      <Info className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-500 dark:text-slate-400 transition-colors" />
+      <div className="absolute top-8 left-4 bg-slate-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity w-64 whitespace-normal normal-case tracking-normal font-normal z-50 shadow-md">
+        {text}
+      </div>
+    </>
+  );
+}
 
 export const dynamic = "force-dynamic";
 // Uploads started from this page extract their data in the background (see processUpload), and that
@@ -27,20 +44,24 @@ export default async function Home() {
 
   // Totals, the 14-day cash flow and the lists are computed in the database, so the page stays
   // fast however many documents there are.
-  const [summary, actionQueueItems, recentDocuments, extractingCount] = await Promise.all([
+  const supabase = await createClient();
+  const [summary, actionQueueItems, recentDocuments, extractingCount, cash, canRecordIncome] = await Promise.all([
     getDashboardSummary(),
     getActionQueue(),
     getRecentDocuments(),
     getExtractingCount(),
+    getCashThisMonth(),
+    featureAllowed(supabase, orgId, "income", "use"),
   ]);
 
   const {
     awaitingTotal: awaitingPaymentTotal,
     needsReviewCount,
     needsReviewTotal: needsReviewAmountTotal,
-    paidThisMonth: paidThisMonthTotal,
     cashFlow: last14Days,
   } = summary;
+  // Money in is a paid feature; a free organisation still sees it if it has any (refunds, credit notes)
+  const showMoneyIn = canRecordIncome || cash.moneyIn > 0;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -52,57 +73,70 @@ export default async function Home() {
       <ExtractionPoller count={extractingCount} />
 
       {/* Top Row: KPI Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className={`grid gap-6 md:grid-cols-2 ${showMoneyIn ? "xl:grid-cols-4" : "lg:grid-cols-3"}`}>
         <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
             <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
               Awaiting Payment
-              <Info className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-500 dark:text-slate-400 transition-colors" />
-              <div className="absolute top-8 left-4 bg-slate-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-md">
-                Excludes documents pending manual review.
-              </div>
+              <CardNote text="Approved documents that have not been paid yet. Documents still waiting for review are not included." />
             </CardTitle>
             <AlertCircle className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white">
-              {symbol}{awaitingPaymentTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Needs Review
-            </CardTitle>
-            <FileText className="h-4 w-4 text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white">{needsReviewCount}</div>
+            <Link href="/ledger?status=awaiting_payment" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="awaiting-payment">
+              {symbol}{money(awaitingPaymentTotal)}
+            </Link>
           </CardContent>
         </Card>
         <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
             <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
-              Paid This Month
-              <Info className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-500 dark:text-slate-400 transition-colors" />
-              <div className="absolute top-8 left-4 bg-slate-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-md">
-                Excludes documents pending manual review.
-              </div>
+              Needs Review
+              <CardNote text="Uploaded documents waiting for someone to check the details and approve them." />
             </CardTitle>
-            <Banknote className="h-4 w-4 text-indigo-500" />
+            <FileText className="h-4 w-4 text-indigo-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white">
-              {symbol}{paidThisMonthTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
+            <Link href="/ledger?status=needs_review" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="needs-review">
+              {needsReviewCount}
+            </Link>
+          </CardContent>
+        </Card>
+        <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
+            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
+              Money Out This Month
+              <CardNote text="Payments made this month, by payment date, from the cash book. Documents still waiting for review or payment are not included." />
+            </CardTitle>
+            <ArrowUpRight className="h-4 w-4 text-indigo-500" />
+          </CardHeader>
+          <CardContent>
+            <Link href={`/ledger?view=cash&type=money_out&from=${cash.from}&to=${cash.to}`} className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="money-out-month">
+              {symbol}{money(cash.moneyOut)}
+            </Link>
             {needsReviewAmountTotal > 0 && (
               <p className="text-xs text-slate-400 mt-1 font-medium">
-                + {symbol}{needsReviewAmountTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pending approval
+                + {symbol}{money(needsReviewAmountTotal)} pending approval
               </p>
             )}
           </CardContent>
         </Card>
+        {showMoneyIn && (
+          <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
+              <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
+                Money In This Month
+                <CardNote text="Donations, grants and other income received this month, by date received. Refunds you received also count as money in." />
+              </CardTitle>
+              <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
+            </CardHeader>
+            <CardContent>
+              <Link href={`/ledger?view=cash&type=money_in&from=${cash.from}&to=${cash.to}`} className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 hover:underline" data-testid="money-in-month">
+                {symbol}{money(cash.moneyIn)}
+              </Link>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Main Content Split */}

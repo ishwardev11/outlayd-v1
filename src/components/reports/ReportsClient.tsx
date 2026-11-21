@@ -3,7 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, TrendingUp, AlertTriangle, Wallet, PieChart, ListX, Info, FileCheck, FileSpreadsheet, ChevronLeft, ChevronRight } from "lucide-react";
+import { BarChart3, TrendingUp, AlertTriangle, Wallet, PieChart, ListX, Info, FileCheck, FileSpreadsheet, ChevronLeft, ChevronRight, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -85,9 +85,18 @@ export function ReportsClient({ summary, largeTransactions: largeTx, filters, pa
                         </div>
                     </div>
                     <p className="text-gray-500 dark:text-slate-400 mt-2 text-lg">Detailed breakdown of expense allocation and spending.</p>
+                    <p className="text-gray-400 dark:text-slate-500 mt-1 text-sm">Based on documents by document date. For income and spending by payment date, open the Income &amp; Expenditure statement.</p>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                    <Link
+                        href="/reports/income-expenditure"
+                        title="Income and spending by payment date, from the cash book"
+                        className="inline-flex items-center gap-2 h-10 px-4 rounded-md text-sm font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                        <Scale className="h-4 w-4" />
+                        Income &amp; Expenditure
+                    </Link>
                     <Link
                         href="/reports/donor-memo"
                         className="inline-flex items-center gap-2 h-10 px-4 rounded-md text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"

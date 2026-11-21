@@ -19,7 +19,7 @@ export function FeatureLocked({
     tagline: string;
     heading: string;
     features: string[];
-    context: "accounting_export" | "bank_statements";
+    context: "accounting_export" | "bank_statements" | "financial_statements";
     icon: ReactNode;
 }) {
     const [showPaywall, setShowPaywall] = useState(false);

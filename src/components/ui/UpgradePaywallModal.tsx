@@ -7,7 +7,7 @@ import { CheckCircle2, LockKeyhole } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
-type PaywallContext = "upload_limit" | "team_limit" | "donor_memo" | "accounting_export" | "bank_statements";
+type PaywallContext = "upload_limit" | "team_limit" | "donor_memo" | "accounting_export" | "bank_statements" | "financial_statements";
 
 interface UpgradePaywallModalProps {
     isOpen: boolean;
@@ -36,6 +36,11 @@ const COPY: Record<PaywallContext, { heading: string; subtext: string }> = {
         heading: "Bank Statement Import is a Growth Feature",
         subtext:
             "Upload a bank statement PDF, match each payment to an approved invoice or receipt, and see which payments have no paperwork. Upgrade to Outlayd Growth to unlock it.",
+    },
+    financial_statements: {
+        heading: "Financial Statements are a Growth Feature",
+        subtext:
+            "Produce your Statement of Income and Expenditure (or Profit and Loss) from your records, by fund and against last year, ready for your AGM and auditor. Upgrade to Outlayd Growth to unlock it.",
     },
     team_limit: {
         heading: "Collaborate with your whole team",

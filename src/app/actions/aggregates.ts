@@ -69,6 +69,24 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     }
 }
 
+/**
+ * Money in and money out this month, by payment date, read from transactions only (the cash book).
+ * Paid documents are already in there through the mirror, so nothing is counted twice.
+ */
+export async function getCashThisMonth(): Promise<{ moneyIn: number; moneyOut: number; from: string; to: string }> {
+    const supabase = await createClient()
+    const orgId = await requireOrg()
+    const today = todayInTimezone(await getOrganizationTimezone())
+    const { data, error } = await supabase.rpc("dashboard_cash_month", { p_org: orgId, p_today: today })
+    if (error) {
+        console.error("Error loading money in and out this month:", error)
+        throw new Error("Failed to load dashboard")
+    }
+    const raw = (data ?? {}) as JsonObject
+    const { start, end } = monthBounds(today)
+    return { moneyIn: num(raw.money_in), moneyOut: num(raw.money_out), from: start, to: end }
+}
+
 /** The 10 newest documents that still need a human (needs review or awaiting payment). */
 export async function getActionQueue() {
     const supabase = await createClient()
