@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Building2, Landmark, Users, Settings, CreditCard } from "lucide-react"
 import { GeneralSettingsTab } from "./GeneralSettingsTab"
 import { OrganizationProfileTab } from "./OrganizationProfileTab"
+import type { ReceiptSettingsData } from "./ReceiptSettingsForm"
 import { FinancialCustomizationTab } from "./FinancialCustomizationTab"
 import { TeamManagementTab } from "./TeamManagementTab"
 import { BillingSettingsTab } from "./BillingSettingsTab"
@@ -72,6 +73,7 @@ interface SettingsLayoutProps {
     initialCategories: Category[];
     initialTeam: TeamMember[];
     currentUserEmail: string | null;
+    receiptSettings?: ReceiptSettingsData | null;
 }
 
 const TABS = [
@@ -82,7 +84,7 @@ const TABS = [
     { id: 'billing', label: 'Billing & Subscription', icon: CreditCard },
 ]
 
-export function SettingsLayout({ orgSettings, initialFunds, fundSpend = [], initialCategories, initialTeam, currentUserEmail }: SettingsLayoutProps) {
+export function SettingsLayout({ orgSettings, initialFunds, fundSpend = [], initialCategories, initialTeam, currentUserEmail, receiptSettings }: SettingsLayoutProps) {
     const [activeTab, setActiveTab] = useState('general')
 
     return (
@@ -113,7 +115,7 @@ export function SettingsLayout({ orgSettings, initialFunds, fundSpend = [], init
                         <GeneralSettingsTab />
                     )}
                     {activeTab === 'organization' && (
-                        <OrganizationProfileTab orgSettings={orgSettings} />
+                        <OrganizationProfileTab orgSettings={orgSettings} receiptSettings={receiptSettings ?? null} />
                     )}
                     {activeTab === 'financial' && (
                         <FinancialCustomizationTab initialFunds={initialFunds} fundSpend={fundSpend} initialCategories={initialCategories} orgType={orgSettings?.org_type ?? null} />

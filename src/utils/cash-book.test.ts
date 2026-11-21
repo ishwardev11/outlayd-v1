@@ -10,7 +10,7 @@ const row = (over: Partial<CashBookRow>): CashBookRow => ({
         { amount: 100, fundId: "f1", fundName: "General Fund", categoryId: "c1", categoryName: "General donations" },
         { amount: 50, fundId: "f2", fundName: "Building Fund", categoryId: "c2", categoryName: "Government grants" },
     ],
-    balance: null, ...over,
+    balance: null, donation: true, receipt: null, ...over,
 })
 
 test("type labels follow the spec sign rule", () => {

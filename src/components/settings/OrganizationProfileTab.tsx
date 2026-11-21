@@ -23,8 +23,9 @@ import {
 } from "@/components/ui/dialog"
 
 import { OrgSettings } from "./SettingsLayout"
+import { ReceiptSettingsForm, type ReceiptSettingsData } from "./ReceiptSettingsForm"
 
-export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettings | null }) {
+export function OrganizationProfileTab({ orgSettings, receiptSettings = null }: { orgSettings: OrgSettings | null; receiptSettings?: ReceiptSettingsData | null }) {
     const router = useRouter()
     const { isViewer, isAdmin } = useRole()
     const [isSaving, setIsSaving] = useState(false)
@@ -181,6 +182,8 @@ export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettin
                     </div>
                 </form>
             </div>
+
+            {receiptSettings && <ReceiptSettingsForm initial={receiptSettings} />}
 
             {/* Danger Zone */}
             {isAdmin && (

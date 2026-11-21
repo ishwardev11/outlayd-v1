@@ -1,5 +1,6 @@
 import { getOrganizationSettings, getSettingsFunds, getFundBudgetSummary, getSettingsCategories, getTeamMembers } from "@/app/actions/settings"
 import { SettingsLayout } from "@/components/settings/SettingsLayout"
+import { getReceiptSettings } from "@/app/actions/receipts"
 import { createClient } from "@/utils/supabase/server"
 
 export const dynamic = "force-dynamic"
@@ -10,6 +11,7 @@ export default async function SettingsPage() {
     const fundSpend = await getFundBudgetSummary()
     const categories = await getSettingsCategories()
     const team = await getTeamMembers()
+    const receiptSettings = await getReceiptSettings()
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -29,6 +31,7 @@ export default async function SettingsPage() {
                 initialCategories={categories}
                 initialTeam={team}
                 currentUserEmail={currentUserEmail}
+                receiptSettings={receiptSettings}
             />
         </div>
     )

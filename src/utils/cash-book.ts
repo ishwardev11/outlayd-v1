@@ -29,6 +29,10 @@ export interface CashBookRow {
     accountName: string
     lines: CashBookLine[]
     balance: number | null
+    // Money in with at least one donation line (a donation receipt can be issued for it)
+    donation: boolean
+    // The receipt in force, or else the most recent voided one
+    receipt: { id: string; number: string; voided: boolean } | null
 }
 
 export interface CashBookFilters {

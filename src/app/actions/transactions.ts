@@ -116,10 +116,18 @@ async function toRows(supabase: Supabase, organizationId: string, txs: TxRow[], 
     const [lines, funds, categories, accounts, balances] = await Promise.all([
         supabase.from("transaction_lines").select("transaction_id, line_no, amount, fund_id, category_id").in("transaction_id", ids).order("line_no"),
         supabase.from("funds").select("id, name").eq("organization_id", organizationId),
-        supabase.from("categories").select("id, name").eq("organization_id", organizationId),
+        supabase.from("categories").select("id, name, kind, nature").eq("organization_id", organizationId),
         supabase.from("accounts").select("id, name").eq("organization_id", organizationId),
         account ? supabase.rpc("account_running_balance", { p_account: account, p_ids: ids }) : Promise.resolve({ data: [] as unknown[] }),
     ])
+    const { data: receiptRows } = await supabase.from("donation_receipts").select("id, transaction_id, receipt_no, voided_at, seq").in("transaction_id", ids).order("seq", { ascending: false })
+    const donationCats = new Set(((categories.data ?? []) as { id: string; kind: string; nature: string | null }[]).filter((c) => c.kind === "income" && c.nature === "donation").map((c) => c.id))
+    // Per entry: the receipt in force, otherwise the newest voided one
+    const receiptOf = new Map<string, { id: string; number: string; voided: boolean }>()
+    for (const r of (receiptRows ?? []) as { id: string; transaction_id: string; receipt_no: string; voided_at: string | null }[]) {
+        const current = receiptOf.get(r.transaction_id)
+        if (!current || (current.voided && !r.voided_at)) receiptOf.set(r.transaction_id, { id: r.id, number: r.receipt_no, voided: !!r.voided_at })
+    }
     const names = (rows: unknown) => new Map(((rows ?? []) as { id: string; name: string }[]).map((r) => [r.id, r.name]))
     const fundNames = names(funds.data), catNames = names(categories.data), accountNames = names(accounts.data)
     const balanceOf = new Map(((balances.data ?? []) as { transaction_id: string; balance: number | string }[]).map((b) => [b.transaction_id, Number(b.balance)]))
@@ -149,6 +157,8 @@ async function toRows(supabase: Supabase, organizationId: string, txs: TxRow[], 
         accountName: accountNames.get(t.account_id) ?? "",
         lines: linesOf.get(t.id) ?? [],
         balance: account ? balanceOf.get(t.id) ?? null : null,
+        donation: t.tx_type === "money_in" && t.source === "manual" && !t.is_refund && (linesOf.get(t.id) ?? []).some((l) => !!l.categoryId && donationCats.has(l.categoryId)),
+        receipt: receiptOf.get(t.id) ?? null,
     }))
 }
 

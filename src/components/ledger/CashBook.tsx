@@ -12,6 +12,7 @@ import { useCurrency } from "@/components/CurrencyProvider"
 import { exportCashBookCsv, getMoneyIn, type EntryOptions } from "@/app/actions/transactions"
 import { cashBookTotals, sourceLabel, summarise, typeLabel, type CashBookFilters, type CashBookRow } from "@/utils/cash-book"
 import { TransactionDialog, type MoneyInEdit } from "./TransactionDialog"
+import { ReceiptActions } from "./ReceiptActions"
 
 const selectClass = "h-9 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white"
 
@@ -182,6 +183,7 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                                         <td className="px-3 py-2.5 whitespace-nowrap text-xs text-slate-500">{sourceLabel(r.source)}</td>
                                         <td className="px-3 py-2.5 whitespace-nowrap text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                {(r.donation || r.receipt) && <ReceiptActions row={r} canWrite={canMoneyIn} />}
                                                 {r.hasAttachment && (
                                                     <a href={`/api/files/transaction/${r.id}`} target="_blank" rel="noopener noreferrer" aria-label="View attachment" className="text-slate-400 hover:text-indigo-600"><Paperclip className="h-4 w-4" /></a>
                                                 )}
