@@ -2,7 +2,7 @@
 
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
     LayoutDashboard,
@@ -11,7 +11,6 @@ import {
     BarChart3,
     FileCheck,
     Settings,
-    Gavel,
     LogOut,
     HelpCircle,
     X,
@@ -23,7 +22,6 @@ import {
 import { signOutAction } from "@/app/actions/auth";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
-import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
 
 interface SidebarProps {
@@ -34,12 +32,10 @@ interface SidebarProps {
 
 export function Sidebar({ className = "", onNavigate, hideLogo = false }: SidebarProps = {}) {
     const pathname = usePathname();
-    const router = useRouter();
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [openAccordion, setOpenAccordion] = useState<number | null>(null);
     const [isPro, setIsPro] = useState<boolean | null>(null);
     const [hasBeenPaid, setHasBeenPaid] = useState(false);
-    const [showPaywall, setShowPaywall] = useState(false);
 
     // Helper to get the active organization ID
     const getActiveOrgId = (user: User | null) => {
@@ -106,16 +102,6 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
         };
     }, [pathname]); // Re-fetch on navigation to ensure status is fresh after upgrade
 
-    const handleProcurementClick = () => {
-        if (isPro === null) return; // Still loading
-        // A downgraded organisation can still open its existing projects read-only
-        if (isPro || hasBeenPaid) {
-            router.push("/procurement");
-        } else {
-            setShowPaywall(true);
-        }
-    };
-
     const faqs = [
         { q: "How do I change categories?", a: "Go to Settings > Categories to add, edit, or delete the industry categories available in your ledger." },
         { q: "How do I invite team members?", a: "Navigate to Settings > Organization to invite new members via email and assign them roles." },
@@ -167,27 +153,6 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                     <Landmark size={20} />
                     <span>Bank Statements</span>
                 </Link>
-
-                {/* Procurement — gated for free users. Uses a button (not Link) to guarantee no HTML navigation occurs */}
-                <button
-                    id="sidebar-link-procurement"
-                    type="button"
-                    onClick={() => {
-                        onNavigate?.();
-                        handleProcurementClick();
-                    }}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer w-full text-left group ${pathname === '/procurement' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}
-                >
-                    <Gavel size={20} />
-                    <span className="flex-1">Procurement</span>
-                    {/* Lock + Pro badge */}
-                    {isPro === false && (
-                        <span className="ml-auto bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1 shrink-0 animate-in fade-in duration-300 transition-transform group-hover:scale-110 group-hover:-rotate-3">
-                            <Lock size={9} strokeWidth={2.5} />
-                            Pro
-                        </span>
-                    )}
-                </button>
             </nav>
 
             <div className="mt-auto flex flex-col gap-2">
@@ -260,13 +225,6 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                     </div>
                 </div>
             )}
-
-            {/* Procurement Paywall Modal */}
-            <UpgradePaywallModal
-                isOpen={showPaywall}
-                onClose={() => setShowPaywall(false)}
-                context="procurement"
-            />
         </div>
     );
 }

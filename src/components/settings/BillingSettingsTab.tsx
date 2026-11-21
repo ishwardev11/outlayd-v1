@@ -169,10 +169,6 @@ export function BillingSettingsTab({ orgSettings }: { orgSettings: OrgSettings |
                             </li>
                             <li className="flex items-start">
                                 <Check className="h-5 w-5 text-indigo-500 shrink-0 mr-2" />
-                                <span className="text-sm text-indigo-900/80 dark:text-indigo-200">Full procurement & quotation tracking</span>
-                            </li>
-                            <li className="flex items-start">
-                                <Check className="h-5 w-5 text-indigo-500 shrink-0 mr-2" />
                                 <span className="text-sm text-indigo-900/80 dark:text-indigo-200">Priority 24/7 support</span>
                             </li>
                         </ul>

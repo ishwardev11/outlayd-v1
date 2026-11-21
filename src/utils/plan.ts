@@ -6,7 +6,7 @@ type Supabase = Awaited<ReturnType<typeof createClient>>
 // function org_feature_allowed (migration 20261121100000_plan_flags.sql), which row-level security
 // also uses, so the app and the database can never disagree. Summary:
 //   use  = create or change       read = view existing data, or export it
-//   funds, accounts, bank_statements, procurement, income, invoices, assets, period_lock, reconciliation
+//   funds, accounts, bank_statements, income, invoices, assets, period_lock, reconciliation
 //        use: paid plan          read: everyone (a downgraded org keeps read-only access)
 //   accounting_export, donor_memo, financial_statements
 //        use: paid plan          read: paid plan, or an org that has been on one (exports of existing data)
@@ -18,7 +18,6 @@ export type PlanFeature =
     | "funds"
     | "accounts"
     | "bank_statements"
-    | "procurement"
     | "accounting_export"
     | "donor_memo"
     | "audit_log"
@@ -70,7 +69,6 @@ const FEATURE_NAMES: Record<PlanFeature, string> = {
     funds: "Creating and editing funds",
     accounts: "Accounts",
     bank_statements: "Bank statement import",
-    procurement: "Procurement",
     accounting_export: "The Accounting Export",
     donor_memo: "The Donor & Audit Memo",
     audit_log: "The audit log",

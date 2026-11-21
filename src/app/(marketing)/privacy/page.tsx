@@ -24,7 +24,7 @@ export default function PrivacyPolicyPage() {
                         <div className="max-w-none text-slate-300 space-y-6 text-lg leading-relaxed">
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">1. Introduction</h2>
                             <p>
-                                Welcome to Outlayd (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your personal and corporate information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or use our B2B expense management and procurement software (collectively, the &quot;Services&quot;).
+                                Welcome to Outlayd (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your personal and corporate information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or use our B2B expense management software (collectively, the &quot;Services&quot;).
                             </p>
                             <p>
                                 By accessing or using the Services, you agree to the collection and use of information in accordance with this Privacy Policy.
@@ -37,7 +37,7 @@ export default function PrivacyPolicyPage() {
                             <ul className="list-disc pl-6 space-y-2 mt-4 text-slate-300">
                                 <li><strong>Account and Profile Data:</strong> Name, email address, password, company name, role, and business contact information.</li>
                                 <li><strong>Financial and Transaction Data:</strong> Billing address and subscription details. Payment processing is handled securely by our third-party payment processor (e.g., Stripe), and we do not store your full credit card numbers on our servers.</li>
-                                <li><strong>User-Generated Content:</strong> Receipts, invoices, procurement bids, ledger data, and other documents you upload to the Services for expense tracking and categorization.</li>
+                                <li><strong>User-Generated Content:</strong> Receipts, invoices, ledger data, and other documents you upload to the Services for expense tracking and categorization.</li>
                                 <li><strong>Automatically Collected Data:</strong> IP addresses, browser type, operating system, access times, and interaction data via standard tracking technologies to maintain the security and operation of our Services.</li>
                             </ul>
 

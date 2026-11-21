@@ -113,7 +113,6 @@ export async function updateOrganizationSettings(updates: OrganizationSettingsUp
     revalidatePath("/ledger")
     revalidatePath("/vendors")
     revalidatePath("/reports")
-    revalidatePath("/procurement")
     return { success: true, data }
 }
 

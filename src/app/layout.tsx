@@ -34,7 +34,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Outlayd | Intelligent Expense Management & Procurement",
+  title: "Outlayd | Intelligent Expense Management",
   description: "An expense tracking and AP automation tool for Malaysian nonprofits and small businesses.",
 };
 

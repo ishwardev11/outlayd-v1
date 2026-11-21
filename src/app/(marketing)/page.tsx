@@ -341,8 +341,8 @@ function HowItWorksSection() {
         },
         {
             num: "03",
-            title: "Report & Procure",
-            desc: "Generate comprehensive operational reports and manage your procurement pipeline smoothly."
+            title: "Report & Share",
+            desc: "Generate comprehensive operational reports and audit-ready summaries for your board and donors."
         }
     ];
 

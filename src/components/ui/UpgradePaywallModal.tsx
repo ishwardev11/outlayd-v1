@@ -7,7 +7,7 @@ import { CheckCircle2, LockKeyhole } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
-type PaywallContext = "upload_limit" | "procurement" | "team_limit" | "donor_memo" | "accounting_export" | "bank_statements";
+type PaywallContext = "upload_limit" | "team_limit" | "donor_memo" | "accounting_export" | "bank_statements";
 
 interface UpgradePaywallModalProps {
     isOpen: boolean;
@@ -21,11 +21,6 @@ const COPY: Record<PaywallContext, { heading: string; subtext: string }> = {
         heading: "You've reached your free limit!",
         subtext:
             "Your organization has successfully processed 5 free documents. To keep automating your ledger and generating audit-ready reports, upgrade to our Growth Tier.",
-    },
-    procurement: {
-        heading: "Procurement is a Growth Feature",
-        subtext:
-            "The full Procurement pipeline — RFP management, vendor bidding, and AI-powered quote evaluation — is exclusive to Outlayd Growth. Upgrade to unlock it today.",
     },
     donor_memo: {
         heading: "The Donor & Audit Memo is a Growth Feature",
@@ -130,12 +125,6 @@ export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upl
                         <CheckCircle2 className="w-5 h-5 text-indigo-500 shrink-0 mr-3 mt-0.5" />
                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                             Advanced board-ready PDF reporting
-                        </span>
-                    </div>
-                    <div className="flex items-start">
-                        <CheckCircle2 className="w-5 h-5 text-indigo-500 shrink-0 mr-3 mt-0.5" />
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                            Unlock the full Procurement pipeline (Purchase Orders &amp; Quote Tracking)
                         </span>
                     </div>
                 </div>

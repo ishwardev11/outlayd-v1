@@ -24,7 +24,7 @@ export default function TermsOfServicePage() {
                         <div className="max-w-none text-slate-300 space-y-6 text-lg leading-relaxed">
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">1. Acceptance of Terms</h2>
                             <p>
-                                Welcome to Outlayd (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Outlayd website, application, and any related expense management, AI extraction, and procurement services (collectively, the &quot;Services&quot;).
+                                Welcome to Outlayd (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Outlayd website, application, and any related expense management and AI extraction services (collectively, the &quot;Services&quot;).
                             </p>
                             <p>
                                 By registering for an account or using the Services, you agree to be bound by these Terms. If you are accepting these Terms on behalf of a company or other legal entity, you represent that you have the authority to bind that entity to these Terms. If you do not agree with these Terms, you may not use the Services.
@@ -32,7 +32,7 @@ export default function TermsOfServicePage() {
 
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">2. Description of Services</h2>
                             <p>
-                                Outlayd provides a B2B SaaS platform designed to assist businesses with ledger management, split categorization, procurement workflows, and AI-assisted data extraction from financial documents (such as receipts and invoices).
+                                Outlayd provides a B2B SaaS platform designed to assist businesses with ledger management, split categorization, and AI-assisted data extraction from financial documents (such as receipts and invoices).
                             </p>
 
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">3. Account Registration and Security</h2>
@@ -51,7 +51,7 @@ export default function TermsOfServicePage() {
                             <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">5. AI Extraction and Financial Disclaimer</h2>
                             <ul className="list-disc pl-6 space-y-2 mt-4 text-slate-300">
                                 <li><strong>AI Technology:</strong> Outlayd utilizes third-party artificial intelligence (including Google Gemini) to perform Optical Character Recognition (OCR) and categorize data from uploaded documents.</li>
-                                <li><strong>Verification Required:</strong> While we strive for high accuracy, AI-generated outputs can occasionally contain errors, omissions, or miscategorizations. You are solely responsible for reviewing, verifying, and approving all extracted data, ledger entries, and procurement bids before relying on them.</li>
+                                <li><strong>Verification Required:</strong> While we strive for high accuracy, AI-generated outputs can occasionally contain errors, omissions, or miscategorizations. You are solely responsible for reviewing, verifying, and approving all extracted data, and ledger entries before relying on them.</li>
                                 <li><strong>Not Accounting Advice:</strong> Outlayd is an administrative software tool, not a certified public accountant, tax advisor, or financial planner. The Services do not constitute professional accounting, tax, or legal advice.</li>
                             </ul>
 

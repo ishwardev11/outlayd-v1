@@ -9,7 +9,6 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 const SOURCES = {
     document: { table: "documents", column: "image_url" },
-    quote: { table: "quotes", column: "file_url" },
     statement: { table: "bank_statements", column: "file_url" },
     transaction: { table: "transactions", column: "attachment_url" },
 } as const
