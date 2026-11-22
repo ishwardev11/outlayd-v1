@@ -20,7 +20,8 @@ BEGIN
 
   ASSERT (SELECT count(*) FROM public.funds WHERE organization_id = o AND is_default) = 1, 'one default fund';
   ASSERT (SELECT count(*) FROM public.accounts WHERE organization_id = o AND is_default) = 1, 'one default account';
-  ASSERT (SELECT count(*) FROM public.categories WHERE organization_id = o AND is_system) = 3, 'three system categories';
+  -- Uncategorised, Uncategorised income, Depreciation and (stage 5a) Gain/loss on disposal
+  ASSERT (SELECT count(*) FROM public.categories WHERE organization_id = o AND is_system) = 4, 'four system categories';
   ASSERT (SELECT count(*) FROM public.vendors WHERE organization_id = o AND is_system) = 2, 'two built-in payees';
   RAISE NOTICE 'PASS a new organisation gets its defaults automatically';
 END $$;

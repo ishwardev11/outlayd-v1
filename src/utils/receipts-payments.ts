@@ -5,8 +5,11 @@
 import { CSV_BOM, csvRow, csvText } from "./csv"
 import { buildStatement, type IEColumn, type IEGroup, type IERow } from "./income-expenditure"
 
-export interface RPRow extends IERow {
+// kind "item": cash for an asset or liability (a purchase, a loan received, a repayment, sale proceeds).
+// For those rows category_id / category_name are the item, and group_name says what the movement was.
+export interface RPRow extends Omit<IERow, "kind"> {
     section: "receipts" | "payments"
+    kind: IERow["kind"] | "item"
 }
 
 export interface CashPosition { opening: number; closing: number }
@@ -43,10 +46,11 @@ export function buildReceiptsPayments(input: {
     labels: { current: string; prior: string }
     cash: { current: CashPosition; prior: CashPosition | null } | null
 }): RPStatement {
+    const notItem = (rows: RPRow[]) => rows.filter((r) => r.kind !== "item") as unknown as IERow[]
     const part = (section: RPRow["section"]) => buildStatement({
         orgType: input.orgType,
-        current: input.current.filter((r) => r.section === section),
-        prior: input.prior ? input.prior.filter((r) => r.section === section) : null,
+        current: notItem(input.current.filter((r) => r.section === section)),
+        prior: input.prior ? notItem(input.prior.filter((r) => r.section === section)) : null,
         layout: "total",
         labels: input.labels,
     })
@@ -55,10 +59,34 @@ export function buildReceiptsPayments(input: {
     const columns = rec.columns
     const keys = columns.map((c) => c.key)
 
-    // Receipts: income by type, then refunds received (money in against expense categories).
-    // Payments: expenditure by group, then income paid back (money out against income categories).
-    const receipts = [...rec.income, ...mergeGroups("Refunds and recoveries", rec.expense, keys)]
-    const payments = [...pay.expense, ...mergeGroups("Income returned", pay.income, keys)]
+    // Cash for assets and liabilities, one group per kind of movement, one line per item
+    const itemGroups = (section: RPRow["section"]): IEGroup[] => {
+        const groups = new Map<string, Map<string, { name: string; cents: Record<string, number> }>>()
+        const add = (rows: RPRow[] | null, key: string) => {
+            for (const r of rows ?? []) {
+                if (r.kind !== "item" || r.section !== section || !keys.includes(key)) continue
+                const label = r.group_name ?? "Assets and liabilities"
+                if (!groups.has(label)) groups.set(label, new Map())
+                const lines = groups.get(label)!
+                if (!lines.has(r.category_id)) lines.set(r.category_id, { name: r.category_name, cents: Object.fromEntries(keys.map((k) => [k, 0])) })
+                lines.get(r.category_id)!.cents[key] += cents(r.amount)
+            }
+        }
+        add(input.current, "current")
+        add(input.prior, "prior")
+        return [...groups].sort((a, b) => a[0].localeCompare(b[0])).map(([label, lines]) => {
+            const list = [...lines].sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([id, l]) => ({
+                categoryId: id, name: l.name, values: Object.fromEntries(keys.map((k) => [k, l.cents[k] / 100])),
+            }))
+            const total = Object.fromEntries(keys.map((k) => [k, list.reduce((s, l) => s + cents(l.values[k]), 0) / 100]))
+            return { label, lines: list, total }
+        })
+    }
+
+    // Receipts: income by type, refunds received (money in against expense categories), then loans and
+    // other asset money in. Payments: expenditure by group, income paid back, then purchases and repayments.
+    const receipts = [...rec.income, ...mergeGroups("Refunds and recoveries", rec.expense, keys), ...itemGroups("receipts")]
+    const payments = [...pay.expense, ...mergeGroups("Income returned", pay.income, keys), ...itemGroups("payments")]
     const sum = (gs: IEGroup[]) => Object.fromEntries(keys.map((k) => [k, gs.reduce((s, g) => s + cents(g.total[k] ?? 0), 0) / 100]))
     const totalReceipts = sum(receipts)
     const totalPayments = sum(payments)

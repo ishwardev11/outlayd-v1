@@ -45,6 +45,23 @@ test("receipts and payments: a mismatch is reported, a fund view has no cash", (
     assert.equal(buildReceiptsPayments({ orgType: "nonprofit", current: [], prior: null, labels: { current: "", prior: "" }, cash: null }).empty, true)
 })
 
+test("receipts and payments: asset and loan cash has its own lines", () => {
+    const item = (section: RPRow["section"], group: string, name: string, amount: number): RPRow =>
+        r(section, "item", name, amount, { group_name: group, category_id: `item-${name}` })
+    const s = buildReceiptsPayments({
+        orgType: "nonprofit",
+        current: [...rows, item("receipts", "Loans received", "Bank loan", 5000), item("payments", "Purchase of fixed assets", "Van", 3600),
+                  item("payments", "Loan repayments", "Bank loan", 1000)],
+        prior: null, labels: { current: "2026", prior: "" },
+        cash: { current: { opening: 1000, closing: 1000 + 820 + 5000 - 680 - 3600 - 1000 }, prior: null },
+    })
+    assert.deepEqual(s.receipts.map((g) => g.label), ["Donations", "Programme income", "Refunds and recoveries", "Loans received"])
+    assert.deepEqual(s.payments.map((g) => g.label).slice(-2), ["Loan repayments", "Purchase of fixed assets"])
+    assert.deepEqual(s.totalReceipts, { current: 5820 })
+    assert.deepEqual(s.totalPayments, { current: 5280 })
+    assert.equal(s.balanced, true)
+})
+
 test("receipts and payments CSV", () => {
     const s = buildReceiptsPayments({ orgType: "nonprofit", current: rows, prior: null, labels: { current: "2026", prior: "" }, cash: { current: { opening: 1000, closing: 1140 }, prior: null } })
     const out = parseCsv(buildReceiptsPaymentsCsv(s, { orgName: "Harapan", heading: "For the year ended 31 December 2026", fundName: null, currency: "MYR" }))

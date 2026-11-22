@@ -111,7 +111,7 @@ export async function getReceiptsPaymentsPage(sp: SearchParams): Promise<RPPageD
     if (!organizationId) return null
 
     const [{ data: org }, timezone, currency, allowed] = await Promise.all([
-        supabase.from("organizations").select("name, org_type, fiscal_year_start").eq("id", organizationId).maybeSingle(),
+        supabase.from("organizations").select("name, org_type, fiscal_year_start, tracking_start_date").eq("id", organizationId).maybeSingle(),
         getOrganizationTimezone(),
         getOrganizationCurrency(),
         featureAllowed(supabase, organizationId, "financial_statements", "read"),
@@ -119,6 +119,9 @@ export async function getReceiptsPaymentsPage(sp: SearchParams): Promise<RPPageD
     if (!org) return null
     const fiscalYearStart = Number(org.fiscal_year_start) || 1
     const today = todayInTimezone(timezone)
+    // Opening and closing cash are only known from the tracking start date (the opening position)
+    const startDate = (org.tracking_start_date as string | null) ?? ""
+    const cashKnown = (from: string) => !startDate || from >= startDate
     // One column per fund is not offered here; the fund filter shows one fund at a time
     const filters: IEFilters = { ...parseIEFilters(sp, fiscalYearStart, today), layout: "total" }
     const base = { orgName: String(org.name ?? ""), orgType: String(org.org_type ?? "nonprofit"), fiscalYearStart, currency, today, filters }
@@ -132,8 +135,8 @@ export async function getReceiptsPaymentsPage(sp: SearchParams): Promise<RPPageD
     const [current, prior, cashNow, cashPrior] = await Promise.all([
         fetchRP(supabase, organizationId, filters.from, filters.to, filters.fund),
         priorRange ? fetchRP(supabase, organizationId, priorRange.from, priorRange.to, filters.fund) : Promise.resolve(null),
-        filters.fund ? Promise.resolve(null) : fetchCash(supabase, organizationId, filters.from, filters.to),
-        !filters.fund && priorRange ? fetchCash(supabase, organizationId, priorRange.from, priorRange.to) : Promise.resolve(null),
+        filters.fund || !cashKnown(filters.from) ? Promise.resolve(null) : fetchCash(supabase, organizationId, filters.from, filters.to),
+        !filters.fund && priorRange && cashKnown(priorRange.from) ? fetchCash(supabase, organizationId, priorRange.from, priorRange.to) : Promise.resolve(null),
     ])
     return {
         ...base, locked: false, funds: fundList, current, prior, priorRange,

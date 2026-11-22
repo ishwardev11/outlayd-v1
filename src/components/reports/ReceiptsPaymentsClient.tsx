@@ -92,6 +92,7 @@ export function ReceiptsPaymentsClient({ statement: s, filters, priorRange, head
                 Cash only: money received and paid in the period, by payment date, across all your accounts. Unpaid bills and invoices are not
                 included; a payment of a bill or invoice is shown under its categories. Transfers between your own accounts are left out.
                 {fundName ? " Opening and closing cash are shown for all funds together, so they are hidden when one fund is selected." : ""}
+                {!fundName && !s.opening ? " Opening and closing cash are shown for periods from your tracking start date (Settings, opening position)." : ""}
                 {" "}Click a figure to see the cash book entries behind it.
             </p>
         </div>
