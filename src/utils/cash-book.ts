@@ -33,6 +33,8 @@ export interface CashBookRow {
     donation: boolean
     // The receipt in force, or else the most recent voided one
     receipt: { id: string; number: string; voided: boolean } | null
+    // The invoice this entry pays, if any (payments of invoices are changed on the Invoices page)
+    invoice: { id: string; direction: "payable" | "receivable"; label: string } | null
 }
 
 export interface CashBookFilters {
@@ -75,7 +77,8 @@ export function parseCashBookFilters(sp: SearchParams): CashBookFilters {
 
 // "Refund received" is money in that reduces an expense: entered as a refund, or a credit note or
 // refund document that the mirror turned into money in.
-export function typeLabel(row: Pick<CashBookRow, "type" | "isRefund" | "source">): string {
+export function typeLabel(row: Pick<CashBookRow, "type" | "isRefund" | "source"> & { invoice?: CashBookRow["invoice"] }): string {
+    if (row.invoice) return row.type === "money_out" ? "Bill payment" : "Invoice payment received"
     if (row.type === "money_in") return row.isRefund || row.source === "document" ? "Refund received" : "Money in"
     if (row.type === "money_out") return "Money out"
     if (row.type === "account_transfer") return "Account transfer"

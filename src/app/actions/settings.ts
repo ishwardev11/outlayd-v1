@@ -1123,8 +1123,8 @@ export async function deleteOrganizationAccount() {
     const storage = adminClient.storage.from("receipts");
     const filePaths = new Set<string>();
 
-    // (Money-in attachments sit in a subfolder the folder listing below does not reach, so list them here)
-    for (const [table, column] of [["documents", "image_url"], ["quotes", "file_url"], ["transactions", "attachment_url"]] as const) {
+    // (Money-in and invoice attachments sit in subfolders the folder listing below does not reach, so list them here)
+    for (const [table, column] of [["documents", "image_url"], ["quotes", "file_url"], ["transactions", "attachment_url"], ["invoices", "attachment_url"]] as const) {
         let from = 0;
         while (true) {
             const { data, error } = await adminClient

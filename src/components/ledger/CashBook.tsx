@@ -187,7 +187,12 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                                                 {r.hasAttachment && (
                                                     <a href={`/api/files/transaction/${r.id}`} target="_blank" rel="noopener noreferrer" aria-label="View attachment" className="text-slate-400 hover:text-indigo-600"><Paperclip className="h-4 w-4" /></a>
                                                 )}
-                                                {r.source === "manual" && r.type === "money_in" ? (
+                                                {r.invoice && (
+                                                    <Link href={`/invoices?${r.invoice.direction === "receivable" ? "tab=receivable&" : ""}open=${r.invoice.id}`} className="text-indigo-600 hover:underline text-xs" title="This entry pays an invoice. Change it on the Invoices page.">
+                                                        {r.invoice.label}
+                                                    </Link>
+                                                )}
+                                                {r.invoice && r.source === "manual" ? null : r.source === "manual" && r.type === "money_in" ? (
                                                     <button type="button" onClick={() => openEdit(r.id)} disabled={loadingEdit === r.id} className="inline-flex items-center gap-1 text-indigo-600 hover:underline text-xs">
                                                         {loadingEdit === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}{isViewer ? "View" : "Edit"}
                                                     </button>

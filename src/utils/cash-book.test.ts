@@ -10,7 +10,7 @@ const row = (over: Partial<CashBookRow>): CashBookRow => ({
         { amount: 100, fundId: "f1", fundName: "General Fund", categoryId: "c1", categoryName: "General donations" },
         { amount: 50, fundId: "f2", fundName: "Building Fund", categoryId: "c2", categoryName: "Government grants" },
     ],
-    balance: null, donation: true, receipt: null, ...over,
+    balance: null, donation: true, receipt: null, invoice: null, ...over,
 })
 
 test("type labels follow the spec sign rule", () => {
@@ -18,6 +18,9 @@ test("type labels follow the spec sign rule", () => {
     assert.equal(typeLabel({ type: "money_in", isRefund: true, source: "manual" }), "Refund received")
     assert.equal(typeLabel({ type: "money_in", isRefund: false, source: "document" }), "Refund received") // a credit note
     assert.equal(typeLabel({ type: "money_out", isRefund: false, source: "document" }), "Money out")
+    const inv = { id: "i1", direction: "payable" as const, label: "Bill SUP-1" }
+    assert.equal(typeLabel({ type: "money_out", isRefund: false, source: "document", invoice: inv }), "Bill payment")
+    assert.equal(typeLabel({ type: "money_in", isRefund: false, source: "manual", invoice: { ...inv, direction: "receivable" } }), "Invoice payment received")
 })
 
 test("summary shows one value or the number of distinct values", () => {

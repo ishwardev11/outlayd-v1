@@ -11,6 +11,7 @@ const SOURCES = {
     document: { table: "documents", column: "image_url" },
     statement: { table: "bank_statements", column: "file_url" },
     transaction: { table: "transactions", column: "attachment_url" },
+    invoice: { table: "invoices", column: "attachment_url" },
 } as const
 
 // New rows store the storage path ("<orgId>/<file>"). Older rows store the full public URL.
