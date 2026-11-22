@@ -54,6 +54,15 @@ test("settings: problems get clear messages", () => {
     assert.match(err({ signatories: [{ title: "Treasurer" }] }), /needs a name/)
     assert.match(err({ signatories: [1, 2, 3, 4].map((i) => ({ name: `P${i}` })) }), /at most three/)
     assert.match(err({ tax_exempt_receipts: true, tax_exempt_reference: "" }), /approval reference/)
+    // Invoice numbering and payment details (stage 4c)
+    const inv = { invoice_prefix: "INV-", invoice_next_number: 1, payment_details: "Maybank 5123 4567 8901" }
+    assert.match(err({ ...inv, invoice_prefix: "<b>" }), /invoice prefix/)
+    assert.match(err({ ...inv, invoice_next_number: "0" }), /next invoice number/)
+    assert.match(err({ ...inv, payment_details: "x".repeat(1001) }), /1,000/)
+    const ok = parseReceiptSettings({ ...base, ...inv, invoice_prefix: " HRP/INV- ", invoice_next_number: "201", payment_details: "  " })
+    assert.ok(ok.ok && ok.value.invoice_prefix === "HRP/INV-" && ok.value.invoice_next_number === 201 && ok.value.payment_details === null)
+    const without = parseReceiptSettings(base)
+    assert.ok(without.ok && !("invoice_prefix" in without.value), "invoice fields are left alone when not sent")
 })
 
 const receipt = (over: Partial<ReceiptRecord> = {}): ReceiptRecord => ({

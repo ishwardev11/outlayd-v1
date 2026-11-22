@@ -4,14 +4,16 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Ban, Loader2, Paperclip, Pencil, Trash2, Wallet } from "lucide-react"
+import { Ban, Download, Loader2, Paperclip, Pencil, Trash2, Wallet } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useCurrency } from "@/components/CurrencyProvider"
-import { deleteInvoice, deleteInvoicePayment, recordInvoicePayment, voidInvoice, type InvoiceDetail } from "@/app/actions/invoices"
+import { deleteInvoice, deleteInvoicePayment, getInvoiceForPdf, recordInvoicePayment, voidInvoice, type InvoiceDetail } from "@/app/actions/invoices"
+import { buildInvoiceContent } from "@/utils/invoice-document"
+import { buildInvoicePdf } from "@/utils/invoice-pdf"
 import type { EntryOptions } from "@/app/actions/transactions"
 import { statusLabel } from "@/utils/invoices"
 import { StatusBadge } from "./StatusBadge"
@@ -64,6 +66,19 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
     }
 
     const title = `${payable ? "Bill" : "Invoice"}${inv.invoice_no ? ` ${inv.invoice_no}` : ""}`
+
+    // Invoices you issue can be downloaded as a PDF (everyone who can see them, any plan)
+    const downloadPdf = async () => {
+        setBusy(true)
+        try {
+            const res = await getInvoiceForPdf(inv.id)
+            if (!res.success || !res.data) return toast.error(res.success ? "That invoice was not found" : res.error)
+            const name = (inv.invoice_no ?? "draft").replace(/[^A-Za-z0-9-]/g, "_")
+            buildInvoicePdf(buildInvoiceContent(res.data.invoice, res.data.org)).save(`invoice-${name}.pdf`)
+        } finally {
+            setBusy(false)
+        }
+    }
 
     return (
         <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
@@ -197,6 +212,7 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                             )}
                         </div>
                         <div className="flex flex-wrap gap-2">
+                            {!payable && <Button variant="outline" onClick={downloadPdf} disabled={busy}><Download className="h-4 w-4 mr-1" />Download PDF</Button>}
                             {canEdit && <Button variant="outline" onClick={onEdit}><Pencil className="h-4 w-4 mr-1" />Edit</Button>}
                             {canPay && (
                                 <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setMode("pay")}>

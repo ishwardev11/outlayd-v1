@@ -10,28 +10,11 @@ import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { checkWriteAccess, getCurrentUserRole, getOrganizationCurrency, getOrganizationId } from "./document-utils"
 import { LETTERHEAD_MAX_BYTES, letterheadImageType, parseReceiptSettings, type ReceiptOrg, type ReceiptRecord, type Signatory } from "@/utils/donation-receipt"
+import { loadLetterhead, ownLetterhead } from "@/utils/letterhead-server"
 
 type ActionResult<T = undefined> = { success: true; data?: T } | { success: false; error: string }
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const BUCKET = "receipts"
-
-// Only paths inside the organisation's own folder are ever read or removed
-const ownLetterhead = (organizationId: string, path: string | null | undefined): path is string =>
-    !!path && path.startsWith(`${organizationId}/letterhead-`) && !path.includes("..")
-
-// The letterhead as a data URL for the PDF (built in the browser), or null if there is none
-async function loadLetterhead(organizationId: string, path: string | null | undefined): Promise<string | null> {
-    if (!ownLetterhead(organizationId, path)) return null
-    const { data, error } = await createAdminClient().storage.from(BUCKET).download(path)
-    if (error || !data) {
-        console.error("Could not load the letterhead:", error)
-        return null
-    }
-    const bytes = new Uint8Array(await data.arrayBuffer())
-    const type = letterheadImageType(bytes)
-    if (!type) return null
-    return `data:image/${type};base64,${Buffer.from(bytes).toString("base64")}`
-}
 
 // The database raises readable messages; show those, never raw technical ones
 function dbMessage(error: { message?: string } | null | undefined, fallback: string): string {
@@ -109,11 +92,12 @@ export async function getReceiptSettings() {
     const supabase = await createClient()
     const organizationId = await getOrganizationId()
     if (!organizationId) return null
-    const [{ data: o }, { data: last }] = await Promise.all([
+    const [{ data: o }, { data: last }, { data: lastInv }] = await Promise.all([
         supabase.from("organizations")
-            .select("legal_name, address, signatories, receipt_prefix, receipt_next_number, tax_exempt_receipts, tax_exempt_reference, letterhead_path")
+            .select("legal_name, address, signatories, receipt_prefix, receipt_next_number, tax_exempt_receipts, tax_exempt_reference, letterhead_path, invoice_prefix, invoice_next_number, payment_details")
             .eq("id", organizationId).maybeSingle(),
         supabase.from("donation_receipts").select("seq").eq("organization_id", organizationId).order("seq", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("invoices").select("seq").eq("organization_id", organizationId).not("seq", "is", null).order("seq", { ascending: false }).limit(1).maybeSingle(),
     ])
     if (!o) return null
     // A short-lived private link for the preview in settings
@@ -133,6 +117,10 @@ export async function getReceiptSettings() {
         tax_exempt_receipts: o.tax_exempt_receipts === true,
         tax_exempt_reference: (o.tax_exempt_reference as string | null) ?? "",
         last_issued: (last?.seq as number | undefined) ?? 0,
+        invoice_prefix: String(o.invoice_prefix ?? ""),
+        invoice_next_number: Number(o.invoice_next_number ?? 1),
+        payment_details: (o.payment_details as string | null) ?? "",
+        last_invoice_issued: (lastInv?.seq as number | undefined) ?? 0,
     }
 }
 

@@ -61,6 +61,10 @@ export interface ReceiptSettings {
     receipt_next_number: number
     tax_exempt_receipts: boolean
     tax_exempt_reference: string | null
+    // Invoices you issue (stage 4c): only checked and saved when the form sends them
+    invoice_prefix?: string
+    invoice_next_number?: number
+    payment_details?: string | null
 }
 
 type Result<T> = { ok: true; value: T } | { ok: false; error: string }
@@ -103,7 +107,21 @@ export function parseReceiptSettings(raw: unknown): Result<ReceiptSettings> {
     if (tax_exempt_reference === undefined) return { ok: false, error: "The approval reference can be at most 200 characters" }
     if (tax_exempt_receipts && !tax_exempt_reference) return { ok: false, error: "Enter the approval reference for tax-exempt receipts" }
 
-    return { ok: true, value: { legal_name, address, signatories, receipt_prefix: prefix, receipt_next_number: next, tax_exempt_receipts, tax_exempt_reference } }
+    const value: ReceiptSettings = { legal_name, address, signatories, receipt_prefix: prefix, receipt_next_number: next, tax_exempt_receipts, tax_exempt_reference }
+    if (r.invoice_next_number !== undefined || r.invoice_prefix !== undefined || r.payment_details !== undefined) {
+        const invPrefix = typeof r.invoice_prefix === "string" ? r.invoice_prefix.trim() : ""
+        if (invPrefix.length > 20 || !/^[A-Za-z0-9\-/_. ]*$/.test(invPrefix)) {
+            return { ok: false, error: "The invoice prefix can have up to 20 letters, numbers, dashes or slashes" }
+        }
+        const invNext = typeof r.invoice_next_number === "number" ? r.invoice_next_number : Number(String(r.invoice_next_number ?? "").trim())
+        if (!Number.isInteger(invNext) || invNext < 1 || invNext > 999999999) return { ok: false, error: "The next invoice number must be a whole number from 1" }
+        const payment_details = optText(r.payment_details, 1000)
+        if (payment_details === undefined) return { ok: false, error: "Payment details can be at most 1,000 characters" }
+        value.invoice_prefix = invPrefix
+        value.invoice_next_number = invNext
+        value.payment_details = payment_details
+    }
+    return { ok: true, value }
 }
 
 // ------------------------------------------------------------------ letterhead image
@@ -161,11 +179,17 @@ export interface ReceiptContent {
 
 const money = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-export function buildReceiptContent(r: ReceiptRecord, org: ReceiptOrg): ReceiptContent {
-    const funds = [...new Set((r.details.lines ?? []).map((l) => l.fund).filter(Boolean))]
-    const letterhead = [org.legal_name || org.name, ...(org.legal_name && org.legal_name !== org.name ? [org.name] : []),
+// The typed letterhead: legal name, trading name if different, address lines, registration number.
+// Shared by donation receipts and invoices.
+export function letterheadLines(org: Pick<ReceiptOrg, "name" | "legal_name" | "address" | "registration_id">): string[] {
+    return [org.legal_name || org.name, ...(org.legal_name && org.legal_name !== org.name ? [org.name] : []),
         ...(org.address ? org.address.split(/\r?\n/).map((l) => l.trim()).filter(Boolean) : []),
         ...(org.registration_id ? [`Registration no. ${org.registration_id}`] : [])]
+}
+
+export function buildReceiptContent(r: ReceiptRecord, org: ReceiptOrg): ReceiptContent {
+    const funds = [...new Set((r.details.lines ?? []).map((l) => l.fund).filter(Boolean))]
+    const letterhead = letterheadLines(org)
     const fields: [string, string][] = [
         ["Receipt no.", r.receipt_no],
         ["Date of donation", r.donation_date],

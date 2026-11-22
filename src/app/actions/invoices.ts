@@ -10,6 +10,8 @@ import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { checkWriteAccess, getOrganizationCurrency, getOrganizationId } from "./document-utils"
 import { errorMessage } from "@/utils/row-types"
+import { loadLetterhead } from "@/utils/letterhead-server"
+import type { InvoicePrintOrg, InvoicePrintRecord } from "@/utils/invoice-document"
 import {
     INVOICE_PAGE_SIZE, ageingSummary, buildInvoicesCsv, parseInvoiceInput, parsePaymentInput,
     type AgeingBucket, type InvoiceFilters, type InvoiceRow,
@@ -155,6 +157,50 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
         })),
         payments: [...byTx.values()].sort((a, b) => a.date.localeCompare(b.date)),
         document: (doc.data as InvoiceDetail["document"]) ?? null,
+    }
+}
+
+// Everything the invoice PDF needs (invoices you issued only): the invoice as it stands, who it is
+// for, and the organisation's letterhead and payment details. Built into a PDF in the browser.
+export async function getInvoiceForPdf(id: string): Promise<ActionResult<{ invoice: InvoicePrintRecord; org: InvoicePrintOrg }>> {
+    const detail = await getInvoiceDetail(id)
+    if (!detail) return { success: false, error: "That invoice was not found" }
+    const inv = detail.invoice
+    if (inv.direction !== "receivable") return { success: false, error: "Only invoices you issue can be downloaded as a PDF" }
+    const supabase = await createClient()
+    const organizationId = await getOrganizationId()
+    if (!organizationId) return { success: false, error: "No active organization" }
+    const [{ data: o }, { data: payee }, currency] = await Promise.all([
+        supabase.from("organizations").select("name, legal_name, address, registration_id, signatories, letterhead_path, payment_details").eq("id", organizationId).maybeSingle(),
+        inv.payee_id ? supabase.from("vendors").select("address, email").eq("id", inv.payee_id).maybeSingle() : Promise.resolve({ data: null }),
+        getOrganizationCurrency(),
+    ])
+    if (!o) return { success: false, error: "No active organization" }
+    return {
+        success: true,
+        data: {
+            invoice: {
+                invoice_no: inv.invoice_no, status: inv.status, derived_status: inv.derived_status, issue_date: inv.issue_date,
+                due_date: inv.due_date, reference: inv.reference, remarks: inv.remarks, total: inv.total, paid: inv.paid,
+                balance: inv.balance, void_reason: inv.void_reason,
+                lines: detail.lines.map((l) => ({ description: l.description, category_name: l.category_name, amount: l.amount })),
+                bill_to: {
+                    name: inv.payee_name,
+                    address: ((payee as { address?: string | null } | null)?.address) ?? null,
+                    email: ((payee as { email?: string | null } | null)?.email) ?? null,
+                },
+            },
+            org: {
+                name: String(o.name ?? ""),
+                legal_name: (o.legal_name as string | null) ?? null,
+                address: (o.address as string | null) ?? null,
+                registration_id: (o.registration_id as string | null) ?? null,
+                signatories: [],
+                currency,
+                letterheadImage: await loadLetterhead(organizationId, o.letterhead_path as string | null),
+                payment_details: (o.payment_details as string | null) ?? null,
+            },
+        },
     }
 }
 

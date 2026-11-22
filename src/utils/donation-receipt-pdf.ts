@@ -10,8 +10,8 @@ const LETTERHEAD_MAX_HEIGHT = 35 // mm
 
 // Draws the letterhead image centred at the top, as wide as the text area but never taller than
 // 35 mm, keeping its proportions. Returns where it ends, or null if the image could not be read
-// (the receipt then falls back to the typed letterhead rather than failing).
-function drawLetterheadImage(doc: jsPDF, dataUrl: string, W: number, M: number): number | null {
+// (the document then falls back to the typed letterhead rather than failing). Also used by invoices.
+export function drawLetterheadImage(doc: jsPDF, dataUrl: string, W: number, M: number): number | null {
     try {
         const format = dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG"
         const { width, height } = doc.getImageProperties(dataUrl)
