@@ -19,6 +19,7 @@ import {
     ScrollText,
     Landmark,
     ReceiptText,
+    Package,
 } from "lucide-react";
 import { signOutAction } from "@/app/actions/auth";
 import { createClient } from "@/utils/supabase/client";
@@ -130,6 +131,10 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                 <Link id="sidebar-link-invoices" href="/invoices" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/invoices' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <ReceiptText size={20} />
                     <span>Invoices</span>
+                </Link>
+                <Link id="sidebar-link-assets" href="/assets" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/assets' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                    <Package size={20} />
+                    <span>Assets &amp; Loans</span>
                 </Link>
                 <Link id="sidebar-link-vendors" href="/vendors" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/vendors' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <Users size={20} />

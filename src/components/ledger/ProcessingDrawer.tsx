@@ -564,6 +564,11 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                 <Button type="button" variant="outline" size="sm" onClick={addSplit} className="w-full text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:border-blue-900/30 dark:hover:bg-blue-900/40">
                                     <Plus className="w-4 h-4 mr-2" /> Add Split Attribute
                                 </Button>
+                                {/* Spec 5b: equipment is an asset, not an expense */}
+                                <p className="text-xs text-slate-500 dark:text-slate-400" data-testid="asset-hint">
+                                    Buying equipment, a vehicle or furniture that lasts more than a year? Record it under{" "}
+                                    <a href="/assets" className="text-indigo-600 hover:underline">Assets &amp; Loans</a> instead, so it is depreciated rather than counted as an expense all at once.
+                                </p>
                             </div>
 
                             <div className="pt-8 mb-4">

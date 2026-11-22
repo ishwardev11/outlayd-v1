@@ -21,6 +21,11 @@ test("type labels follow the spec sign rule", () => {
     const inv = { id: "i1", direction: "payable" as const, label: "Bill SUP-1" }
     assert.equal(typeLabel({ type: "money_out", isRefund: false, source: "document", invoice: inv }), "Bill payment")
     assert.equal(typeLabel({ type: "money_in", isRefund: false, source: "manual", invoice: { ...inv, direction: "receivable" } }), "Invoice payment received")
+    const loan = { id: "x", name: "Bank loan", kind: "liability" as const }
+    assert.equal(typeLabel({ type: "money_in", isRefund: false, source: "manual", item: loan }), "Loan received")
+    assert.equal(typeLabel({ type: "money_out", isRefund: false, source: "manual", item: loan }), "Loan repayment")
+    assert.equal(typeLabel({ type: "money_out", isRefund: false, source: "manual", item: { ...loan, kind: "fixed_asset" } }), "Asset purchase")
+    assert.equal(typeLabel({ type: "fund_transfer", isRefund: false, source: "manual" }), "Fund transfer")
 })
 
 test("summary shows one value or the number of distinct values", () => {

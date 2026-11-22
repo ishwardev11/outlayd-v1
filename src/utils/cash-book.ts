@@ -35,6 +35,10 @@ export interface CashBookRow {
     receipt: { id: string; number: string; voided: boolean } | null
     // The invoice this entry pays, if any (payments of invoices are changed on the Invoices page)
     invoice: { id: string; direction: "payable" | "receivable"; label: string } | null
+    // The asset or liability this entry is for, if any (changed on the Assets & Liabilities page)
+    item?: { id: string; name: string; kind: "fixed_asset" | "other_asset" | "liability" } | null
+    // A fund transfer: the two funds
+    transfer?: { from: string; to: string } | null
 }
 
 export interface CashBookFilters {
@@ -77,7 +81,13 @@ export function parseCashBookFilters(sp: SearchParams): CashBookFilters {
 
 // "Refund received" is money in that reduces an expense: entered as a refund, or a credit note or
 // refund document that the mirror turned into money in.
-export function typeLabel(row: Pick<CashBookRow, "type" | "isRefund" | "source"> & { invoice?: CashBookRow["invoice"] }): string {
+export function typeLabel(row: Pick<CashBookRow, "type" | "isRefund" | "source"> & { invoice?: CashBookRow["invoice"]; item?: CashBookRow["item"] }): string {
+    if (row.item) {
+        const out = row.type === "money_out"
+        if (row.item.kind === "fixed_asset") return out ? "Asset purchase" : "Asset sale"
+        if (row.item.kind === "liability") return out ? "Loan repayment" : "Loan received"
+        return out ? "Deposit paid" : "Deposit returned"
+    }
     if (row.invoice) return row.type === "money_out" ? "Bill payment" : "Invoice payment received"
     if (row.type === "money_in") return row.isRefund || row.source === "document" ? "Refund received" : "Money in"
     if (row.type === "money_out") return "Money out"

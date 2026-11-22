@@ -172,8 +172,8 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                                         </td>
                                         <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-slate-100">{r.payee || "—"}</td>
                                         <td className="px-3 py-2.5 whitespace-nowrap">{typeLabel(r)}</td>
-                                        <td className="px-3 py-2.5">{summarise(r.lines.map((l) => l.categoryName))}</td>
-                                        <td className="px-3 py-2.5">{summarise(r.lines.map((l) => l.fundName))}</td>
+                                        <td className="px-3 py-2.5">{r.transfer ? "—" : summarise(r.lines.map((l) => l.categoryName))}</td>
+                                        <td className="px-3 py-2.5">{r.transfer ? `${r.transfer.from} → ${r.transfer.to}` : summarise(r.lines.map((l) => l.fundName))}</td>
                                         {showAccount && <td className="px-3 py-2.5">{r.accountName}</td>}
                                         <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700 dark:text-emerald-400">{isIn ? money(r.total) : ""}</td>
                                         <td className="px-3 py-2.5 text-right tabular-nums">{r.type === "money_out" ? money(r.total) : ""}</td>
@@ -192,7 +192,12 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                                                         {r.invoice.label}
                                                     </Link>
                                                 )}
-                                                {r.invoice && r.source === "manual" ? null : r.source === "manual" && r.type === "money_in" ? (
+                                                {r.item && (
+                                                    <Link href="/assets" className="text-indigo-600 hover:underline text-xs" title="This entry is for an asset or liability. Change it on the Assets & Liabilities page.">
+                                                        {r.item.name}
+                                                    </Link>
+                                                )}
+                                                {(r.invoice || r.item) && r.source === "manual" ? null : r.source === "manual" && r.type === "money_in" ? (
                                                     <button type="button" onClick={() => openEdit(r.id)} disabled={loadingEdit === r.id} className="inline-flex items-center gap-1 text-indigo-600 hover:underline text-xs">
                                                         {loadingEdit === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}{isViewer ? "View" : "Edit"}
                                                     </button>

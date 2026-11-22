@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Building2, Landmark, Users, Settings, CreditCard } from "lucide-react"
+import { useSearchParams } from "next/navigation"
+import { Building2, Landmark, Users, Settings, CreditCard, Wallet } from "lucide-react"
+import { AccountsTab } from "./AccountsTab"
 import { GeneralSettingsTab } from "./GeneralSettingsTab"
 import { OrganizationProfileTab } from "./OrganizationProfileTab"
 import type { ReceiptSettingsData } from "./ReceiptSettingsForm"
@@ -80,12 +82,15 @@ const TABS = [
     { id: 'general', label: 'General', icon: Settings },
     { id: 'organization', label: 'Organization Profile', icon: Building2 },
     { id: 'financial', label: 'Financial Customization', icon: Landmark },
+    { id: 'accounts', label: 'Accounts & Transfers', icon: Wallet },
     { id: 'team', label: 'Team Management', icon: Users },
     { id: 'billing', label: 'Billing & Subscription', icon: CreditCard },
 ]
 
 export function SettingsLayout({ orgSettings, initialFunds, fundSpend = [], initialCategories, initialTeam, currentUserEmail, receiptSettings }: SettingsLayoutProps) {
-    const [activeTab, setActiveTab] = useState('general')
+    // ?tab=accounts (from the Opening Position wizard) opens that tab
+    const requested = useSearchParams().get("tab")
+    const [activeTab, setActiveTab] = useState(TABS.some((x) => x.id === requested) ? (requested as string) : 'general')
 
     return (
         <div className="flex flex-col md:flex-row gap-8">
@@ -119,6 +124,9 @@ export function SettingsLayout({ orgSettings, initialFunds, fundSpend = [], init
                     )}
                     {activeTab === 'financial' && (
                         <FinancialCustomizationTab initialFunds={initialFunds} fundSpend={fundSpend} initialCategories={initialCategories} orgType={orgSettings?.org_type ?? null} />
+                    )}
+                    {activeTab === 'accounts' && (
+                        <AccountsTab funds={initialFunds} />
                     )}
                     {activeTab === 'team' && (
                         <TeamManagementTab

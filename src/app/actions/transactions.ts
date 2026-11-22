@@ -88,12 +88,14 @@ interface TxRow {
     is_refund: boolean
     attachment_url: string | null
     account_id: string
+    from_fund_id: string | null
+    to_fund_id: string | null
 }
 
 async function queryCashBook(supabase: Supabase, organizationId: string, filters: CashBookFilters, from: number, to: number) {
     const lineFilter = !!(filters.fund || filters.category)
     // When filtering by fund or category, keep only entries with at least one matching line
-    const select = "id, tx_type, tx_date, date_estimated, total, payee_name, reference, remarks, source, document_id, is_refund, attachment_url, account_id, created_at"
+    const select = "id, tx_type, tx_date, date_estimated, total, payee_name, reference, remarks, source, document_id, is_refund, attachment_url, account_id, from_fund_id, to_fund_id, created_at"
         + (lineFilter ? ", matching:transaction_lines!inner(id)" : "")
     let q = supabase.from("transactions").select(select, { count: "exact" }).eq("organization_id", organizationId)
     if (filters.fund) q = q.eq("matching.fund_id", filters.fund)
@@ -114,7 +116,7 @@ async function toRows(supabase: Supabase, organizationId: string, txs: TxRow[], 
     if (txs.length === 0) return []
     const ids = txs.map((t) => t.id)
     const [lines, funds, categories, accounts, balances] = await Promise.all([
-        supabase.from("transaction_lines").select("transaction_id, line_no, amount, fund_id, category_id, invoice_id").in("transaction_id", ids).order("line_no"),
+        supabase.from("transaction_lines").select("transaction_id, line_no, amount, fund_id, category_id, invoice_id, item_id").in("transaction_id", ids).order("line_no"),
         supabase.from("funds").select("id, name").eq("organization_id", organizationId),
         supabase.from("categories").select("id, name, kind, nature").eq("organization_id", organizationId),
         supabase.from("accounts").select("id, name").eq("organization_id", organizationId),
@@ -145,12 +147,21 @@ async function toRows(supabase: Supabase, organizationId: string, txs: TxRow[], 
         direction: (i.direction === "receivable" ? "receivable" : "payable") as "payable" | "receivable",
         label: `${i.direction === "receivable" ? "Invoice" : "Bill"}${i.invoice_no ? ` ${i.invoice_no}` : ""}`,
     }]))
+    // The asset or liability each entry is for, if any
+    const itemIds = [...new Set(((lines.data ?? []) as { item_id: string | null }[]).map((l) => l.item_id).filter((x): x is string => !!x))]
+    const { data: itemRows } = itemIds.length
+        ? await supabase.from("items").select("id, name, kind").in("id", itemIds)
+        : { data: [] as { id: string; name: string; kind: string }[] }
+    const itemInfo = new Map(((itemRows ?? []) as { id: string; name: string; kind: "fixed_asset" | "other_asset" | "liability" }[]).map((i) => [i.id, i]))
+    const itemOfTx = new Map<string, { id: string; name: string; kind: "fixed_asset" | "other_asset" | "liability" }>()
     const linesOf = new Map<string, CashBookLine[]>()
-    for (const l of (lines.data ?? []) as { transaction_id: string; amount: number | string; fund_id: string; category_id: string | null }[]) {
+    for (const l of (lines.data ?? []) as { transaction_id: string; amount: number | string; fund_id: string; category_id: string | null; item_id: string | null }[]) {
         const list = linesOf.get(l.transaction_id) ?? []
+        const item = l.item_id ? itemInfo.get(l.item_id) : undefined
+        if (item) itemOfTx.set(l.transaction_id, item)
         list.push({
             amount: Number(l.amount), fundId: l.fund_id, fundName: fundNames.get(l.fund_id) ?? "Unknown fund",
-            categoryId: l.category_id, categoryName: (l.category_id && catNames.get(l.category_id)) || "Uncategorised",
+            categoryId: l.category_id, categoryName: item ? item.name : (l.category_id && catNames.get(l.category_id)) || "Uncategorised",
         })
         linesOf.set(l.transaction_id, list)
     }
@@ -174,6 +185,10 @@ async function toRows(supabase: Supabase, organizationId: string, txs: TxRow[], 
         donation: t.tx_type === "money_in" && t.source === "manual" && !t.is_refund && (linesOf.get(t.id) ?? []).some((l) => !!l.categoryId && donationCats.has(l.categoryId)),
         receipt: receiptOf.get(t.id) ?? null,
         invoice: invoiceOfTx.has(t.id) ? invoiceInfo.get(invoiceOfTx.get(t.id)!) ?? null : null,
+        item: itemOfTx.get(t.id) ?? null,
+        transfer: t.tx_type === "fund_transfer"
+            ? { from: fundNames.get(t.from_fund_id ?? "") ?? "", to: fundNames.get(t.to_fund_id ?? "") ?? "" }
+            : null,
     }))
 }
 

@@ -45,7 +45,7 @@ export default async function Home() {
   // Totals, the 14-day cash flow and the lists are computed in the database, so the page stays
   // fast however many documents there are.
   const supabase = await createClient();
-  const [summary, actionQueueItems, recentDocuments, extractingCount, cash, canRecordIncome, overdue] = await Promise.all([
+  const [summary, actionQueueItems, recentDocuments, extractingCount, cash, canRecordIncome, overdue, { data: orgRow }] = await Promise.all([
     getDashboardSummary(),
     getActionQueue(),
     getRecentDocuments(),
@@ -53,7 +53,10 @@ export default async function Home() {
     getCashThisMonth(),
     featureAllowed(supabase, orgId, "income", "use"),
     getOverdueInvoices(),
+    supabase.from("organizations").select("opening_position_completed_at").eq("id", orgId).maybeSingle(),
   ]);
+  // Paid organisations are asked once to set up their opening position (spec 5.6)
+  const needsOpening = canRecordIncome && !orgRow?.opening_position_completed_at;
 
   const {
     awaitingTotal: awaitingPaymentTotal,
@@ -72,6 +75,15 @@ export default async function Home() {
       </div>
 
       <ExtractionPoller count={extractingCount} />
+
+      {needsOpening && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-950/30 px-4 py-3 text-sm" data-testid="opening-prompt">
+          <span className="text-indigo-900 dark:text-indigo-200">
+            <span className="font-semibold">Set up your opening position</span> so your balance sheet and fund balances start from the right figures.
+          </span>
+          <Link href="/settings/opening-position" className="font-medium text-indigo-700 dark:text-indigo-300 hover:underline">Start now</Link>
+        </div>
+      )}
 
       {/* Overdue bills and invoices (spec 5.5), only when something is overdue */}
       {(overdue.payable.count > 0 || overdue.receivable.count > 0) && (
