@@ -5,6 +5,8 @@ import { AlertTriangle, ArrowLeft } from "lucide-react";
 import type { IEFilters } from "@/utils/income-expenditure";
 import { buildChangesInFundsCsv, type CIFStatement } from "@/utils/financial-position";
 import { StatementControls } from "./StatementControls";
+import { ReadyToSubmit, useStatementPdf } from "./StatementAssurance";
+import { printChangesInFunds } from "@/utils/statement-print";
 import { amountCell, downloadCsv } from "./IncomeExpenditureClient";
 
 const COLS = [
@@ -22,6 +24,7 @@ export function ChangesInFundsClient({ statement: s, filters, heading, orgName, 
     currency: string;
     funds: { id: string; name: string; archived: boolean }[];
 }) {
+    const { exportPdf, busy } = useStatementPdf();
     // Income and expenditure of one fund open the statement filtered to it
     const ieLink = (fundId: string) => {
         const p = new URLSearchParams({ period: "custom", from: filters.from, to: filters.to, fund: fundId, compare: "0" });
@@ -36,7 +39,10 @@ export function ChangesInFundsClient({ statement: s, filters, heading, orgName, 
             </div>
             <StatementControls basePath="/reports/changes-in-funds" filters={filters} funds={funds} showLayout={false} showFund={false} showCompare={false}
                 onExport={() => downloadCsv(buildChangesInFundsCsv(s, { orgName, heading, currency }), `statement-of-changes-in-funds-${filters.from}-to-${filters.to}.csv`)}
+                onExportPdf={() => exportPdf(printChangesInFunds(s, { heading, currency, from: filters.from, to: filters.to }), filters.from, filters.to)}
+                pdfBusy={busy}
                 exportDisabled={s.groups.length === 0} />
+            <ReadyToSubmit from={filters.from} to={filters.to} />
             {!s.transfersBalance && (
                 <div className="flex gap-3 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-800 dark:text-red-300">
                     <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" /><p>Transfers in and out do not match. Please contact support.</p>

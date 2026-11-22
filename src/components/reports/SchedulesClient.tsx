@@ -7,6 +7,8 @@ import { CSV_BOM, csvRow, csvText } from "@/utils/csv";
 import { formatAmount } from "@/utils/income-expenditure";
 import { AGEING_LABELS, type AgeingBucket } from "@/utils/invoices";
 import { StatementControls } from "./StatementControls";
+import { ReadyToSubmit, useStatementPdf } from "./StatementAssurance";
+import { printSchedules } from "@/utils/statement-print";
 import { downloadCsv } from "./IncomeExpenditureClient";
 
 const BUCKETS: AgeingBucket[] = ["current", "1_30", "31_60", "61_plus"];
@@ -16,6 +18,7 @@ const c = (n: number) => Math.round(n * 100);
 // an optional donor list (off by default, for privacy)
 export function SchedulesClient({ data, heading }: { data: SchedulesPageData; heading: string }) {
     const { filters } = data;
+    const { exportPdf, busy } = useStatementPdf();
     const fundName = new Map(data.funds.map((f) => [f.id, f.name]));
     const num = (n: number) => <span className="tabular-nums">{formatAmount(n)}</span>;
 
@@ -68,7 +71,13 @@ export function SchedulesClient({ data, heading }: { data: SchedulesPageData; he
                 <p className="mt-1 text-slate-500 dark:text-slate-400">{data.orgName} · {heading}</p>
             </div>
             <StatementControls basePath="/reports/schedules" filters={filters} funds={data.funds} showLayout={false} showCompare={false}
-                extraParams={{ donors: data.donors ? "1" : "" }} onExport={exportCsv} exportDisabled={false} />
+                extraParams={{ donors: data.donors ? "1" : "" }} onExport={exportCsv} exportDisabled={false}
+                onExportPdf={() => exportPdf(printSchedules({
+                    fixedAssets: fa.map((r) => ({ ...r, fund: fundName.get(r.fund_id) ?? "" })),
+                    ageing: data.ageing, byFund: fundRows, donors: data.donors,
+                }, { heading, currency: data.currency, from: filters.from, to: filters.to }), filters.from, filters.to)}
+                pdfBusy={busy} />
+            <ReadyToSubmit from={filters.from} to={filters.to} />
 
             <section className="space-y-2">
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Fixed assets</h2>

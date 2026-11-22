@@ -5,6 +5,8 @@ import { AlertTriangle, ArrowLeft } from "lucide-react";
 import type { IEFilters, IEGroup } from "@/utils/income-expenditure";
 import { buildReceiptsPaymentsCsv, type RPStatement } from "@/utils/receipts-payments";
 import { StatementControls } from "./StatementControls";
+import { ReadyToSubmit, useStatementPdf } from "./StatementAssurance";
+import { printReceiptsPayments } from "@/utils/statement-print";
 import { GroupRows, amountCell, cashBookLink, downloadCsv } from "./IncomeExpenditureClient";
 
 interface Props {
@@ -22,6 +24,7 @@ interface Props {
 export function ReceiptsPaymentsClient({ statement: s, filters, priorRange, heading, funds, orgName, currency }: Props) {
     const fundName = funds.find((f) => f.id === filters.fund)?.name ?? null;
     const drill = cashBookLink(filters, priorRange);
+    const { exportPdf, busy } = useStatementPdf();
 
     const cashRow = (label: string, values: Record<string, number> | null, testId: string) => values && (
         <tr className="border-b border-slate-200 dark:border-slate-700" data-testid={testId}>
@@ -53,7 +56,11 @@ export function ReceiptsPaymentsClient({ statement: s, filters, priorRange, head
 
             <StatementControls basePath="/reports/receipts-payments" filters={filters} funds={funds} showLayout={false}
                 onExport={() => downloadCsv(buildReceiptsPaymentsCsv(s, { orgName, heading, fundName, currency }), `receipts-and-payments-${filters.from}-to-${filters.to}.csv`)}
+                onExportPdf={() => exportPdf(printReceiptsPayments(s, { heading, fundName, currency, from: filters.from, to: filters.to }), filters.from, filters.to)}
+                pdfBusy={busy}
                 exportDisabled={s.empty && !s.opening} />
+
+            <ReadyToSubmit from={filters.from} to={filters.to} />
 
             {s.balanced === false && (
                 <div className="flex gap-3 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-800 dark:text-red-300">

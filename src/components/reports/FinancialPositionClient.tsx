@@ -5,6 +5,8 @@ import { AlertTriangle, ArrowLeft } from "lucide-react";
 import type { IEFilters } from "@/utils/income-expenditure";
 import { buildFinancialPositionCsv, type BSGroup, type BSLine, type BSStatement } from "@/utils/financial-position";
 import { StatementControls } from "./StatementControls";
+import { ReadyToSubmit, useStatementPdf } from "./StatementAssurance";
+import { printFinancialPosition } from "@/utils/statement-print";
 import { amountCell, downloadCsv } from "./IncomeExpenditureClient";
 
 // Where each line leads: the entries or register behind it
@@ -29,6 +31,7 @@ export function FinancialPositionClient({ statement: s, filters, heading, orgNam
     funds: { id: string; name: string; archived: boolean }[];
 }) {
     const cols = s.columns;
+    const { exportPdf, busy } = useStatementPdf();
     const totalRow = (label: string, values: Record<string, number>, strong = false, testId?: string) => (
         <tr className={strong ? "border-t-2 border-slate-300 dark:border-slate-600" : ""} data-testid={testId}>
             <td className={`py-2 ${strong ? "font-bold text-slate-900 dark:text-white" : "font-semibold text-slate-900 dark:text-white"}`}>{label}</td>
@@ -65,7 +68,11 @@ export function FinancialPositionClient({ statement: s, filters, heading, orgNam
 
             <StatementControls basePath="/reports/financial-position" filters={filters} funds={funds} showLayout={false} showFund={false}
                 onExport={() => downloadCsv(buildFinancialPositionCsv(s, { orgName, heading, currency }), `statement-of-financial-position-${filters.to}.csv`)}
+                onExportPdf={() => exportPdf(printFinancialPosition(s, { heading, currency, asAt: filters.to }), filters.from, filters.to)}
+                pdfBusy={busy}
                 exportDisabled={false} />
+
+            <ReadyToSubmit from={filters.from} to={filters.to} />
 
             {!s.balanced && (
                 <div className="flex gap-3 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-800 dark:text-red-300" data-testid="r5-banner">

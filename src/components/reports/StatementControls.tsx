@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Download } from "lucide-react"
+import { Download, FileText, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { IEFilters } from "@/utils/income-expenditure"
@@ -11,12 +11,14 @@ const selectClass = "h-9 rounded-md border border-slate-200 dark:border-slate-70
 
 // Period, fund, layout and comparison controls shared by the financial statements. The filters live
 // in the URL, so a statement can be bookmarked or shared within the organisation.
-export function StatementControls({ basePath, filters, funds, showLayout, onExport, exportDisabled, showFund = true, showCompare = true, extraParams }: {
+export function StatementControls({ basePath, filters, funds, showLayout, onExport, onExportPdf, pdfBusy, exportDisabled, showFund = true, showCompare = true, extraParams }: {
     basePath: string
     filters: IEFilters
     funds: { id: string; name: string; archived: boolean }[]
     showLayout: boolean
     onExport: () => void
+    onExportPdf?: () => void
+    pdfBusy?: boolean
     exportDisabled: boolean
     showFund?: boolean
     showCompare?: boolean
@@ -80,7 +82,12 @@ export function StatementControls({ basePath, filters, funds, showLayout, onExpo
                     Compare with the year before
                 </label>
             )}
-            <div className="ml-auto">
+            <div className="ml-auto flex gap-2">
+                {onExportPdf && (
+                    <Button variant="outline" className="h-9" onClick={onExportPdf} disabled={exportDisabled || pdfBusy}>
+                        {pdfBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}Export PDF
+                    </Button>
+                )}
                 <Button variant="outline" className="h-9" onClick={onExport} disabled={exportDisabled}>
                     <Download className="mr-2 h-4 w-4" />Export CSV
                 </Button>

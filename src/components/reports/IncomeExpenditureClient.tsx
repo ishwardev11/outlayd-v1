@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ArrowLeft, ReceiptText } from "lucide-react";
 import { buildStatementCsv, formatAmount, type IEColumn, type IEFilters, type IEGroup, type IEStatement } from "@/utils/income-expenditure";
 import { StatementControls } from "./StatementControls";
+import { ReadyToSubmit, useStatementPdf } from "./StatementAssurance";
+import { printIncomeExpenditure } from "@/utils/statement-print";
 
 interface Props {
     statement: IEStatement;
@@ -42,6 +44,7 @@ export function cashBookLink(filters: IEFilters, priorRange: { from: string; to:
 export function IncomeExpenditureClient({ statement: s, filters, priorRange, heading, funds, orgName, currency }: Props) {
     const fundName = funds.find((f) => f.id === filters.fund)?.name ?? null;
     const drill = cashBookLink(filters, priorRange);
+    const { exportPdf, busy } = useStatementPdf();
     // Bills and invoices count on their invoice date (rule R1): these open the Invoices page on the same lines
     const invoicesLink = (tab: "payable" | "receivable") => (categoryId: string) => {
         const p = new URLSearchParams({ tab, from: filters.from, to: filters.to, category: categoryId });
@@ -74,7 +77,11 @@ export function IncomeExpenditureClient({ statement: s, filters, priorRange, hea
 
             <StatementControls basePath="/reports/income-expenditure" filters={filters} funds={funds} showLayout
                 onExport={() => downloadCsv(buildStatementCsv(s, { orgName, heading, fundName, currency }), `${s.title.toLowerCase().replace(/[^a-z]+/g, "-")}-${filters.from}-to-${filters.to}.csv`)}
+                onExportPdf={() => exportPdf(printIncomeExpenditure(s, { heading, fundName, currency, from: filters.from, to: filters.to }), filters.from, filters.to)}
+                pdfBusy={busy}
                 exportDisabled={s.empty} />
+
+            <ReadyToSubmit from={filters.from} to={filters.to} />
 
             <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 sm:px-6 pb-6">
                 {s.empty ? (

@@ -9,7 +9,9 @@ import { createClient } from "@/utils/supabase/server"
 import { getCurrentUserRole, getOrganizationCurrency, getOrganizationId, getOrganizationTimezone } from "./document-utils"
 import { todayInTimezone } from "@/utils/dates"
 import { featureAllowed } from "@/utils/plan"
-import { isIsoDay, isMonthEnd, parseLockInput, pastMonthEnds } from "@/utils/lock"
+import { formatDay, isIsoDay, isMonthEnd, parseLockInput, pastMonthEnds } from "@/utils/lock"
+import { letterheadLines } from "@/utils/donation-receipt"
+import { loadLetterhead } from "@/utils/letterhead-server"
 import { parseMoney } from "@/utils/balance-input"
 import { AUDIT_KINDS, describeChange, type AuditChange, type AuditKind, type AuditLookups, type DescribedChange } from "@/utils/audit-changes"
 import { getCurrencyDetails } from "@/utils/currency"
@@ -195,6 +197,121 @@ export async function deleteReconciliation(id: string): Promise<ActionResult> {
     revalidatePath("/reconciliations")
     revalidatePath("/reports")
     return { success: true }
+}
+
+// ------------------------------------------------------------------ ready to submit (spec 8)
+
+export interface IntegrityCheck {
+    code: string
+    title: string
+    severity: "block" | "warning"
+    // null when the check does not apply yet (for example before the opening position)
+    passed: boolean | null
+    detail: string | null
+    fixHref: string | null
+    fixLabel: string | null
+}
+
+export interface StatementAssurance {
+    checks: IntegrityCheck[]
+    // every blocking check passes: the PDF is final (no DRAFT mark)
+    final: boolean
+    lockDate: string | null
+    // an Admin on a paid plan, for a period that ends after the lock date and not after today
+    canLockPeriod: boolean
+}
+
+function fixFor(code: string, from: string, to: string, monthEnd: string | null): { href: string; label: string } | null {
+    const range = `from=${from}&to=${to}`
+    switch (code) {
+        case "uncategorised": return { href: `/ledger?view=cash&${range}`, label: "Open the cash book" }
+        case "lines_balanced": return { href: `/ledger?view=cash&${range}`, label: "Open the cash book" }
+        case "opening_complete": return { href: "/settings/opening-position", label: "Complete the opening position" }
+        case "balance_check": return { href: "/reports/financial-position", label: "Open the Statement of Financial Position" }
+        case "prior_year": return { href: "/reports/changes-in-funds", label: "Open Changes in Funds" }
+        case "invoices": return { href: "/invoices", label: "Open Invoices" }
+        case "reconciled": return { href: `/reconciliations${monthEnd ? `?month=${monthEnd}` : ""}`, label: "Open Reconciliations" }
+        case "restricted_negative": return { href: "/reports/changes-in-funds", label: "Open Changes in Funds" }
+        default: return null
+    }
+}
+
+export async function getStatementAssurance(from: string, to: string): Promise<StatementAssurance | null> {
+    if (!isIsoDay(from) || !isIsoDay(to) || from > to) return null
+    const organizationId = await getOrganizationId()
+    if (!organizationId) return null
+    const supabase = await createClient()
+    if (!(await featureAllowed(supabase, organizationId, "financial_statements", "read"))) return null
+    const [{ data, error }, { data: org }, role, lockPaid, today] = await Promise.all([
+        supabase.rpc("integrity_checks", { p_org: organizationId, p_from: from, p_to: to }),
+        supabase.from("organizations").select("lock_date").eq("id", organizationId).maybeSingle(),
+        getCurrentUserRole(),
+        featureAllowed(supabase, organizationId, "period_lock", "use"),
+        getOrganizationTimezone().then(todayInTimezone),
+    ])
+    if (error) {
+        console.error("getStatementAssurance failed:", error)
+        return null
+    }
+    const checks = ((data ?? []) as { code: string; title: string; severity: "block" | "warning"; passed: boolean | null; detail: string | null }[]).map((c) => {
+        // The reconciliation check names its month-end in its title ("... at 2026-10-31")
+        const monthEnd = c.code === "reconciled" ? (c.title.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? null) : null
+        const fix = c.passed === false || c.passed === null ? fixFor(c.code, from, to, monthEnd) : null
+        const detail = c.code === "prior_year" && c.detail === "The period starts at the opening position"
+            ? "Does not apply: the period starts on or before your tracking start date, so there is no earlier period in Outlayd"
+            : c.detail
+        return {
+            code: c.code, severity: c.severity, passed: c.passed, detail,
+            title: monthEnd ? c.title.replace(monthEnd, formatDay(monthEnd)) : c.title,
+            fixHref: fix?.href ?? null, fixLabel: fix?.label ?? null,
+        }
+    })
+    const lockDate = (org?.lock_date as string | null) ?? null
+    return {
+        checks,
+        final: checks.every((c) => c.severity !== "block" || c.passed !== false),
+        lockDate,
+        canLockPeriod: role === "Admin" && lockPaid && to <= today && (!lockDate || to > lockDate),
+    }
+}
+
+export interface StatementFrameData {
+    letterhead: string[]
+    letterheadImage: string | null
+    signatories: { name: string; title: string }[]
+    statementNote: string | null
+    preparedOn: string
+    assurance: StatementAssurance
+}
+
+// Everything a statement PDF needs besides its figures: the letterhead, signatories, the statement line,
+// and whether the period passes its checks (otherwise the PDF is marked DRAFT)
+export async function getStatementFrame(from: string, to: string): Promise<ActionResult<StatementFrameData>> {
+    const assurance = await getStatementAssurance(from, to)
+    if (!assurance) return { success: false, error: "Financial statements are available on the Growth and Nonprofit plans." }
+    const organizationId = await getOrganizationId()
+    if (!organizationId) return { success: false, error: "No active organization" }
+    const supabase = await createClient()
+    const [{ data: o }, today] = await Promise.all([
+        supabase.from("organizations").select("name, legal_name, address, registration_id, signatories, letterhead_path, statement_note").eq("id", organizationId).maybeSingle(),
+        getOrganizationTimezone().then(todayInTimezone),
+    ])
+    if (!o) return { success: false, error: "No active organization" }
+    const signatories = (Array.isArray(o.signatories) ? o.signatories : [])
+        .filter((s): s is { name: string; title?: string } => !!s && typeof (s as { name?: unknown }).name === "string")
+        .map((s) => ({ name: String(s.name), title: String(s.title ?? "") }))
+        .slice(0, 3)
+    return {
+        success: true,
+        data: {
+            letterhead: letterheadLines({ name: String(o.name ?? ""), legal_name: (o.legal_name as string | null) ?? null, address: (o.address as string | null) ?? null, registration_id: (o.registration_id as string | null) ?? null }),
+            letterheadImage: await loadLetterhead(organizationId, o.letterhead_path as string | null),
+            signatories,
+            statementNote: (o.statement_note as string | null) ?? null,
+            preparedOn: formatDay(today),
+            assurance,
+        },
+    }
 }
 
 // ------------------------------------------------------------------ change history
