@@ -1,7 +1,7 @@
 "use server"
 
-// Financial statements (spec section 6). Stage 3d: the Statement of Income and Expenditure on a
-// cash basis. Read gate "financial_statements": paid plans, and organisations that have been on one
+// Financial statements (spec section 6): the Statement of Income and Expenditure (rule R1 since
+// stage 4a: invoices by issue date, other entries by payment date). Read gate "financial_statements": paid plans, and organisations that have been on one
 // (they keep access to statements of their existing records). Row-level security limits every query
 // to the caller's own organisation.
 import { createClient } from "@/utils/supabase/server"

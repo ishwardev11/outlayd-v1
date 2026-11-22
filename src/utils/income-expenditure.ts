@@ -1,6 +1,7 @@
 // Statement of Income and Expenditure (Profit and Loss for small businesses), spec 6.1.
 // Pure helpers: the period maths, the filters from the URL, the statement layout and the CSV.
-// The figures come from the database function income_expenditure (cash basis, transactions only,
+// The figures come from the database function income_expenditure (rule R1: invoices by issue date,
+// other entries by payment date, payments of invoices not counted twice;
 // already signed by the spec's sign rule), so nothing here decides what counts as income or expense.
 import { CSV_BOM, csvRow, csvText } from "./csv"
 import { EXPENSE_GROUPS_BUSINESS, EXPENSE_GROUPS_NONPROFIT, INCOME_NATURES, natureLabel } from "./category-options"
@@ -257,7 +258,7 @@ export function buildStatementCsv(s: IEStatement, meta: { orgName: string; headi
         csvRow([csvText(s.title)]),
         csvRow([csvText(meta.heading)]),
         csvRow([csvText(meta.fundName ? `Fund: ${meta.fundName}` : "All funds")]),
-        csvRow([csvText(`Cash basis. Amounts in ${meta.currency}.`)]),
+        csvRow([csvText(`Bills and invoices by invoice date; other entries by payment date. Amounts in ${meta.currency}.`)]),
         "",
         csvRow([csvText("Line"), ...s.columns.map((c) => csvText(c.label))]),
     ]

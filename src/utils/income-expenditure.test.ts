@@ -101,6 +101,7 @@ test("CSV: header block, every line, totals and surplus", () => {
     const s = buildStatement({ orgType: "nonprofit", current, prior, layout: "total", labels: { current: "2026", prior: "2025" } })
     const csv = buildStatementCsv(s, { orgName: "=Harapan", heading: "For the year ended 31 December 2026", fundName: null, currency: "MYR" })
     assert.ok(csv.startsWith("﻿"))
+    assert.ok(csv.includes("Bills and invoices by invoice date"))
     const rows = parseCsv(csv)
     assert.equal(rows[0][0], "'=Harapan") // formula-safe
     assert.deepEqual(rows[6], ["Line", "2026", "2025"])

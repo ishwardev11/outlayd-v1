@@ -158,8 +158,9 @@ export function IncomeExpenditureClient({ statement: s, filters, priorRange, hea
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400">
-                Cash basis: money in and out by payment date, from the cash book. Refunds reduce the expense they refund.
-                Unpaid bills are not included. Negative figures are shown in brackets. Click a figure to see the entries behind it.
+                Bills and invoices count on their invoice date, whether paid yet or not, and their payments are not counted again.
+                Everything else counts on the date the money moved. Refunds reduce the expense they refund.
+                Negative figures are shown in brackets. Click a figure to see the cash book entries for it (dated by payment).
                 Expense categories without a group are shown under &quot;Other expenses&quot;; set groups in Settings, Financial Customization.
             </p>
         </div>

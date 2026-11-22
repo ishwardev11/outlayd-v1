@@ -7,7 +7,8 @@ import { buildStatement, columnLabel, periodHeading } from "@/utils/income-expen
 export const dynamic = "force-dynamic";
 
 // Statement of Income and Expenditure (Profit and Loss for small businesses), spec 6.1.
-// Cash basis: money in and out by payment date, read from transactions only.
+// Rule R1: bills and invoices by issue date, other money in and out by payment date (database function
+// income_expenditure); payments of invoices are never counted twice.
 export default async function IncomeExpenditurePage({
     searchParams,
 }: {
