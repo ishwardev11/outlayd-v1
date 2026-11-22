@@ -112,6 +112,27 @@ export async function getOverdueInvoices(): Promise<Record<"payable" | "receivab
     return out
 }
 
+/**
+ * Each fund's balance today (spec 5.7), from the opening position onwards (rule R4). Null until the
+ * opening position is complete, because the balances would be wrong before it.
+ */
+export async function getFundBalances(): Promise<{ id: string; name: string; restricted: boolean; isDefault: boolean; balance: number }[] | null> {
+    const supabase = await createClient()
+    const orgId = await requireOrg()
+    const { data: org } = await supabase.from("organizations").select("tracking_start_date, opening_position_completed_at").eq("id", orgId).maybeSingle()
+    if (!org?.opening_position_completed_at || !org.tracking_start_date) return null
+    const today = todayInTimezone(await getOrganizationTimezone())
+    const { data, error } = await supabase.rpc("changes_in_funds", { p_org: orgId, p_from: org.tracking_start_date, p_to: today })
+    if (error) {
+        console.error("Error loading fund balances:", error)
+        return null
+    }
+    return ((data ?? []) as { fund_id: string; fund_name: string; fund_type: string; is_default: boolean; archived: boolean; closing: number | string }[])
+        .filter((f) => !f.archived || Math.abs(num(f.closing)) >= 0.005)
+        .map((f) => ({ id: f.fund_id, name: f.fund_name, restricted: f.fund_type === "restricted", isDefault: f.is_default, balance: num(f.closing) }))
+        .sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || Number(b.restricted) - Number(a.restricted) || a.name.localeCompare(b.name))
+}
+
 /** The 10 newest documents that still need a human (needs review or awaiting payment). */
 export async function getActionQueue() {
     const supabase = await createClient()

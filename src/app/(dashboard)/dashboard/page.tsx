@@ -1,4 +1,4 @@
-import { getDashboardSummary, getActionQueue, getRecentDocuments, getExtractingCount, getCashThisMonth, getOverdueInvoices } from "@/app/actions/aggregates";
+import { getDashboardSummary, getActionQueue, getRecentDocuments, getExtractingCount, getCashThisMonth, getOverdueInvoices, getFundBalances } from "@/app/actions/aggregates";
 import { createClient } from "@/utils/supabase/server";
 import { featureAllowed } from "@/utils/plan";
 import Link from "next/link";
@@ -45,7 +45,7 @@ export default async function Home() {
   // Totals, the 14-day cash flow and the lists are computed in the database, so the page stays
   // fast however many documents there are.
   const supabase = await createClient();
-  const [summary, actionQueueItems, recentDocuments, extractingCount, cash, canRecordIncome, overdue, { data: orgRow }] = await Promise.all([
+  const [summary, actionQueueItems, recentDocuments, extractingCount, cash, canRecordIncome, overdue, { data: orgRow }, fundBalances] = await Promise.all([
     getDashboardSummary(),
     getActionQueue(),
     getRecentDocuments(),
@@ -54,6 +54,7 @@ export default async function Home() {
     featureAllowed(supabase, orgId, "income", "use"),
     getOverdueInvoices(),
     supabase.from("organizations").select("opening_position_completed_at").eq("id", orgId).maybeSingle(),
+    getFundBalances(),
   ]);
   // Paid organisations are asked once to set up their opening position (spec 5.6)
   const needsOpening = canRecordIncome && !orgRow?.opening_position_completed_at;
@@ -192,6 +193,36 @@ export default async function Home() {
           <div className="h-52 shrink-0">
             <QuickUpload />
           </div>
+          {fundBalances && fundBalances.length > 0 && (
+            <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm" data-testid="fund-balances">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
+                <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
+                  Fund Balances
+                  <CardNote text="What each fund holds today: its opening balance plus income, less spending, plus or minus transfers." />
+                </CardTitle>
+                <Link href="/reports/changes-in-funds" className="text-xs text-indigo-600 hover:underline">Details</Link>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                {fundBalances.map((f) => (
+                  <div key={f.id} className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="text-slate-700 dark:text-slate-300">
+                      {f.name}
+                      {f.restricted && <span className="ml-1 text-xs text-slate-400">restricted</span>}
+                    </span>
+                    <span className={`tabular-nums font-semibold ${f.balance < 0 ? "text-red-600 dark:text-red-400" : "text-slate-900 dark:text-white"}`}>
+                      {f.balance < 0 ? "-" : ""}{symbol}{money(Math.abs(f.balance))}
+                    </span>
+                  </div>
+                ))}
+                {/* Spec 3.2: a soft warning when a restricted fund has spent more than it holds */}
+                {fundBalances.some((f) => f.restricted && f.balance < 0) && (
+                  <p className="pt-1 text-xs text-red-600 dark:text-red-400" data-testid="restricted-overspent">
+                    A restricted fund is below zero: more has been spent from it than it received. Consider a transfer from an unrestricted fund.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
           <div className="flex-1">
             <RecentActivity documents={recentDocuments} />
           </div>
