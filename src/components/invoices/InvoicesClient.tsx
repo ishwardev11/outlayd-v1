@@ -15,6 +15,7 @@ import { AGEING_LABELS, STATUS_OPTIONS, type AgeingBucket, type InvoiceFilters }
 import { StatusBadge } from "./StatusBadge"
 import { InvoiceDialog } from "./InvoiceDialog"
 import { InvoiceDetailDialog } from "./InvoiceDetailDialog"
+import { UpgradeNotice, usePaywall } from "@/components/ui/UpgradeNotice"
 
 const selectClass = "h-9 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white"
 
@@ -31,6 +32,7 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
 
     const payable = filters.tab === "payable"
     const canWrite = !isViewer && options.paid
+    const paywall = usePaywall("invoices")
     const money = (n: number) => `${symbol}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     const pages = Math.max(1, Math.ceil(data.total / data.pageSize))
 
@@ -114,21 +116,19 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
                     <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Invoices</h1>
                     <p className="text-gray-500 mt-2 dark:text-slate-400">Bills you owe and invoices you issued, with what is still outstanding.</p>
                 </div>
-                <Button onClick={() => setForm({ edit: null, key: Date.now() })} disabled={!canWrite}
+                <Button onClick={() => (options.paid ? setForm({ edit: null, key: Date.now() }) : paywall.open())} disabled={isViewer}
                     title={isViewer ? "Viewers cannot create invoices" : !options.paid ? "Creating invoices is part of the Growth and Nonprofit plans" : ""}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white">
                     {options.paid ? <Plus className="h-4 w-4 mr-1.5" /> : <Lock className="h-4 w-4 mr-1.5" />}{payable ? "New bill" : "New invoice"}
                 </Button>
+                {paywall.modal}
             </div>
 
             {!options.paid && (
-                <div className="flex gap-3 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-900 dark:text-amber-200">
-                    <Lock className="h-4 w-4 shrink-0 mt-0.5" />
-                    <p>
-                        Bills you approve in the Ledger appear here automatically, and you mark them paid in the Ledger as usual.
-                        Creating invoices, invoicing others and recording part-payments are part of the Growth and Nonprofit plans.
-                    </p>
-                </div>
+                <UpgradeNotice context="invoices">
+                    Bills you approve in the Ledger appear here automatically, and you mark them paid in the Ledger as usual.
+                    Creating invoices, invoicing others and recording part-payments are part of the Growth and Nonprofit plans.
+                </UpgradeNotice>
             )}
 
             <nav className="flex gap-1 border-b border-slate-200 dark:border-slate-800 pb-2" aria-label="Invoice types">

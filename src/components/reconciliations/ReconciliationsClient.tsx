@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useCurrency } from "@/components/CurrencyProvider"
 import { LockedNotice } from "@/components/LockProvider"
+import { UpgradeNotice } from "@/components/ui/UpgradeNotice"
 import { deleteReconciliation, saveReconciliation, type ReconciliationPage, type ReconciliationRow } from "@/app/actions/assurance"
 import { formatDay, isLockedDate, lockedMessage } from "@/utils/lock"
 
@@ -47,7 +48,7 @@ export function ReconciliationsClient({ data }: { data: ReconciliationPage }) {
                 </label>
             </div>
 
-            {!data.paid && <p className="text-sm text-amber-700">Recording reconciliations is part of the Growth and Nonprofit plans. Existing ones stay available to view.</p>}
+            {!data.paid && <UpgradeNotice context="reconciliation">Recording reconciliations is part of the Growth and Nonprofit plans. Existing ones stay available to view.</UpgradeNotice>}
             {data.paid && !data.canEdit && <p className="text-sm text-slate-500">Only Admins and Editors can record reconciliations.</p>}
             {locked && data.lockDate && <LockedNotice text={`${formatDay(data.periodEnd)} is in a locked period. ${lockedMessage(data.lockDate)}`} />}
 

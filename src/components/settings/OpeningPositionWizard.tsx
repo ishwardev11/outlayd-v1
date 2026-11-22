@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useRole } from "@/components/RoleProvider"
 import { usePlan } from "@/components/PlanProvider"
+import { UpgradeNotice } from "@/components/ui/UpgradeNotice"
 import { useCurrency } from "@/components/CurrencyProvider"
 import { LockedNotice, useLock } from "@/components/LockProvider"
 import { completeOpeningPosition, saveAccount, saveFundOpenings, saveStartDate, type OpeningPosition } from "@/app/actions/balance"
@@ -80,7 +81,7 @@ export function OpeningPositionWizard({ data }: { data: OpeningPosition }) {
                     {data.completedAt && <span className="ml-1 font-medium text-emerald-700 dark:text-emerald-400">Completed.</span>}
                 </p>
                 {frozen && <LockedNotice className="mt-3" text={`The opening position is in a locked period, so it cannot change. ${lock.message}`} />}
-                {!paid && <p className="mt-2 text-sm text-amber-700">The opening position is part of the Growth and Nonprofit plans.</p>}
+                {!paid && <UpgradeNotice context="accounts" className="mt-3">The opening position is part of the Growth and Nonprofit plans. It is what your Statement of Financial Position and fund balances start from.</UpgradeNotice>}
                 {paid && !isAdmin && <p className="mt-2 text-sm text-slate-500">Only Admins can change the start date, accounts and complete this. Editors can enter fund balances, assets and loans.</p>}
             </div>
 

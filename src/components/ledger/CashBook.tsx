@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { useRole } from "@/components/RoleProvider"
 import { useCurrency } from "@/components/CurrencyProvider"
 import { useLock } from "@/components/LockProvider"
+import { usePaywall } from "@/components/ui/UpgradeNotice"
 import { exportCashBookCsv, getMoneyIn, type EntryOptions } from "@/app/actions/transactions"
 import { cashBookTotals, sourceLabel, summarise, typeLabel, type CashBookFilters, type CashBookRow } from "@/utils/cash-book"
 import { TransactionDialog, type MoneyInEdit } from "./TransactionDialog"
@@ -44,6 +45,7 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
     const pages = Math.max(1, Math.ceil(total / pageSize))
     const totals = cashBookTotals(rows)
     const canMoneyIn = !isViewer && options.paid
+    const paywall = usePaywall("income")
 
     const go = (f: CashBookFilters) => {
         const p = new URLSearchParams({ view: "cash" })
@@ -94,7 +96,8 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
         <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-2">
-                    <Button onClick={() => setDialog({ mode: "in", edit: null, key: Date.now() })} disabled={!canMoneyIn}
+                    {paywall.modal}
+                    <Button onClick={() => (options.paid ? setDialog({ mode: "in", edit: null, key: Date.now() }) : paywall.open())} disabled={isViewer}
                         title={isViewer ? "Viewers cannot record money in" : !options.paid ? "Recording income and donations is part of the Growth and Nonprofit plans" : ""}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white">
                         {options.paid ? <ArrowDownLeft className="h-4 w-4 mr-1.5" /> : <Lock className="h-4 w-4 mr-1.5" />}Money in

@@ -17,7 +17,7 @@ export default async function ChangesInFundsPage({
     const data = await getChangesInFundsPage(await searchParams);
     if (!data) redirect("/onboarding");
     const wrap = (child: React.ReactNode) => <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">{child}</div>;
-    if (data.locked) return wrap(<IncomeExpenditureLocked business={data.orgType === "small_business"} title="Statement of Changes in Funds" />);
+    if (data.locked) return wrap(<IncomeExpenditureLocked business={data.orgType === "small_business"} kind="changes_in_funds" />);
     if (!data.ready) return wrap(<OpeningPositionPrompt title="Statement of Changes in Funds" />);
     const { filters } = data;
     return wrap(

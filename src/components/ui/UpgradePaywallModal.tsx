@@ -6,8 +6,11 @@ import { createPortal } from "react-dom";
 import { CheckCircle2, LockKeyhole } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { useRole } from "@/components/RoleProvider";
 
-type PaywallContext = "upload_limit" | "team_limit" | "donor_memo" | "accounting_export" | "bank_statements" | "financial_statements";
+export type PaywallContext =
+    | "upload_limit" | "team_limit" | "donor_memo" | "accounting_export" | "bank_statements" | "financial_statements"
+    | "income" | "invoices" | "assets" | "funds" | "accounts" | "reconciliation" | "period_lock";
 
 interface UpgradePaywallModalProps {
     isOpen: boolean;
@@ -40,18 +43,60 @@ const COPY: Record<PaywallContext, { heading: string; subtext: string }> = {
     financial_statements: {
         heading: "Financial Statements are a Growth Feature",
         subtext:
-            "Produce your Statement of Income and Expenditure (or Profit and Loss) from your records, by fund and against last year, ready for your AGM and auditor. Upgrade to Outlayd Growth to unlock it.",
+            "Produce your Statement of Income and Expenditure, Receipts and Payments, Financial Position and Changes in Funds from your records, with checks and signed PDFs for your AGM and auditor. Upgrade to Outlayd Growth to unlock them.",
     },
     team_limit: {
-        heading: "Collaborate with your whole team",
+        heading: "Work on your books together",
         subtext:
-            "Your Free Tier limit is 1 user. Upgrade to the Growth Tier to unlock up to 5 member seats, real-time collaboration, and custom permissions.",
+            "The Free plan has 1 user. Growth gives you up to 5 people, each as an Admin, Editor or Viewer.",
+    },
+    income: {
+        heading: "Income and Donations are a Growth Feature",
+        subtext:
+            "Record donations, grants, fees and other money in, split across funds, and issue numbered donation receipts (tax-exempt ones too, once your organisation is approved). Upgrade to Outlayd Growth to unlock it.",
+    },
+    invoices: {
+        heading: "Invoices are a Growth Feature",
+        subtext:
+            "Create bills and invoices, number and send invoices with your letterhead, record part-payments and see what is overdue. Bills you approve in the Ledger keep appearing here on every plan.",
+    },
+    assets: {
+        heading: "Assets and Loans are a Growth Feature",
+        subtext:
+            "Record equipment, deposits and loans, with depreciation worked out every month, so your Statement of Financial Position is complete.",
+    },
+    funds: {
+        heading: "Funds are a Growth Feature",
+        subtext:
+            "Create a fund for each grant or appeal, mark restricted money, and see every fund's balance. Your existing funds stay usable on the Free plan.",
+    },
+    accounts: {
+        heading: "Accounts and Transfers are a Growth Feature",
+        subtext:
+            "Keep each bank account, cash box and e-wallet separately, move money between funds, and set your opening position.",
+    },
+    reconciliation: {
+        heading: "Reconciliation is a Growth Feature",
+        subtext:
+            "Check each account against its bank statement at every month-end, with the difference worked out and a note for anything not yet entered.",
+    },
+    period_lock: {
+        heading: "Period Locks are a Growth Feature",
+        subtext:
+            "Lock a finished year so the figures you reported cannot change, and unlock it with a recorded reason when your auditor asks.",
     },
 };
+
+const VALUE_LINES = [
+    "Unlimited AI receipt and invoice reading, up to 5 users",
+    "Money in, donor receipts, invoices, funds, assets and loans",
+    "Financial statements with checks, as PDFs for your AGM and auditor",
+];
 
 export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upload_limit" }: UpgradePaywallModalProps) {
     const [isLoading, setIsLoading] = useState(false);
     const mounted = useIsClient();
+    const { isAdmin } = useRole();
 
     if (!isOpen) return null;
     if (!mounted) return null;
@@ -120,23 +165,25 @@ export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upl
 
                 {/* Value Props */}
                 <div className="space-y-4 mb-8">
-                    <div className="flex items-start">
-                        <CheckCircle2 className="w-5 h-5 text-indigo-500 shrink-0 mr-3 mt-0.5" />
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                            Unlimited AI receipt &amp; invoice extraction
-                        </span>
-                    </div>
-                    <div className="flex items-start">
-                        <CheckCircle2 className="w-5 h-5 text-indigo-500 shrink-0 mr-3 mt-0.5" />
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                            Advanced board-ready PDF reporting
-                        </span>
-                    </div>
+                    {VALUE_LINES.map((line) => (
+                        <div key={line} className="flex items-start">
+                            <CheckCircle2 className="w-5 h-5 text-indigo-500 shrink-0 mr-3 mt-0.5" />
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{line}</span>
+                        </div>
+                    ))}
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Registered nonprofits can apply for the Nonprofit price (RM49 a month, the same features) on our contact page.
+                    </p>
                 </div>
 
-                {/* Call to Action */}
+                {/* Call to Action: only Admins can start a subscription */}
                 <div className="flex flex-col gap-3">
-                    <button
+                    {!isAdmin && (
+                        <p className="rounded-lg bg-slate-100 dark:bg-slate-800 px-4 py-3 text-center text-sm text-slate-600 dark:text-slate-300">
+                            Ask an Admin of your organisation to upgrade.
+                        </p>
+                    )}
+                    {isAdmin && <button
                         disabled={isLoading}
                         onClick={onUpgrade || handleCheckout}
                         className={`w-full font-semibold py-3 px-4 rounded-xl transition-colors shadow-sm disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer ${
@@ -146,7 +193,7 @@ export function UpgradePaywallModal({ isOpen, onClose, onUpgrade, context = "upl
                         }`}
                     >
                         {isLoading ? "Redirecting..." : "Upgrade to Growth — RM89/mo"}
-                    </button>
+                    </button>}
                     <button
                         onClick={onClose}
                         className="w-full bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium py-3 px-4 rounded-xl transition-colors cursor-pointer"

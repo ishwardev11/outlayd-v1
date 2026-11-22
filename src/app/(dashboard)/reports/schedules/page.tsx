@@ -17,7 +17,7 @@ export default async function SchedulesPage({
     return (
         <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
             {data.locked
-                ? <IncomeExpenditureLocked business={data.orgType === "small_business"} title="Schedules" />
+                ? <IncomeExpenditureLocked business={data.orgType === "small_business"} kind="schedules" />
                 : <SchedulesClient data={data} heading={periodHeading(data.filters.from, data.filters.to, data.fiscalYearStart)} />}
         </div>
     );

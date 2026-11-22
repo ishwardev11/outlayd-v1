@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Loader2, Plus, Archive, ArchiveRestore } from "lucide-react"
 import { useRole } from "@/components/RoleProvider"
 import { usePlan } from "@/components/PlanProvider"
+import { UpgradeNotice } from "@/components/ui/UpgradeNotice"
 import { useCurrency } from "@/components/CurrencyProvider"
 import { Fund, FundSpend, Category } from "./SettingsLayout"
 import { CategorySettings } from "./CategorySettings"
@@ -69,9 +70,9 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
                 <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">Active Funds</h2>
                 <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">A fund answers &quot;whose money is this?&quot; (for example the General Fund, a building appeal or a specific grant). Most organisations only need the General Fund plus one fund per grant.</p>
                 {!paid && (
-                    <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-900 dark:text-amber-300">
-                        On the Free plan you can keep recording expenses against your existing funds. Creating, editing and archiving funds is part of the Growth and Nonprofit plans. You can upgrade under Billing &amp; Subscription.
-                    </div>
+                    <UpgradeNotice context="funds" className="mb-4">
+                        On the Free plan you can keep recording expenses against your existing funds. Creating, editing and archiving funds is part of the Growth and Nonprofit plans.
+                    </UpgradeNotice>
                 )}
                 <form onSubmit={handleAddFund} className="flex gap-4 items-end mb-6">
                     <div className="flex-1 space-y-2">

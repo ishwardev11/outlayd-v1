@@ -18,7 +18,7 @@ export default async function FinancialPositionPage({
     const data = await getFinancialPositionPage(await searchParams);
     if (!data) redirect("/onboarding");
     const wrap = (child: React.ReactNode) => <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">{child}</div>;
-    if (data.locked) return wrap(<IncomeExpenditureLocked business={data.orgType === "small_business"} title="Statement of Financial Position" />);
+    if (data.locked) return wrap(<IncomeExpenditureLocked business={data.orgType === "small_business"} kind="financial_position" />);
     if (!data.ready) return wrap(<OpeningPositionPrompt title="Statement of Financial Position" />);
     if (data.current.length === 0) return wrap(<OpeningPositionPrompt title="Statement of Financial Position" beforeStart={data.startDate} />);
 

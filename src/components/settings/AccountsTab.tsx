@@ -16,6 +16,7 @@ import {
 } from "@/app/actions/balance"
 import { ACCOUNT_TYPES, type AccountType } from "@/utils/balance-input"
 import { LockedNotice, useLock } from "@/components/LockProvider"
+import { UpgradeNotice, usePaywall } from "@/components/ui/UpgradeNotice"
 
 const selectClass = "h-9 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white disabled:opacity-60"
 
@@ -42,6 +43,7 @@ export function AccountsTab({ funds }: { funds: { id: string; name: string; arch
     const canTransfer = !isViewer && paid
     const activeFunds = funds.filter((f) => !f.archived_at)
     const lock = useLock()
+    const paywall = usePaywall("accounts")
     const transferLocked = lock.isLocked(tr.date)
 
     const load = async () => {
@@ -105,9 +107,10 @@ export function AccountsTab({ funds }: { funds: { id: string; name: string; arch
                         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Accounts</h2>
                         <p className="text-sm text-slate-500">Where your cash sits: bank accounts, a cash box, e-wallets.</p>
                     </div>
-                    <Button variant="outline" size="sm" disabled={!canAccounts || busy}
+                    {paywall.modal}
+                    <Button variant="outline" size="sm" disabled={!isAdmin || busy}
                         title={!paid ? "More than one account is part of the Growth and Nonprofit plans" : !isAdmin ? "Only Admins can change accounts" : ""}
-                        onClick={() => setEdit({ id: null, name: "", account_type: "bank", opening_balance: "0", archived: false })}>
+                        onClick={() => (canAccounts ? setEdit({ id: null, name: "", account_type: "bank", opening_balance: "0", archived: false }) : paywall.open())}>
                         {paid ? <Plus className="h-4 w-4 mr-1" /> : <Lock className="h-4 w-4 mr-1" />}Add account
                     </Button>
                 </div>
@@ -180,7 +183,7 @@ export function AccountsTab({ funds }: { funds: { id: string; name: string; arch
                         <Button type="submit" size="sm" className="h-9" disabled={transferLocked}>Transfer</Button>
                     </fieldset>
                     {canTransfer && transferLocked && <LockedNotice className="w-full" text={`That date is in a locked period. ${lock.message}`} />}
-                    {!paid && <p className="w-full text-xs text-amber-700">Fund transfers are part of the Growth and Nonprofit plans.</p>}
+                    {!paid && <UpgradeNotice context="accounts" className="w-full">Accounts, fund transfers and the opening position are part of the Growth and Nonprofit plans.</UpgradeNotice>}
                 </form>
                 {transfers.length > 0 && (
                     <table className="w-full text-sm">

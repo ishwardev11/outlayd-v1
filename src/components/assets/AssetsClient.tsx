@@ -20,6 +20,7 @@ import { ITEM_ACTIONS, itemKindLabel, type ItemAction, type ItemKind } from "@/u
 import { ItemDialog } from "./ItemDialog"
 import { LockedNotice, useLock } from "@/components/LockProvider"
 import { RecordHistory } from "@/components/audit/RecordHistory"
+import { UpgradeNotice, usePaywall } from "@/components/ui/UpgradeNotice"
 import { itemValuesLocked } from "@/utils/lock"
 
 const selectClass = "h-9 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white"
@@ -30,6 +31,7 @@ export function AssetsClient({ data, options }: { data: AssetsPage; options: Ent
     const { isViewer } = useRole()
     const { symbol } = useCurrency()
     const canWrite = !isViewer && options.paid
+    const paywall = usePaywall("assets")
     const money = (n: number) => `${symbol}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     const [form, setForm] = useState<{ edit: ItemRow | null; kind?: ItemKind; key: number } | null>(null)
     const [openId, setOpenId] = useState<string | null>(null)
@@ -49,18 +51,16 @@ export function AssetsClient({ data, options }: { data: AssetsPage; options: Ent
                     <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Assets &amp; Liabilities</h1>
                     <p className="text-gray-500 mt-2 dark:text-slate-400">Equipment, deposits and loans: what you own and owe besides cash, invoices and bills.</p>
                 </div>
-                <Button onClick={() => setForm({ edit: null, key: Date.now() })} disabled={!canWrite}
+                <Button onClick={() => (options.paid ? setForm({ edit: null, key: Date.now() }) : paywall.open())} disabled={isViewer}
                     title={isViewer ? "Viewers cannot add items" : !options.paid ? "Assets and liabilities are part of the Growth and Nonprofit plans" : ""}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white">
                     {options.paid ? <Plus className="h-4 w-4 mr-1.5" /> : <Lock className="h-4 w-4 mr-1.5" />}Add
                 </Button>
+                {paywall.modal}
             </div>
 
             {!options.paid && (
-                <div className="flex gap-3 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-900 dark:text-amber-200">
-                    <Lock className="h-4 w-4 shrink-0 mt-0.5" />
-                    <p>Recording assets, loans and depreciation is part of the Growth and Nonprofit plans. Anything already recorded stays visible here.</p>
-                </div>
+                <UpgradeNotice context="assets">Recording assets, loans and depreciation is part of the Growth and Nonprofit plans. Anything already recorded stays visible here.</UpgradeNotice>
             )}
             {data.startDate === null && (
                 <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300">

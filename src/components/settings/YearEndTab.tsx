@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { getYearEnd, saveStatementNote, setLockDate, type YearEndState } from "@/app/actions/assurance"
 import { formatDay } from "@/utils/lock"
+import { UpgradeNotice } from "@/components/ui/UpgradeNotice"
 
 // Settings > Year end: lock the books up to a date (spec 3.9), the line printed on statements, and the
 // way to reconciliations and the change history.
@@ -70,7 +71,7 @@ export function YearEndTab() {
                     {state.startDate && <span className="ml-auto text-xs font-normal text-slate-500">Tracking since {formatDay(state.startDate)}</span>}
                 </div>
 
-                {!state.lockPaid && <p className="text-sm text-amber-700">Locking periods is part of the Growth and Nonprofit plans.</p>}
+                {!state.lockPaid && <UpgradeNotice context="period_lock">Locking periods is part of the Growth and Nonprofit plans.</UpgradeNotice>}
                 {state.lockPaid && !state.isAdmin && <p className="text-sm text-slate-500">Only Admins can lock or unlock a period.</p>}
 
                 {state.canLock && (

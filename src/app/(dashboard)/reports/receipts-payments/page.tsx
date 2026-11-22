@@ -19,7 +19,7 @@ export default async function ReceiptsPaymentsPage({
     if (data.locked) {
         return (
             <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
-                <IncomeExpenditureLocked business={data.orgType === "small_business"} title="Receipts and Payments" />
+                <IncomeExpenditureLocked business={data.orgType === "small_business"} kind="receipts_payments" />
             </div>
         );
     }

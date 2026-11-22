@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useRole } from "@/components/RoleProvider"
 import { usePlan } from "@/components/PlanProvider"
+import { UpgradeNotice } from "@/components/ui/UpgradeNotice"
 import { addSettingCategory, deleteSettingCategory, moveCategory, setCategoryArchived, updateCategory } from "@/app/actions/settings"
 import { INCOME_NATURES, OTHER_GROUP, expenseGroupsFor } from "@/utils/category-options"
 import { CategoryAccountCode } from "./CategoryAccountCode"
@@ -158,9 +159,9 @@ function CategorySection({ kind, categories, orgType }: { kind: Kind; categories
             <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">{title}</h2>
             <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">{intro}</p>
             {kind === "income" && !paid && (
-                <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-900 dark:text-amber-300">
-                    Recording income and donations is part of the Growth and Nonprofit plans, so these categories are shown read-only. You can upgrade under Billing &amp; Subscription.
-                </div>
+                <UpgradeNotice context="income" className="mb-4">
+                    Recording income and donations is part of the Growth and Nonprofit plans, so these categories are shown read-only.
+                </UpgradeNotice>
             )}
             <form onSubmit={add} className="flex flex-wrap gap-3 items-end mb-6">
                 <Input placeholder={kind === "income" ? "e.g. Zakat collections" : "e.g. Travel Stipends"} value={name} onChange={(e) => setName(e.target.value)} maxLength={100}
