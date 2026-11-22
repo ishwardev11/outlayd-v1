@@ -38,6 +38,11 @@ export interface InvoiceFilters {
     q: string
     page: number
     open: string
+    // From a statement line: invoice dates, and invoices with a line in this category / fund
+    from: string
+    to: string
+    category: string
+    fund: string
 }
 
 export const INVOICE_PAGE_SIZE = 50
@@ -62,13 +67,18 @@ const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v
 export function parseInvoiceFilters(sp: SearchParams): InvoiceFilters {
     const status = first(sp.status)
     const page = Number.parseInt(first(sp.page), 10)
-    const open = first(sp.open)
+    const id = (v: string) => (UUID_RE.test(v) ? v : "")
+    const date = (v: string) => (realDate(v) ?? "")
     return {
         tab: first(sp.tab) === "receivable" ? "receivable" : "payable",
         status: STATUS_OPTIONS.some((o) => o.value === status) ? (status as InvoiceFilters["status"]) : "all",
         q: first(sp.q).trim().slice(0, 60),
         page: Number.isFinite(page) && page > 0 ? page : 1,
-        open: UUID_RE.test(open) ? open : "",
+        open: id(first(sp.open)),
+        from: date(first(sp.from)),
+        to: date(first(sp.to)),
+        category: id(first(sp.category)),
+        fund: id(first(sp.fund)),
     }
 }
 

@@ -3,10 +3,10 @@
 import { Scale } from "lucide-react";
 import { FeatureLocked } from "@/components/ui/FeatureLocked";
 
-export function IncomeExpenditureLocked({ business }: { business: boolean }) {
+export function IncomeExpenditureLocked({ business, title }: { business: boolean; title?: string }) {
     return (
         <FeatureLocked
-            title={business ? "Profit and Loss" : "Statement of Income and Expenditure"}
+            title={title ?? (business ? "Profit and Loss" : "Statement of Income and Expenditure")}
             tagline="Your income and spending for the year, straight from your records."
             heading="Financial statements are a Growth feature"
             features={[

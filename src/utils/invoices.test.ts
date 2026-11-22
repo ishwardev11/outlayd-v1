@@ -8,10 +8,14 @@ const C = "00000000-0000-4000-8000-000000000002"
 const F = "00000000-0000-4000-8000-000000000003"
 
 test("filters: bad values fall back, a uuid opens an invoice", () => {
-    assert.deepEqual(parseInvoiceFilters({}), { tab: "payable", status: "all", q: "", page: 1, open: "" })
+    const none = { from: "", to: "", category: "", fund: "" }
+    assert.deepEqual(parseInvoiceFilters({}), { tab: "payable", status: "all", q: "", page: 1, open: "", ...none })
     assert.deepEqual(parseInvoiceFilters({ tab: "receivable", status: "overdue", q: "  Dewan ", page: "3", open: P }),
-        { tab: "receivable", status: "overdue", q: "Dewan", page: 3, open: P })
-    assert.deepEqual(parseInvoiceFilters({ tab: "x", status: "bogus", page: "-2", open: "1; drop" }), { tab: "payable", status: "all", q: "", page: 1, open: "" })
+        { tab: "receivable", status: "overdue", q: "Dewan", page: 3, open: P, ...none })
+    assert.deepEqual(parseInvoiceFilters({ tab: "x", status: "bogus", page: "-2", open: "1; drop" }), { tab: "payable", status: "all", q: "", page: 1, open: "", ...none })
+    // From a statement line
+    assert.deepEqual(parseInvoiceFilters({ from: "2026-01-01", to: "2026-12-31", category: C, fund: F }), { tab: "payable", status: "all", q: "", page: 1, open: "", from: "2026-01-01", to: "2026-12-31", category: C, fund: F })
+    assert.deepEqual(parseInvoiceFilters({ from: "2026-02-30", to: "x", category: "c", fund: "f" }), { tab: "payable", status: "all", q: "", page: 1, open: "", ...none })
     assert.equal(statusLabel("part_paid"), "Part-paid")
 })
 

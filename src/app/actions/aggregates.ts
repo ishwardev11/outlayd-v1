@@ -87,6 +87,31 @@ export async function getCashThisMonth(): Promise<{ moneyIn: number; moneyOut: n
     return { moneyIn: num(raw.money_in), moneyOut: num(raw.money_out), from: start, to: end }
 }
 
+/**
+ * Overdue bills you owe and invoices owed to you (spec 5.5): open, past their due date, not fully
+ * paid. Worked out by the database view invoice_summary from today's date, never stored.
+ */
+export async function getOverdueInvoices(): Promise<Record<"payable" | "receivable", { count: number; total: number }>> {
+    const supabase = await createClient()
+    const orgId = await requireOrg()
+    const out = { payable: { count: 0, total: 0 }, receivable: { count: 0, total: 0 } }
+    const { data, error } = await supabase.from("invoice_summary").select("direction, balance")
+        .eq("organization_id", orgId).eq("derived_status", "overdue").limit(10000)
+    if (error) {
+        console.error("Error loading overdue invoices:", error)
+        return out
+    }
+    const cents = { payable: 0, receivable: 0 }
+    for (const r of (data ?? []) as { direction: "payable" | "receivable"; balance: number | string }[]) {
+        const d = r.direction === "receivable" ? "receivable" : "payable"
+        out[d].count++
+        cents[d] += Math.round(num(r.balance) * 100)
+    }
+    out.payable.total = cents.payable / 100
+    out.receivable.total = cents.receivable / 100
+    return out
+}
+
 /** The 10 newest documents that still need a human (needs review or awaiting payment). */
 export async function getActionQueue() {
     const supabase = await createClient()

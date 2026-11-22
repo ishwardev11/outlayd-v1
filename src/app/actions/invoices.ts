@@ -67,9 +67,23 @@ function toRow(r: Record<string, unknown>): InvoiceRow {
     }
 }
 
-function listQuery(supabase: Supabase, organizationId: string, f: InvoiceFilters) {
+// Invoices with at least one line in the category / fund (from a statement line), or null for no line filter
+async function invoicesWithLines(supabase: Supabase, organizationId: string, f: InvoiceFilters): Promise<string[] | null> {
+    if (!f.category && !f.fund) return null
+    let q = supabase.from("invoice_lines").select("invoice_id").eq("organization_id", organizationId)
+    if (f.category) q = q.eq("category_id", f.category)
+    if (f.fund) q = q.eq("fund_id", f.fund)
+    const { data, error } = await q.limit(EXPORT_MAX_ROWS)
+    if (error) throw error
+    return [...new Set(((data ?? []) as { invoice_id: string }[]).map((l) => l.invoice_id))]
+}
+
+function listQuery(supabase: Supabase, organizationId: string, f: InvoiceFilters, onlyIds: string[] | null) {
     let q = supabase.from("invoice_summary").select(SUMMARY_COLUMNS, { count: "exact" })
         .eq("organization_id", organizationId).eq("direction", f.tab)
+    if (onlyIds) q = q.in("id", onlyIds.length ? onlyIds : ["00000000-0000-0000-0000-000000000000"])
+    if (f.from) q = q.gte("issue_date", f.from)
+    if (f.to) q = q.lte("issue_date", f.to)
     if (f.status !== "all") q = q.eq("derived_status", f.status)
     if (f.q) {
         const like = `%${f.q.replace(/[\\%_,()]/g, (c) => "\\" + c)}%`
@@ -92,11 +106,12 @@ export async function getInvoicesPage(f: InvoiceFilters): Promise<InvoicesPage> 
     const empty: InvoicesPage = { rows: [], total: 0, page: 1, pageSize: INVOICE_PAGE_SIZE, ageing: ageingSummary([]) }
     if (!organizationId) return empty
 
+    const onlyIds = await invoicesWithLines(supabase, organizationId, f)
     let page = Math.max(1, f.page)
-    let res = await listQuery(supabase, organizationId, f).range((page - 1) * INVOICE_PAGE_SIZE, page * INVOICE_PAGE_SIZE - 1)
+    let res = await listQuery(supabase, organizationId, f, onlyIds).range((page - 1) * INVOICE_PAGE_SIZE, page * INVOICE_PAGE_SIZE - 1)
     if (res.error?.code === "PGRST103" && page > 1) {
         page = 1
-        res = await listQuery(supabase, organizationId, f).range(0, INVOICE_PAGE_SIZE - 1)
+        res = await listQuery(supabase, organizationId, f, onlyIds).range(0, INVOICE_PAGE_SIZE - 1)
     }
     if (res.error) {
         console.error("getInvoicesPage failed:", res.error)
@@ -329,8 +344,9 @@ export async function exportInvoicesCsv(f: InvoiceFilters): Promise<ActionResult
         if (!organizationId) return { success: false, error: "No active organization" }
         const all: InvoiceRow[] = []
         let truncated = false
+        const onlyIds = await invoicesWithLines(supabase, organizationId, f)
         for (let from = 0; from < EXPORT_MAX_ROWS; from += 1000) {
-            const res = await listQuery(supabase, organizationId, f).range(from, from + 999)
+            const res = await listQuery(supabase, organizationId, f, onlyIds).range(from, from + 999)
             if (res.error) throw res.error
             const chunk = ((res.data ?? []) as Record<string, unknown>[]).map(toRow)
             all.push(...chunk)

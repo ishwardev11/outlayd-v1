@@ -98,6 +98,14 @@ export function ReportsClient({ summary, largeTransactions: largeTx, filters, pa
                         Income &amp; Expenditure
                     </Link>
                     <Link
+                        href="/reports/receipts-payments"
+                        title="Cash received and paid, with opening and closing cash"
+                        className="inline-flex items-center gap-2 h-10 px-4 rounded-md text-sm font-medium border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                        <Wallet className="h-4 w-4" />
+                        Receipts &amp; Payments
+                    </Link>
+                    <Link
                         href="/reports/donor-memo"
                         className="inline-flex items-center gap-2 h-10 px-4 rounded-md text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
                     >

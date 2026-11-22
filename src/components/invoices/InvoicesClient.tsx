@@ -42,6 +42,7 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
         if (f.q) p.set("q", f.q)
         if (f.page > 1) p.set("page", String(f.page))
         if (f.open) p.set("open", f.open)
+        for (const k of ["from", "to", "category", "fund"] as const) if (f[k]) p.set(k, f[k])
         const s = p.toString()
         return `/invoices${s ? `?${s}` : ""}`
     }
@@ -90,8 +91,13 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
         }
     }
 
+    const fromStatement = !!(filters.from || filters.to || filters.category || filters.fund)
+    const categoryName = options.categories.find((c) => c.id === filters.category)?.name
+    const fundName = options.funds.find((f) => f.id === filters.fund)?.name
+    const clearStatement = { from: "", to: "", category: "", fund: "", page: 1 }
+
     const tab = (key: InvoiceFilters["tab"], label: string) => (
-        <Link href={href({ tab: key, status: "all", q: "", page: 1 })} aria-current={filters.tab === key ? "page" : undefined}
+        <Link href={href({ tab: key, status: "all", q: "", ...clearStatement })} aria-current={filters.tab === key ? "page" : undefined}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${filters.tab === key
                 ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-cyan-400"
                 : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-900"}`}>
@@ -143,6 +149,19 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
                     <p className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white" data-testid="ageing-total">{money(data.ageing.total)}</p>
                 </div>
             </div>
+
+            {fromStatement && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-indigo-200 dark:border-indigo-900 bg-indigo-50/60 dark:bg-indigo-950/20 px-3 py-2 text-sm text-slate-700 dark:text-slate-300" data-testid="statement-filter">
+                    <span>
+                        Showing {payable ? "bills" : "invoices"}
+                        {filters.from || filters.to ? ` dated ${filters.from || "…"} to ${filters.to || "…"}` : ""}
+                        {categoryName ? ` with ${categoryName}` : filters.category ? " in the chosen category" : ""}
+                        {fundName ? ` on ${fundName}` : ""}
+                        , from the statement. Drafts, void and opening-balance invoices are listed but not counted there.
+                    </span>
+                    <Link href={href(clearStatement)} className="text-indigo-600 hover:underline">Show all</Link>
+                </div>
+            )}
 
             <div className="flex flex-wrap items-end justify-between gap-3">
                 <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); router.push(href({ status: draft.status, q: draft.q.trim(), page: 1 })) }}>

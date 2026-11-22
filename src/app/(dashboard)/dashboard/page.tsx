@@ -1,4 +1,4 @@
-import { getDashboardSummary, getActionQueue, getRecentDocuments, getExtractingCount, getCashThisMonth } from "@/app/actions/aggregates";
+import { getDashboardSummary, getActionQueue, getRecentDocuments, getExtractingCount, getCashThisMonth, getOverdueInvoices } from "@/app/actions/aggregates";
 import { createClient } from "@/utils/supabase/server";
 import { featureAllowed } from "@/utils/plan";
 import Link from "next/link";
@@ -11,7 +11,7 @@ import { QuickUpload } from "@/components/dashboard/QuickUpload";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { ExtractionPoller } from "@/components/ExtractionPoller";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, FileText, ArrowDownLeft, ArrowUpRight, Info } from "lucide-react";
+import { AlertCircle, FileText, ArrowDownLeft, ArrowUpRight, Info, Clock } from "lucide-react";
 
 const money = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -45,13 +45,14 @@ export default async function Home() {
   // Totals, the 14-day cash flow and the lists are computed in the database, so the page stays
   // fast however many documents there are.
   const supabase = await createClient();
-  const [summary, actionQueueItems, recentDocuments, extractingCount, cash, canRecordIncome] = await Promise.all([
+  const [summary, actionQueueItems, recentDocuments, extractingCount, cash, canRecordIncome, overdue] = await Promise.all([
     getDashboardSummary(),
     getActionQueue(),
     getRecentDocuments(),
     getExtractingCount(),
     getCashThisMonth(),
     featureAllowed(supabase, orgId, "income", "use"),
+    getOverdueInvoices(),
   ]);
 
   const {
@@ -71,6 +72,23 @@ export default async function Home() {
       </div>
 
       <ExtractionPoller count={extractingCount} />
+
+      {/* Overdue bills and invoices (spec 5.5), only when something is overdue */}
+      {(overdue.payable.count > 0 || overdue.receivable.count > 0) && (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm" data-testid="overdue-strip">
+          <span className="flex items-center gap-2 font-semibold text-red-800 dark:text-red-300"><Clock className="h-4 w-4" />Overdue</span>
+          {overdue.payable.count > 0 && (
+            <Link href="/invoices?status=overdue" className="text-red-800 dark:text-red-300 hover:underline" data-testid="overdue-bills">
+              {overdue.payable.count} {overdue.payable.count === 1 ? "bill" : "bills"} to pay: <span className="font-semibold tabular-nums">{symbol}{money(overdue.payable.total)}</span>
+            </Link>
+          )}
+          {overdue.receivable.count > 0 && (
+            <Link href="/invoices?tab=receivable&status=overdue" className="text-red-800 dark:text-red-300 hover:underline" data-testid="overdue-invoices">
+              {overdue.receivable.count} {overdue.receivable.count === 1 ? "invoice" : "invoices"} owed to you: <span className="font-semibold tabular-nums">{symbol}{money(overdue.receivable.total)}</span>
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Top Row: KPI Cards */}
       <div className={`grid gap-6 md:grid-cols-2 ${showMoneyIn ? "xl:grid-cols-4" : "lg:grid-cols-3"}`}>
