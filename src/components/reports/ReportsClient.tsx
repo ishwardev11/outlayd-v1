@@ -86,6 +86,14 @@ export function ReportsClient({ summary, largeTransactions: largeTx, filters, pa
                     </div>
                     <p className="text-gray-500 dark:text-slate-400 mt-2 text-lg">Detailed breakdown of expense allocation and spending.</p>
                     <p className="text-gray-400 dark:text-slate-500 mt-1 text-sm">Based on documents by document date. For income and spending by payment date, open the Income &amp; Expenditure statement.</p>
+                    <nav className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm" aria-label="Financial statements">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">Financial statements:</span>
+                        <Link href="/reports/income-expenditure" className="text-indigo-600 hover:underline">Income &amp; Expenditure</Link>
+                        <Link href="/reports/financial-position" className="text-indigo-600 hover:underline">Financial Position</Link>
+                        <Link href="/reports/changes-in-funds" className="text-indigo-600 hover:underline">Changes in Funds</Link>
+                        <Link href="/reports/receipts-payments" className="text-indigo-600 hover:underline">Receipts &amp; Payments</Link>
+                        <Link href="/reports/schedules" className="text-indigo-600 hover:underline">Schedules</Link>
+                    </nav>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">

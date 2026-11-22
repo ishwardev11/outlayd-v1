@@ -81,7 +81,18 @@ export function columnLabel(from: string, to: string, startMonth: number): strin
         const a = from.slice(0, 4), b = to.slice(0, 4)
         return a === b ? a : `${a}/${b.slice(2)}`
     }
-    return `${from} to ${to}`
+    // e.g. "1 Jan to 22 Nov 2026" for a year to date
+    const short = (d: string, withYear: boolean) => {
+        const [y, m, day] = d.split("-").map(Number)
+        return `${day} ${MONTHS[m - 1].slice(0, 3)}${withYear ? ` ${y}` : ""}`
+    }
+    return `${short(from, from.slice(0, 4) !== to.slice(0, 4))} to ${short(to, true)}`
+}
+
+// A period that runs past today stops at today, so nothing that has not happened yet (such as next
+// month's depreciation) is counted. A period wholly in the future is left as it is.
+export function clampToToday(from: string, to: string, today: string): string {
+    return to > today && from <= today ? today : to
 }
 
 // ------------------------------------------------------------------ filters

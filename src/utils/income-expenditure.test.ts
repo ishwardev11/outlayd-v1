@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { buildStatement, buildStatementCsv, columnLabel, financialYear, formatAmount, parseIEFilters, periodHeading, shiftYear, type IERow } from "./income-expenditure"
+import { buildStatement, buildStatementCsv, clampToToday, columnLabel, financialYear, formatAmount, parseIEFilters, periodHeading, shiftYear, type IERow } from "./income-expenditure"
 import { parseCsv } from "../test/parse-csv"
 
 const GF = "00000000-0000-4000-8000-000000000001"
@@ -30,6 +30,11 @@ test("headings and column labels", () => {
     assert.equal(periodHeading("2026-03-01", "2026-08-31", 1), "For the period 1 March 2026 to 31 August 2026")
     assert.equal(columnLabel("2026-01-01", "2026-12-31", 1), "2026")
     assert.equal(columnLabel("2025-07-01", "2026-06-30", 7), "2025/26")
+    assert.equal(columnLabel("2026-01-01", "2026-11-22", 1), "1 Jan to 22 Nov 2026")
+    assert.equal(columnLabel("2025-07-01", "2026-03-31", 1), "1 Jul 2025 to 31 Mar 2026")
+    assert.equal(clampToToday("2026-01-01", "2026-12-31", "2026-11-22"), "2026-11-22")
+    assert.equal(clampToToday("2025-01-01", "2025-12-31", "2026-11-22"), "2025-12-31")
+    assert.equal(clampToToday("2027-01-01", "2027-12-31", "2026-11-22"), "2027-12-31")
 })
 
 test("filters: bad input falls back to the current financial year", () => {

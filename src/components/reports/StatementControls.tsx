@@ -11,13 +11,17 @@ const selectClass = "h-9 rounded-md border border-slate-200 dark:border-slate-70
 
 // Period, fund, layout and comparison controls shared by the financial statements. The filters live
 // in the URL, so a statement can be bookmarked or shared within the organisation.
-export function StatementControls({ basePath, filters, funds, showLayout, onExport, exportDisabled }: {
+export function StatementControls({ basePath, filters, funds, showLayout, onExport, exportDisabled, showFund = true, showCompare = true, extraParams }: {
     basePath: string
     filters: IEFilters
     funds: { id: string; name: string; archived: boolean }[]
     showLayout: boolean
     onExport: () => void
     exportDisabled: boolean
+    showFund?: boolean
+    showCompare?: boolean
+    // extra query parameters a page keeps (e.g. the schedules' donor list switch)
+    extraParams?: Record<string, string>
 }) {
     const router = useRouter()
     const [custom, setCustom] = useState({ from: filters.from, to: filters.to })
@@ -33,6 +37,7 @@ export function StatementControls({ basePath, filters, funds, showLayout, onExpo
         if (next.fund) p.set("fund", next.fund)
         if (next.compare === "0") p.set("compare", "0")
         if (showLayout && next.layout === "by_fund") p.set("layout", "by_fund")
+        for (const [k, v] of Object.entries(extraParams ?? {})) if (v) p.set(k, v)
         router.push(`${basePath}?${p.toString()}`)
     }
 
@@ -53,12 +58,14 @@ export function StatementControls({ basePath, filters, funds, showLayout, onExpo
                     <Button type="submit" size="sm" className="h-9">Apply</Button>
                 </form>
             )}
-            <label className="text-xs text-slate-500">Fund<br />
-                <select aria-label="Fund" className={selectClass} value={filters.fund} onChange={(e) => go({ fund: e.target.value })}>
-                    <option value="">All funds</option>
-                    {funds.map((f) => <option key={f.id} value={f.id}>{f.name}{f.archived ? " (archived)" : ""}</option>)}
-                </select>
-            </label>
+            {showFund && (
+                <label className="text-xs text-slate-500">Fund<br />
+                    <select aria-label="Fund" className={selectClass} value={filters.fund} onChange={(e) => go({ fund: e.target.value })}>
+                        <option value="">All funds</option>
+                        {funds.map((f) => <option key={f.id} value={f.id}>{f.name}{f.archived ? " (archived)" : ""}</option>)}
+                    </select>
+                </label>
+            )}
             {showLayout && (
                 <label className="text-xs text-slate-500">Layout<br />
                     <select aria-label="Layout" className={selectClass} value={filters.layout} onChange={(e) => go({ layout: e.target.value })}>
@@ -67,7 +74,7 @@ export function StatementControls({ basePath, filters, funds, showLayout, onExpo
                     </select>
                 </label>
             )}
-            {filters.layout === "total" && (
+            {showCompare && filters.layout === "total" && (
                 <label className="flex h-9 items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                     <input type="checkbox" checked={filters.compare} onChange={(e) => go({ compare: e.target.checked ? "1" : "0" })} />
                     Compare with the year before
