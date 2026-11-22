@@ -12,6 +12,7 @@ import { sanitizeVendorUpdates, assertOwnedIds, UpdateValidationError } from "@/
 import { runExtraction } from "./ai"
 import { toStoragePath } from "@/utils/storage-paths"
 import { getPlanState, requireFeature } from "@/utils/plan"
+import { isLockError } from "@/utils/lock"
 import { errorMessage, type ExtractionFlagRow } from "@/utils/row-types";
 export { getOrganizationId, updateDocument }
 
@@ -122,7 +123,8 @@ export async function createCategory(name: string) {
     return data
 }
 
-export async function deleteDocument(id: string) {
+// Returns the reason when it cannot be deleted (a thrown message would be hidden in production)
+export async function deleteDocument(id: string): Promise<{ success: true } | { success: false; error: string }> {
     await checkWriteAccess();
     const supabase = await createClient()
     const { error } = await supabase
@@ -131,14 +133,17 @@ export async function deleteDocument(id: string) {
         .eq("id", id)
 
     if (error) {
+        // A document whose payment or bill is in a locked period cannot be deleted
+        if (isLockError(error)) return { success: false, error: error.message }
         console.error("Error deleting document:", error)
-        throw new Error("Failed to delete document")
+        return { success: false, error: "Failed to delete document" }
     }
 
     revalidatePath("/ledger")
     revalidatePath("/")
     revalidatePath("/vendors")
     revalidatePath("/reports")
+    return { success: true }
 }
 
 // A payee that has documents is archived, never deleted, so reports and old entries keep their payee.

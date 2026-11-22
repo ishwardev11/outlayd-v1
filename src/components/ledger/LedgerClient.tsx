@@ -94,7 +94,11 @@ export function LedgerClient({ documents, total, page, pageSize, counts, filters
         if (window.confirm("Are you sure you want to delete this document?")) {
             setIsDeleting(id);
             try {
-                await deleteDocument(id);
+                const res = await deleteDocument(id);
+                if (!res.success) {
+                    alert(res.error);
+                    return;
+                }
                 setSelectedDocs(prev => prev.filter(docId => docId !== id));
             } catch (error) {
                 console.error(error);
@@ -148,7 +152,15 @@ export function LedgerClient({ documents, total, page, pageSize, counts, filters
         if (window.confirm(`Are you sure you want to permanently delete the ${selectedDocs.length} selected documents?`)) {
             setIsBulkDeleting(true);
             try {
-                await Promise.all(selectedDocs.map(id => deleteDocument(id)));
+                const results = await Promise.all(selectedDocs.map(async id => {
+                    const res = await deleteDocument(id);
+                    const doc = documents.find(d => d.id === id);
+                    return res.success ? null : `${doc?.vendor_name || 'Document'}: ${res.error}`;
+                }));
+                const failures = results.filter((r): r is string => !!r);
+                if (failures.length > 0) {
+                    alert(`${failures.length} document(s) could not be deleted:\n\n${failures.join('\n')}`);
+                }
                 setSelectedDocs([]);
             } catch (error) {
                 console.error(error);

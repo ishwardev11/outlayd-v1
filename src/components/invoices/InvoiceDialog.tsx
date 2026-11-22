@@ -16,6 +16,8 @@ import type { EntryOptions } from "@/app/actions/transactions"
 import { linesTotal, parseAmount } from "@/utils/transaction-input"
 import { INVOICE_MAX_LINES, type InvoiceDirection } from "@/utils/invoices"
 import { errorMessage } from "@/utils/row-types"
+import { LockedNotice, useLock } from "@/components/LockProvider"
+import { formatDay } from "@/utils/lock"
 
 const selectClass = "h-9 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white disabled:opacity-60"
 const NEW_PAYEE = "__new__"
@@ -57,6 +59,8 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
     const [file, setFile] = useState<File | null>(null)
     const [removeAttachment, setRemoveAttachment] = useState(false)
     const [saving, setSaving] = useState(false)
+    const lock = useLock()
+    const dateLocked = lock.isLocked(issueDate) || lock.isLocked(inv?.issue_date)
 
     const paid = inv?.paid ?? 0
     const numbered = !payable && !!inv?.invoice_no
@@ -211,10 +215,11 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
                     </div>
                 </fieldset>
 
+                {dateLocked && <LockedNotice text={`${formatDay(issueDate)} is in a locked period. ${lock.message}`} />}
                 <div className="flex flex-wrap justify-end gap-2 pt-2">
                     <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-                    {canDraft && <Button type="button" variant="outline" onClick={() => submit("draft")} disabled={saving}>Save as draft</Button>}
-                    <Button type="button" onClick={() => submit("open")} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                    {canDraft && <Button type="button" variant="outline" onClick={() => submit("draft")} disabled={saving || dateLocked}>Save as draft</Button>}
+                    <Button type="button" onClick={() => submit("open")} disabled={saving || dateLocked} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                         {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}{inv && inv.status !== "draft" ? "Save" : payable ? "Save bill" : "Save and number"}
                     </Button>
                 </div>

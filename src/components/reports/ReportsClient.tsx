@@ -94,6 +94,12 @@ export function ReportsClient({ summary, largeTransactions: largeTx, filters, pa
                         <Link href="/reports/receipts-payments" className="text-indigo-600 hover:underline">Receipts &amp; Payments</Link>
                         <Link href="/reports/schedules" className="text-indigo-600 hover:underline">Schedules</Link>
                     </nav>
+                    <nav className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm" aria-label="Year end">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">Year end:</span>
+                        <Link href="/reconciliations" className="text-indigo-600 hover:underline">Reconciliations</Link>
+                        <Link href="/settings?tab=year-end" className="text-indigo-600 hover:underline">Lock the books</Link>
+                        <Link href="/audit-log" className="text-indigo-600 hover:underline">Audit log</Link>
+                    </nav>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">

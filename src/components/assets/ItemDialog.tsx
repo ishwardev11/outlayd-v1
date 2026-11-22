@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { useCurrency } from "@/components/CurrencyProvider"
 import { saveItem, type ItemRow } from "@/app/actions/balance"
 import { ITEM_KINDS, type ItemKind } from "@/utils/balance-input"
+import { LockedNotice, useLock } from "@/components/LockProvider"
+import { itemValuesLocked } from "@/utils/lock"
 
 const selectClass = "h-9 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white disabled:opacity-60"
 
@@ -46,6 +48,10 @@ export function ItemDialog({ open, onOpenChange, edit, funds, startDate, default
     const fixed = f.kind === "fixed_asset"
     // Owned before the start date: its cost and depreciation so far belong to the opening position
     const heldAtStart = fixed && !!startDate && !!f.acquired_date && f.acquired_date < startDate
+    const lock = useLock()
+    // A locked item keeps its figures; only its name and notes can change
+    const frozen = !!edit && itemValuesLocked(edit, lock)
+    const newDateLocked = !edit && fixed && lock.isLocked(f.acquired_date)
 
     const submit = async () => {
         setSaving(true)
@@ -80,7 +86,7 @@ export function ItemDialog({ open, onOpenChange, edit, funds, startDate, default
                 <fieldset disabled={saving} className="space-y-4">
                     <div className="space-y-1.5">
                         <Label htmlFor="item-kind">Kind</Label>
-                        <select id="item-kind" className={selectClass} value={f.kind} disabled={hasEntries} onChange={(e) => setF({ ...f, kind: e.target.value as ItemKind })}>
+                        <select id="item-kind" className={selectClass} value={f.kind} disabled={hasEntries || frozen} onChange={(e) => setF({ ...f, kind: e.target.value as ItemKind })}>
                             {ITEM_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
                         </select>
                         <p className="text-xs text-slate-500">{ITEM_KINDS.find((k) => k.value === f.kind)?.help}</p>
@@ -92,14 +98,14 @@ export function ItemDialog({ open, onOpenChange, edit, funds, startDate, default
                         </div>
                         <div className="space-y-1.5">
                             <Label htmlFor="item-fund">Fund</Label>
-                            <select id="item-fund" className={selectClass} value={f.fund_id} disabled={hasEntries} onChange={(e) => setF({ ...f, fund_id: e.target.value })}>
+                            <select id="item-fund" className={selectClass} value={f.fund_id} disabled={hasEntries || frozen} onChange={(e) => setF({ ...f, fund_id: e.target.value })}>
                                 {funds.filter((x) => !x.archived || x.id === f.fund_id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                             </select>
                         </div>
                         {!fixed && (
                             <div className="space-y-1.5">
                                 <Label htmlFor="item-class">Due</Label>
-                                <select id="item-class" className={selectClass} value={f.classification} onChange={(e) => setF({ ...f, classification: e.target.value as "current" | "non_current" })}>
+                                <select id="item-class" className={selectClass} value={f.classification} disabled={frozen} onChange={(e) => setF({ ...f, classification: e.target.value as "current" | "non_current" })}>
                                     <option value="current">Within a year (current)</option>
                                     <option value="non_current">After more than a year (non-current)</option>
                                 </select>
@@ -109,15 +115,15 @@ export function ItemDialog({ open, onOpenChange, edit, funds, startDate, default
                             <>
                                 <div className="space-y-1.5">
                                     <Label htmlFor="item-acquired">Date bought</Label>
-                                    <Input id="item-acquired" type="date" value={f.acquired_date} disabled={hasEntries} onChange={(e) => setF({ ...f, acquired_date: e.target.value })} />
+                                    <Input id="item-acquired" type="date" value={f.acquired_date} disabled={hasEntries || frozen} onChange={(e) => setF({ ...f, acquired_date: e.target.value })} />
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label htmlFor="item-life">Useful life (months)</Label>
-                                    <Input id="item-life" inputMode="numeric" value={f.useful_life_months} onChange={(e) => setF({ ...f, useful_life_months: e.target.value })} placeholder="e.g. 60 for 5 years" />
+                                    <Input id="item-life" inputMode="numeric" value={f.useful_life_months} disabled={frozen} onChange={(e) => setF({ ...f, useful_life_months: e.target.value })} placeholder="e.g. 60 for 5 years" />
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label htmlFor="item-residual">Value at the end of its life ({symbol})</Label>
-                                    <Input id="item-residual" inputMode="decimal" value={f.residual_value} onChange={(e) => setF({ ...f, residual_value: e.target.value })} placeholder="0.00" />
+                                    <Input id="item-residual" inputMode="decimal" value={f.residual_value} disabled={frozen} onChange={(e) => setF({ ...f, residual_value: e.target.value })} placeholder="0.00" />
                                 </div>
                             </>
                         )}
@@ -128,11 +134,11 @@ export function ItemDialog({ open, onOpenChange, edit, funds, startDate, default
                             <p className="sm:col-span-2 text-sm text-slate-600 dark:text-slate-300">Bought before your start date ({startDate}): enter its cost and the depreciation already charged.</p>
                             <div className="space-y-1.5">
                                 <Label htmlFor="item-cost">Cost ({symbol})</Label>
-                                <Input id="item-cost" inputMode="decimal" value={f.opening_cost} onChange={(e) => setF({ ...f, opening_cost: e.target.value })} />
+                                <Input id="item-cost" inputMode="decimal" value={f.opening_cost} disabled={frozen || lock.openingLocked} onChange={(e) => setF({ ...f, opening_cost: e.target.value })} />
                             </div>
                             <div className="space-y-1.5">
                                 <Label htmlFor="item-acc">Depreciation to the start date ({symbol})</Label>
-                                <Input id="item-acc" inputMode="decimal" value={f.opening_accumulated_depreciation} onChange={(e) => setF({ ...f, opening_accumulated_depreciation: e.target.value })} />
+                                <Input id="item-acc" inputMode="decimal" value={f.opening_accumulated_depreciation} disabled={frozen || lock.openingLocked} onChange={(e) => setF({ ...f, opening_accumulated_depreciation: e.target.value })} />
                             </div>
                         </div>
                     )}
@@ -143,7 +149,7 @@ export function ItemDialog({ open, onOpenChange, edit, funds, startDate, default
                     {!fixed && (
                         <div className="space-y-1.5">
                             <Label htmlFor="item-opening">{f.kind === "liability" ? "Amount owed" : "Amount"} at your start date ({symbol})</Label>
-                            <Input id="item-opening" inputMode="decimal" value={f.opening_balance} onChange={(e) => setF({ ...f, opening_balance: e.target.value })} placeholder="0.00" disabled={!startDate} />
+                            <Input id="item-opening" inputMode="decimal" value={f.opening_balance} onChange={(e) => setF({ ...f, opening_balance: e.target.value })} placeholder="0.00" disabled={!startDate || frozen || lock.openingLocked} />
                             <p className="text-xs text-slate-500">{startDate ? `Leave 0 if it started after ${startDate}; record the money with the buttons on the item.` : "Set your start date in the opening position first to enter an opening amount."}</p>
                         </div>
                     )}
@@ -153,9 +159,12 @@ export function ItemDialog({ open, onOpenChange, edit, funds, startDate, default
                         <Textarea id="item-notes" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} maxLength={500} rows={2} />
                     </div>
                 </fieldset>
+                {frozen && <LockedNotice text={`Its figures are in a locked period, so only the name and notes can change. ${lock.message}`} />}
+                {!frozen && lock.openingLocked && (heldAtStart || !fixed) && <LockedNotice text={`The opening position is locked, so opening amounts cannot be entered. ${lock.message}`} />}
+                {newDateLocked && <LockedNotice text={`That purchase date is in a locked period. ${lock.message}`} />}
                 <div className="flex justify-end gap-2 pt-2">
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-                    <Button onClick={submit} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                    <Button onClick={submit} disabled={saving || newDateLocked} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                         {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Save
                     </Button>
                 </div>

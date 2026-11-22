@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { useRole } from "@/components/RoleProvider"
 import { usePlan } from "@/components/PlanProvider"
 import { useCurrency } from "@/components/CurrencyProvider"
+import { LockedNotice, useLock } from "@/components/LockProvider"
 import { completeOpeningPosition, saveAccount, saveFundOpenings, saveStartDate, type OpeningPosition } from "@/app/actions/balance"
 import { itemKindLabel, parseMoney } from "@/utils/balance-input"
 
@@ -21,8 +22,11 @@ export function OpeningPositionWizard({ data }: { data: OpeningPosition }) {
     const { paid } = usePlan()
     const { symbol } = useCurrency()
     const money = (n: number) => `${n < 0 ? "-" : ""}${symbol}${Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    const canAdmin = isAdmin && paid
-    const canEdit = !isViewer && paid
+    const lock = useLock()
+    // Once the lock reaches the start date, the opening position is part of the closed books
+    const frozen = lock.openingLocked && !!data.startDate
+    const canAdmin = isAdmin && paid && !frozen
+    const canEdit = !isViewer && paid && !frozen
     const [month, setMonth] = useState(data.startDate ? data.startDate.slice(0, 7) : "")
     const [accounts, setAccounts] = useState(() => Object.fromEntries(data.accounts.map((a) => [a.id, String(a.opening_balance)])))
     const [funds, setFunds] = useState(() => Object.fromEntries(data.funds.filter((f) => !f.is_default).map((f) => [f.id, String(f.opening)])))
@@ -75,6 +79,7 @@ export function OpeningPositionWizard({ data }: { data: OpeningPosition }) {
                     Tell Outlayd where things stood on the day you start tracking. Your balance sheet and fund balances build on this.
                     {data.completedAt && <span className="ml-1 font-medium text-emerald-700 dark:text-emerald-400">Completed.</span>}
                 </p>
+                {frozen && <LockedNotice className="mt-3" text={`The opening position is in a locked period, so it cannot change. ${lock.message}`} />}
                 {!paid && <p className="mt-2 text-sm text-amber-700">The opening position is part of the Growth and Nonprofit plans.</p>}
                 {paid && !isAdmin && <p className="mt-2 text-sm text-slate-500">Only Admins can change the start date, accounts and complete this. Editors can enter fund balances, assets and loans.</p>}
             </div>

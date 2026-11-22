@@ -18,6 +18,9 @@ import {
 import type { EntryOptions } from "@/app/actions/transactions"
 import { ITEM_ACTIONS, itemKindLabel, type ItemAction, type ItemKind } from "@/utils/balance-input"
 import { ItemDialog } from "./ItemDialog"
+import { LockedNotice, useLock } from "@/components/LockProvider"
+import { RecordHistory } from "@/components/audit/RecordHistory"
+import { itemValuesLocked } from "@/utils/lock"
 
 const selectClass = "h-9 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white"
 
@@ -181,6 +184,10 @@ function ItemDetail({ item, options, canWrite, startDate, disposal, onClose, onE
     const purchased = fixed && (item.opening_cost > 0 || item.entries.some((e) => e.direction === "out"))
     const actions = ITEM_ACTIONS[item.kind].filter((a) => !(a.value === "purchase" && purchased))
     const canAct = canWrite && !item.archived && !item.disposed_date
+    const lock = useLock()
+    // What the item is worth cannot change in a locked period (its name and notes can)
+    const valuesLocked = itemValuesLocked(item, lock)
+    const entryDateLocked = lock.isLocked(entry.date)
 
     return (
         <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
@@ -225,7 +232,7 @@ function ItemDetail({ item, options, canWrite, startDate, disposal, onClose, onE
                                         <td className="py-1.5">{e.direction === "out" ? "Money out" : "Money in"}{e.reference ? ` · ${e.reference}` : ""}</td>
                                         <td className="py-1.5 text-right tabular-nums">{money(e.amount)}</td>
                                         <td className="py-1.5 text-right w-20">
-                                            {canWrite && !item.disposed_date && (
+                                            {canWrite && !item.disposed_date && !lock.isLocked(e.tx_date) && (
                                                 <button type="button" className="text-xs text-red-600 hover:underline" disabled={busy}
                                                     onClick={() => { if (window.confirm("Delete this entry?")) run(() => deleteItemTransaction(e.transaction_id), "Entry deleted") }}>Delete</button>
                                             )}
@@ -237,6 +244,8 @@ function ItemDetail({ item, options, canWrite, startDate, disposal, onClose, onE
                     )}
                 </div>
                 {item.notes && <p className="text-sm text-slate-600 dark:text-slate-300"><span className="font-medium">Notes:</span> {item.notes}</p>}
+                {canWrite && valuesLocked && <LockedNotice text={`Its figures are in a locked period, so only the name and notes can change. ${lock.message}`} />}
+                <RecordHistory recordId={item.id} />
 
                 {mode !== "view" && mode !== "dispose" && (
                     <div className="space-y-3 rounded-lg border border-indigo-200 dark:border-indigo-900 p-4">
@@ -259,9 +268,10 @@ function ItemDetail({ item, options, canWrite, startDate, disposal, onClose, onE
                         </div>
                         <Textarea aria-label="Entry remarks" placeholder="Remarks (optional)" value={entry.remarks} onChange={(e) => setEntry({ ...entry, remarks: e.target.value })} maxLength={500} rows={2} />
                         {mode === "purchase" && <p className="text-xs text-slate-500">The purchase is dated the day the asset was bought ({item.acquired_date}). It is not an expense; depreciation is.</p>}
+                        {entryDateLocked && <LockedNotice text={`That date is in a locked period. ${lock.message}`} />}
                         <div className="flex justify-end gap-2">
                             <Button variant="outline" onClick={() => setMode("view")} disabled={busy}>Cancel</Button>
-                            <Button disabled={busy} className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                            <Button disabled={busy || entryDateLocked} className="bg-indigo-600 hover:bg-indigo-700 text-white"
                                 onClick={() => run(() => recordItemTransaction({ item_id: item.id, action: mode, amount: entry.amount, tx_date: entry.date, account_id: entry.account || null, payee_name: entry.payee, reference: entry.reference, remarks: entry.remarks }), "Recorded")}>
                                 Save
                             </Button>
@@ -279,9 +289,10 @@ function ItemDetail({ item, options, canWrite, startDate, disposal, onClose, onE
                                 <Input id="dp-proceeds" inputMode="decimal" value={entry.amount} onChange={(e) => setEntry({ ...entry, amount: e.target.value })} /></div>
                         </div>
                         <p className="text-xs text-slate-500">Depreciation stops before the month of sale. Any difference from the book value is shown as a gain or loss.</p>
+                        {entryDateLocked && <LockedNotice text={`That date is in a locked period. ${lock.message}`} />}
                         <div className="flex justify-end gap-2">
                             <Button variant="outline" onClick={() => setMode("view")} disabled={busy}>Cancel</Button>
-                            <Button disabled={busy} className="bg-red-600 hover:bg-red-700 text-white"
+                            <Button disabled={busy || entryDateLocked} className="bg-red-600 hover:bg-red-700 text-white"
                                 onClick={() => run(() => disposeItem({ item_id: item.id, disposed_date: entry.date, proceeds: entry.amount, account_id: entry.account || null }), "Disposal recorded")}>
                                 Record disposal
                             </Button>
@@ -292,7 +303,7 @@ function ItemDetail({ item, options, canWrite, startDate, disposal, onClose, onE
                 {mode === "view" && (
                     <div className="flex flex-wrap justify-between gap-2 pt-2">
                         <div className="flex flex-wrap gap-2">
-                            {canWrite && item.entries.length === 0 && !item.disposed_date && (
+                            {canWrite && item.entries.length === 0 && !item.disposed_date && !valuesLocked && (
                                 <Button variant="ghost" className="text-red-600" disabled={busy}
                                     onClick={() => { if (window.confirm("Delete this item?")) run(async () => { const r = await deleteItem(item.id); if (r.success) onClose(); return r }, "Deleted") }}>Delete</Button>
                             )}
@@ -301,7 +312,7 @@ function ItemDetail({ item, options, canWrite, startDate, disposal, onClose, onE
                                     {item.archived ? "Restore" : "Archive"}
                                 </Button>
                             )}
-                            {canWrite && item.disposed_date && (
+                            {canWrite && item.disposed_date && !lock.isLocked(item.disposed_date) && (
                                 <Button variant="ghost" disabled={busy} onClick={() => run(() => undoDisposal(item.id), "Disposal undone")}>Undo disposal</Button>
                             )}
                         </div>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useRole } from "@/components/RoleProvider"
 import { useCurrency } from "@/components/CurrencyProvider"
+import { useLock } from "@/components/LockProvider"
 import { exportCashBookCsv, getMoneyIn, type EntryOptions } from "@/app/actions/transactions"
 import { cashBookTotals, sourceLabel, summarise, typeLabel, type CashBookFilters, type CashBookRow } from "@/utils/cash-book"
 import { TransactionDialog, type MoneyInEdit } from "./TransactionDialog"
@@ -29,6 +30,7 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
     const router = useRouter()
     const pathname = usePathname()
     const { isViewer } = useRole()
+    const lock = useLock()
     const { symbol } = useCurrency()
     const [draft, setDraft] = useState(filters)
     const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -169,6 +171,7 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                                         </td>
                                         <td className="px-3 py-2.5 whitespace-nowrap">
                                             {r.date}{r.dateEstimated && <span className="ml-1 text-amber-600" title="No payment date was recorded, so the document date is used">≈</span>}
+                                            {lock.isLocked(r.date) && <span title={lock.message} aria-label="Locked period" className="ml-1 inline-flex align-middle text-slate-400"><Lock className="h-3 w-3" /></span>}
                                         </td>
                                         <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-slate-100">{r.payee || "—"}</td>
                                         <td className="px-3 py-2.5 whitespace-nowrap">{typeLabel(r)}</td>

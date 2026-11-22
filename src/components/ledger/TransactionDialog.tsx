@@ -14,6 +14,8 @@ import { deleteMoneyIn, recordMoneyOut, saveMoneyIn, type EntryOptions } from "@
 import { createPayee } from "@/app/actions/ledger"
 import { linesTotal, parseAmount } from "@/utils/transaction-input"
 import { errorMessage } from "@/utils/row-types"
+import { LockedNotice, useLock } from "@/components/LockProvider"
+import { formatDay } from "@/utils/lock"
 
 const selectClass = "h-9 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white disabled:opacity-60"
 const TYPED = "__typed__"
@@ -73,7 +75,11 @@ export function TransactionDialog({ open, onOpenChange, mode, options, edit, rea
     const [removeAttachment, setRemoveAttachment] = useState(false)
     const [saving, setSaving] = useState(false)
 
-    const locked = !!edit?.has_receipt || readOnly
+    const lock = useLock()
+    // An entry dated in a locked period cannot change; a new one cannot be dated there
+    const entryLocked = !readOnly && lock.isLocked(edit?.tx_date)
+    const periodLocked = entryLocked || (!readOnly && lock.isLocked(date))
+    const locked = !!edit?.has_receipt || readOnly || entryLocked
     const split = lines.length > 1
 
     // Categories offered: money in uses income categories filtered by Donation / Other income (or
@@ -303,6 +309,11 @@ export function TransactionDialog({ open, onOpenChange, mode, options, edit, rea
                         </div>
                     )}
                 </fieldset>
+                {periodLocked && (
+                    <LockedNotice text={entryLocked
+                        ? `This entry is in a locked period, so it cannot be changed or deleted. ${lock.message}`
+                        : `${formatDay(date)} is in a locked period. Choose a later date. ${lock.message}`} />
+                )}
 
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                     <div>
@@ -315,7 +326,7 @@ export function TransactionDialog({ open, onOpenChange, mode, options, edit, rea
                     <div className="flex gap-2">
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>{readOnly ? "Close" : "Cancel"}</Button>
                         {!readOnly && (
-                            <Button type="button" onClick={submit} disabled={saving || locked} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                            <Button type="button" onClick={submit} disabled={saving || locked || periodLocked} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Save
                             </Button>
                         )}

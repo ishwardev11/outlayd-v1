@@ -8,6 +8,8 @@ import { CurrencyProvider } from "@/components/CurrencyProvider";
 import { getCurrentUserRole, getOrganizationCurrency, getOrganizationId } from "@/app/actions/document-utils";
 import { getMyPendingInvites } from "@/app/actions/settings";
 import { PendingInviteBanner } from "@/components/layout/PendingInviteBanner";
+import { LockProvider } from "@/components/LockProvider";
+import { getLockState } from "@/app/actions/assurance";
 
 export default async function DashboardLayout({
     children,
@@ -18,10 +20,12 @@ export default async function DashboardLayout({
     const currency = await getOrganizationCurrency();
     const pendingInvites = await getMyPendingInvites();
     const plan = await getPlanState(await createClient(), await getOrganizationId());
+    const lock = await getLockState();
 
     return (
         <RoleProvider role={role}>
             <PlanProvider paid={plan.paid} hasBeenPaid={plan.hasBeenPaid}>
+            <LockProvider lockDate={lock.lockDate} startDate={lock.startDate}>
             <CurrencyProvider currency={currency}>
                 <div className="flex flex-col md:flex-row min-h-screen bg-gray-50 dark:bg-slate-950">
                     {/* Desktop Persistent Sidebar */}
@@ -39,6 +43,7 @@ export default async function DashboardLayout({
                     </main>
                 </div>
             </CurrencyProvider>
+            </LockProvider>
             </PlanProvider>
         </RoleProvider>
     );

@@ -417,6 +417,44 @@ BEGIN
 END $$;
 RESET ROLE;
 
+-- ---------------------------------------------------------------- stage 6b: attachments, messages, grouped history
+DO $$
+DECLARE c a_ctx; r record; n integer;
+BEGIN
+  SELECT * INTO c FROM a_ctx;
+  -- An attached file can be added to a locked entry; its figures still cannot change
+  UPDATE transactions SET attachment_url = c.org || '/transactions/proof.pdf' WHERE id = c.tx_jan;
+  PERFORM pg_temp.expect_error(format($q$UPDATE transactions SET remarks = 'x' WHERE id = '%s'$q$, c.tx_jan), 'which is in a locked period (up to 31 Jan 2026)', 'the message writes dates in words');
+  RESET ROLE;
+
+  PERFORM pg_temp.sign_in(c.u_viewer, 'as-viewer@example.com');
+  SET LOCAL ROLE authenticated;
+  -- The January donation: header and lines come back as one change
+  SELECT * INTO r FROM audit_changes(c.org, NULL, NULL, NULL, c.tx_jan) WHERE action = 'insert';
+  ASSERT r.kind = 'money' AND r.root_entity = 'transactions' AND r.actor_email = 'as-admin@example.com', 'one row for the new donation';
+  ASSERT jsonb_array_length(r.lines_after) = 1 AND (r.lines_after -> 0 ->> 'amount')::numeric = 500, 'with its line';
+  ASSERT (SELECT count(*) FROM audit_changes(c.org, NULL, NULL, NULL, c.tx_jan) WHERE action = 'update' AND (after ->> 'attachment_url') IS NOT NULL) = 1, 'the attachment is in the history';
+  -- Filters
+  -- (inside this one test transaction every change has the same time, so the lock changes group together)
+  ASSERT EXISTS (SELECT 1 FROM audit_changes(c.org, ARRAY['settings']) WHERE root_entity = 'organizations'), 'the lock changes are settings';
+  ASSERT NOT EXISTS (SELECT 1 FROM audit_changes(c.org, ARRAY['settings']) WHERE kind <> 'settings'), 'only settings';
+  ASSERT EXISTS (SELECT 1 FROM audit_changes(c.org, ARRAY['assets']) WHERE root_id = c.deposit), 'the deposit is an asset';
+  ASSERT EXISTS (SELECT 1 FROM audit_changes(c.org, ARRAY['assets']) WHERE root_entity = 'transactions'), 'so are its entries';
+  ASSERT EXISTS (SELECT 1 FROM audit_changes(c.org, ARRAY['transfers']) WHERE root_id = c.transfer_jan), 'the fund transfer';
+  ASSERT EXISTS (SELECT 1 FROM audit_changes(c.org, ARRAY['reconciliations'])), 'reconciliations';
+  ASSERT EXISTS (SELECT 1 FROM audit_changes(c.org, ARRAY['invoices'], NULL, NULL, c.inv_jan)), 'the invoice history';
+  ASSERT NOT EXISTS (SELECT 1 FROM audit_changes(c.org, NULL, current_date + 1, NULL)), 'nothing after today';
+  SELECT total_count INTO n FROM audit_changes(c.org, NULL, NULL, NULL, NULL, 2, 0) LIMIT 1;
+  ASSERT n > 2 AND (SELECT count(*) FROM audit_changes(c.org, NULL, NULL, NULL, NULL, 2, 0)) = 2, 'pages, with the full count';
+  RESET ROLE;
+  PERFORM pg_temp.sign_in(c.u_other, 'as-other@example.com');
+  SET LOCAL ROLE authenticated;
+  ASSERT NOT EXISTS (SELECT 1 FROM audit_changes(c.org)), 'another organisation reads none of it';
+  RESET ROLE;
+  RAISE NOTICE 'PASS 6b: attachments on locked entries, dates in words, history grouped by change with filters and pages';
+END $$;
+RESET ROLE;
+
 -- ---------------------------------------------------------------- deleting an organisation with a lock
 DO $$
 DECLARE c a_ctx;

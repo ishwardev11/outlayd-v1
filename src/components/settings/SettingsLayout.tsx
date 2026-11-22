@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { Building2, Landmark, Users, Settings, CreditCard, Wallet } from "lucide-react"
+import { Building2, Landmark, Users, Settings, CreditCard, Wallet, CalendarCheck } from "lucide-react"
 import { AccountsTab } from "./AccountsTab"
+import { YearEndTab } from "./YearEndTab"
 import { GeneralSettingsTab } from "./GeneralSettingsTab"
 import { OrganizationProfileTab } from "./OrganizationProfileTab"
 import type { ReceiptSettingsData } from "./ReceiptSettingsForm"
@@ -83,6 +84,7 @@ const TABS = [
     { id: 'organization', label: 'Organization Profile', icon: Building2 },
     { id: 'financial', label: 'Financial Customization', icon: Landmark },
     { id: 'accounts', label: 'Accounts & Transfers', icon: Wallet },
+    { id: 'year-end', label: 'Year end', icon: CalendarCheck },
     { id: 'team', label: 'Team Management', icon: Users },
     { id: 'billing', label: 'Billing & Subscription', icon: CreditCard },
 ]
@@ -127,6 +129,9 @@ export function SettingsLayout({ orgSettings, initialFunds, fundSpend = [], init
                     )}
                     {activeTab === 'accounts' && (
                         <AccountsTab funds={initialFunds} />
+                    )}
+                    {activeTab === 'year-end' && (
+                        <YearEndTab />
                     )}
                     {activeTab === 'team' && (
                         <TeamManagementTab

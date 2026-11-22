@@ -17,6 +17,8 @@ import { buildInvoicePdf } from "@/utils/invoice-pdf"
 import type { EntryOptions } from "@/app/actions/transactions"
 import { statusLabel } from "@/utils/invoices"
 import { StatusBadge } from "./StatusBadge"
+import { LockedNotice, useLock } from "@/components/LockProvider"
+import { RecordHistory } from "@/components/audit/RecordHistory"
 
 const selectClass = "h-9 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white"
 
@@ -44,11 +46,15 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
     const [pay, setPay] = useState({ amount: inv.balance.toFixed(2), date: todayLocal(), account: options.accounts.find((a) => a.is_default)?.id ?? "", reference: "", remarks: "" })
     const [reason, setReason] = useState("")
 
+    const lock = useLock()
+    // An invoice dated in a locked period cannot change; it can still be paid after the lock date
+    const locked = lock.isLocked(inv.issue_date)
     const fromBill = inv.source === "document"
     const canPay = canWrite && inv.status === "open" && inv.balance > 0
-    const canEdit = canWrite && !fromBill && inv.status !== "void"
-    const canVoid = canWrite && !fromBill && inv.status !== "void" && inv.paid === 0
-    const canDelete = canWrite && !fromBill && inv.status === "draft" && !inv.invoice_no
+    const canEdit = canWrite && !fromBill && inv.status !== "void" && !locked
+    const canVoid = canWrite && !fromBill && inv.status !== "void" && inv.paid === 0 && !locked
+    const canDelete = canWrite && !fromBill && inv.status === "draft" && !inv.invoice_no && !locked
+    const payDateLocked = lock.isLocked(pay.date)
     const accountChoices = options.accounts.filter((a) => !a.archived)
 
     const run = async (fn: () => Promise<{ success: boolean; error?: string }>, done: string) => {
@@ -99,6 +105,9 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                         )}
                     </p>
                 )}
+                {locked && canWrite && (
+                    <LockedNotice text={`This ${payable ? "bill" : "invoice"} is in a locked period, so it cannot be changed or voided.${canPay ? " You can still record a payment dated after the lock." : ""} ${lock.message}`} />
+                )}
                 {inv.is_opening_balance && (
                     <p className="text-xs text-slate-500">Opening balance: owed from before you started using Outlayd. Not counted in income or expenditure.</p>
                 )}
@@ -139,7 +148,7 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                                         <td className="py-1.5">{p.reference ?? ""}{p.from_bill ? <span className="ml-1 text-xs text-slate-500">(bill marked paid)</span> : null}</td>
                                         <td className="py-1.5 text-right tabular-nums">{money(p.amount)}</td>
                                         <td className="py-1.5 text-right w-24">
-                                            {canWrite && !p.from_bill && (
+                                            {canWrite && !p.from_bill && !lock.isLocked(p.date) && (
                                                 <button type="button" className="text-xs text-red-600 hover:underline" disabled={busy}
                                                     onClick={() => { if (window.confirm("Delete this payment? The balance reopens.")) run(() => deleteInvoicePayment(p.transaction_id), "Payment deleted") }}>
                                                     Delete
@@ -157,6 +166,8 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                 {inv.has_attachment && (
                     <a href={`/api/files/invoice/${inv.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline"><Paperclip className="h-3.5 w-3.5" />View attachment</a>
                 )}
+
+                {!fromBill && <RecordHistory recordId={inv.id} />}
 
                 {mode === "pay" && (
                     <div className="space-y-3 rounded-lg border border-indigo-200 dark:border-indigo-900 p-4">
@@ -177,9 +188,10 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                         </div>
                         <Textarea aria-label="Payment remarks" placeholder="Remarks (optional)" value={pay.remarks} onChange={(e) => setPay({ ...pay, remarks: e.target.value })} maxLength={500} rows={2} />
                         <p className="text-xs text-slate-500">Part-payments are fine. The payment is shared across the invoice&apos;s funds and categories in proportion.</p>
+                        {payDateLocked && <LockedNotice text={`That date is in a locked period. ${lock.message}`} />}
                         <div className="flex justify-end gap-2">
                             <Button variant="outline" onClick={() => setMode("view")} disabled={busy}>Cancel</Button>
-                            <Button disabled={busy} className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                            <Button disabled={busy || payDateLocked} className="bg-indigo-600 hover:bg-indigo-700 text-white"
                                 onClick={() => run(() => recordInvoicePayment({ invoice_id: inv.id, amount: pay.amount, tx_date: pay.date, account_id: pay.account || null, reference: pay.reference, remarks: pay.remarks }), "Payment recorded")}>
                                 {busy && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Save payment
                             </Button>

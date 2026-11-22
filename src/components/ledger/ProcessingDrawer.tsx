@@ -25,6 +25,8 @@ import { usePlan } from "@/components/PlanProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { CurrencyConversionPanel, convertedAmount, type FxState } from "./CurrencyConversionPanel";
 import { DocumentHistory } from "./DocumentHistory";
+import { LockedNotice, useLock } from "@/components/LockProvider";
+import { documentLockState } from "@/utils/lock";
 import { errorMessage, type CategoryRow, type DocumentRow, type FundRow, type LineItemRow, type SplitRow } from "@/utils/row-types";
 
 interface Split {
@@ -63,6 +65,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
     const [lineItems, setLineItems] = useState<LineItemRow[]>([]);
     const { isViewer } = useRole();
     const { paid } = usePlan();
+    const lock = useLock();
     const { symbol, currency: baseCurrency } = useCurrency();
     const [fx, setFx] = useState<FxState>({ currency: baseCurrency, originalAmount: "", rate: "", source: null });
     const isForeign = fx.currency !== baseCurrency;
@@ -293,7 +296,11 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         if (window.confirm("Are you sure you want to permanently delete this document?")) {
             setIsSubmitting(true);
             try {
-                await deleteDocument(document.id);
+                const res = await deleteDocument(document.id);
+                if (!res.success) {
+                    toast.error(res.error);
+                    return;
+                }
                 toast.success("Document deleted successfully");
                 onClose();
             } catch (error) {
@@ -331,6 +338,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
     };
 
     if (!document) return null;
+    const lockState = documentLockState(document, lock.lockDate);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -353,6 +361,13 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                     </div>
                 </DialogHeader>
 
+                {lockState !== "open" && (
+                    <LockedNotice className="mx-6 mt-3 shrink-0" text={
+                        lockState === "locked" ? `This document is in a locked period, so it cannot be changed or deleted. ${lock.message}`
+                        : lockState === "pay_only" ? `This bill is dated in a locked period. You can still mark it paid (the payment is dated today), but not change or delete it. ${lock.message}`
+                        : `This document is dated in a locked period, so approving it would be refused unless its date is wrong. ${lock.message}`
+                    } />
+                )}
                 {Array.isArray(document.extraction_flags) && document.extraction_flags.length > 0 && (
                     <div className="px-6 py-2.5 border-b dark:border-slate-800 bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-900 dark:text-amber-300 shrink-0 flex items-start justify-between gap-4">
                         <div>
@@ -670,8 +685,8 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                 variant="destructive"
                                 className="bg-red-600 hover:bg-red-700 dark:bg-red-750 dark:hover:bg-red-700 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all px-4"
                                 onClick={handleDelete}
-                                disabled={isSubmitting || isViewer}
-                                title={isViewer ? "Viewers cannot delete documents" : ""}
+                                disabled={isSubmitting || isViewer || lockState === "locked" || lockState === "pay_only"}
+                                title={isViewer ? "Viewers cannot delete documents" : lockState === "locked" || lockState === "pay_only" ? lock.message : ""}
                             >
                                 {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
                                 Delete Document
@@ -682,7 +697,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                     id="drawer-save-btn"
                                     className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white cursor-pointer rounded-xl active:scale-[0.98] transition-all"
                                     onClick={handleSave}
-                                    disabled={isSubmitting || isViewer}
+                                    disabled={isSubmitting || isViewer || lockState === "locked"}
                                     title={isViewer ? "Viewers cannot edit documents" : "Cmd/Ctrl + Enter to Save"}
                                 >
                                     {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}

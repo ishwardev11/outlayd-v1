@@ -15,6 +15,7 @@ import {
     type AccountRow, type FundTransferRow,
 } from "@/app/actions/balance"
 import { ACCOUNT_TYPES, type AccountType } from "@/utils/balance-input"
+import { LockedNotice, useLock } from "@/components/LockProvider"
 
 const selectClass = "h-9 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white disabled:opacity-60"
 
@@ -40,6 +41,8 @@ export function AccountsTab({ funds }: { funds: { id: string; name: string; arch
     const canAccounts = isAdmin && paid
     const canTransfer = !isViewer && paid
     const activeFunds = funds.filter((f) => !f.archived_at)
+    const lock = useLock()
+    const transferLocked = lock.isLocked(tr.date)
 
     const load = async () => {
         const [a, t, o] = await Promise.all([getAccounts(), getFundTransfers(), getOpeningPosition()])
@@ -139,12 +142,13 @@ export function AccountsTab({ funds }: { funds: { id: string; name: string; arch
                             <select aria-label="Account type" className={selectClass} value={edit.account_type} onChange={(e) => setEdit({ ...edit, account_type: e.target.value as AccountType })}>
                                 {ACCOUNT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                             </select></label>
-                        <label className="text-xs text-slate-500">Opening balance ({symbol})<br /><Input aria-label="Opening balance" className="h-9 w-36" inputMode="decimal" value={edit.opening_balance} onChange={(e) => setEdit({ ...edit, opening_balance: e.target.value })} /></label>
+                        <label className="text-xs text-slate-500">Opening balance ({symbol})<br /><Input aria-label="Opening balance" className="h-9 w-36" inputMode="decimal" disabled={lock.openingLocked} title={lock.openingLocked ? lock.message : undefined} value={edit.opening_balance} onChange={(e) => setEdit({ ...edit, opening_balance: e.target.value })} /></label>
                         {edit.id && !accounts?.find((a) => a.id === edit.id)?.is_default && (
                             <label className="flex h-9 items-center gap-2 text-sm"><input type="checkbox" checked={edit.archived} onChange={(e) => setEdit({ ...edit, archived: e.target.checked })} />Archived</label>
                         )}
                         <Button type="submit" size="sm" className="h-9" disabled={busy}>Save</Button>
                         <Button type="button" size="sm" variant="ghost" className="h-9" onClick={() => setEdit(null)}>Cancel</Button>
+                        {lock.openingLocked && <LockedNotice className="w-full" text={`The opening position is locked, so opening balances cannot change. ${lock.message}`} />}
                         <p className="w-full text-xs text-slate-500">The opening balance is the balance on your tracking start date{opening?.startDate ? ` (${opening.startDate})` : ""}, from the bank statement.</p>
                     </form>
                 )}
@@ -173,8 +177,9 @@ export function AccountsTab({ funds }: { funds: { id: string; name: string; arch
                         <label className="text-xs text-slate-500">Amount ({symbol})<br /><Input aria-label="Transfer amount" className="h-9 w-32" inputMode="decimal" value={tr.amount} onChange={(e) => setTr({ ...tr, amount: e.target.value })} /></label>
                         <label className="text-xs text-slate-500">Date<br /><Input aria-label="Transfer date" type="date" className="h-9 w-40" value={tr.date} onChange={(e) => setTr({ ...tr, date: e.target.value })} /></label>
                         <label className="text-xs text-slate-500">Reason<br /><Input aria-label="Transfer reason" className="h-9 w-56" value={tr.remarks} onChange={(e) => setTr({ ...tr, remarks: e.target.value })} maxLength={500} /></label>
-                        <Button type="submit" size="sm" className="h-9">Transfer</Button>
+                        <Button type="submit" size="sm" className="h-9" disabled={transferLocked}>Transfer</Button>
                     </fieldset>
+                    {canTransfer && transferLocked && <LockedNotice className="w-full" text={`That date is in a locked period. ${lock.message}`} />}
                     {!paid && <p className="w-full text-xs text-amber-700">Fund transfers are part of the Growth and Nonprofit plans.</p>}
                 </form>
                 {transfers.length > 0 && (
@@ -186,7 +191,7 @@ export function AccountsTab({ funds }: { funds: { id: string; name: string; arch
                                     <td className="py-2">{t.from_name} → {t.to_name}{t.remarks ? <span className="text-slate-500"> · {t.remarks}</span> : null}</td>
                                     <td className="py-2 text-right tabular-nums">{money(t.amount)}</td>
                                     <td className="py-2 text-right w-20">
-                                        {canTransfer && <button type="button" className="text-xs text-red-600 hover:underline" disabled={busy}
+                                        {canTransfer && !lock.isLocked(t.tx_date) && <button type="button" className="text-xs text-red-600 hover:underline" disabled={busy}
                                             onClick={() => { if (window.confirm("Delete this transfer?")) run(() => deleteFundTransfer(t.id), "Transfer deleted") }}>Delete</button>}
                                     </td>
                                 </tr>
