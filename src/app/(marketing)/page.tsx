@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import {
     ArrowRight,
+    CheckCircle2,
     ChevronDown,
     CreditCard,
     LineChart,
@@ -19,7 +20,7 @@ import {
     HeartHandshake,
     FileText
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { PlaygroundDemo } from "@/components/marketing/PlaygroundDemo";
 import { PlanCards, PlanComparisonTable } from "@/components/marketing/PlanComparison";
 
@@ -299,77 +300,118 @@ function BenefitsSection() {
 }
 
 function HowItWorksSection() {
-    const videoRef = useRef<HTMLVideoElement>(null);
-
-    useEffect(() => {
-        if (videoRef.current) {
-            videoRef.current.defaultMuted = true;
-            videoRef.current.muted = true;
-            videoRef.current.play().catch(() => {});
-        }
-    }, []);
-
-    const steps = [
+    // Small, static pictures of what each step looks like in the app (no video to keep up to date)
+    const field = (label: string, value: string, highlight = false) => (
+        <div className="flex items-center justify-between gap-3 py-1.5 border-b border-white/5 last:border-0">
+            <span className="text-slate-500">{label}</span>
+            <span className={highlight ? "font-mono text-emerald-400" : "text-slate-200"}>{value}</span>
+        </div>
+    );
+    const steps: { num: string; title: string; desc: string; picture: React.ReactNode }[] = [
         {
             num: "01",
-            title: "Upload & Extract",
-            desc: "Drag and drop receipts and bills, or snap a photo. Outlayd reads the details and matches the payee."
+            title: "Upload a receipt or bill",
+            desc: "Drop a PDF or snap a photo. Outlayd's AI reads the payee, date, amount and lines, and warns you if it looks like a duplicate.",
+            picture: (
+                <div className="text-xs">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="h-8 w-8 rounded-lg bg-indigo-500/20 flex items-center justify-center"><Receipt className="w-4 h-4 text-indigo-400" /></div>
+                        <span className="text-slate-300 font-medium">receipt-kedai-cetak.jpg</span>
+                        <span className="ml-auto rounded-full bg-indigo-500/15 border border-indigo-500/30 px-2 py-0.5 text-[10px] text-indigo-300">Checks passed (97%)</span>
+                    </div>
+                    {field("Payee", "Kedai Cetak Maju")}
+                    {field("Date", "12 Nov 2026")}
+                    {field("Amount", "RM350.00", true)}
+                </div>
+            ),
         },
         {
             num: "02",
-            title: "Review & Categorize",
-            desc: "Check the amount, category and fund, then approve. Record donations and other money in alongside."
+            title: "Check it and approve",
+            desc: "Choose the category and the fund it belongs to, then approve. Unpaid bills wait in Invoices until you mark them paid.",
+            picture: (
+                <div className="text-xs">
+                    {field("Category", "Printing")}
+                    {field("Fund", "Education Fund (restricted)")}
+                    {field("Status", "Awaiting payment")}
+                    <div className="mt-3 flex justify-end gap-2">
+                        <span className="rounded-md border border-white/10 px-2.5 py-1 text-slate-400">Cancel</span>
+                        <span className="rounded-md bg-indigo-600 px-2.5 py-1 font-medium text-white">Approve</span>
+                    </div>
+                </div>
+            ),
         },
         {
             num: "03",
-            title: "Report & Submit",
-            desc: "Produce your financial statements with checks that they add up, and download signed PDFs for your AGM, donors and auditor."
-        }
+            title: "Record money in",
+            desc: "Donations, grants and fees go into the cash book against their fund, with a numbered donor receipt as a PDF if you need one.",
+            picture: (
+                <div className="text-xs">
+                    <div className="flex items-center justify-between py-1.5 border-b border-white/5">
+                        <span className="text-slate-200">Dewan Komuniti appeal</span>
+                        <span className="font-mono text-emerald-400">+RM2,000.00</span>
+                    </div>
+                    {field("Category", "General donations")}
+                    {field("Fund", "Building Fund")}
+                    <div className="mt-3 flex items-center gap-2 text-slate-300">
+                        <FileText className="w-4 h-4 text-emerald-400" />Donation receipt no. 42 issued
+                    </div>
+                </div>
+            ),
+        },
+        {
+            num: "04",
+            title: "Produce your statements",
+            desc: "Income and Expenditure, Receipts and Payments, Financial Position and Changes in Funds. Checks show what to fix first; then download signed PDFs and lock the year.",
+            picture: (
+                <div className="text-xs">
+                    <div className="mb-2 flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-emerald-300">
+                        <CheckCircle2 className="w-4 h-4" />Ready to submit: every check passes
+                    </div>
+                    {["Nothing is Uncategorised", "Assets less liabilities equal the funds", "Every account is reconciled"].map((t) => (
+                        <div key={t} className="flex items-center gap-2 py-1 text-slate-300"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />{t}</div>
+                    ))}
+                    <div className="mt-3 flex justify-end gap-2">
+                        <span className="rounded-md border border-white/10 px-2.5 py-1 text-slate-300">Export PDF</span>
+                        <span className="rounded-md bg-indigo-600 px-2.5 py-1 font-medium text-white">Lock the period</span>
+                    </div>
+                </div>
+            ),
+        },
     ];
 
     return (
         <section id="how-it-works" className="py-16 sm:py-24 px-3 sm:px-4 bg-slate-900/50 border-y border-white/5">
-            <div className="container mx-auto max-w-5xl">
+            <div className="container mx-auto max-w-6xl">
                 <div className="text-center mb-10 sm:mb-12 lg:mb-16">
-                    <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">How it works?</h2>
+                    <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">How it works</h2>
                     <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">
-                        See how you can go from raw invoice PDF to a clean spend ledger in under 2 minutes.
+                        From a photo of a receipt to signed statements for your AGM, in four steps.
                     </p>
                 </div>
 
-                {/* Video Player */}
-                <div className="max-w-4xl mx-auto mb-12 sm:mb-16 lg:mb-20">
-                    <video
-                        ref={videoRef}
-                        src="/demo.mp4"
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        controls
-                        preload="auto"
-                        className="w-full rounded-lg sm:rounded-xl"
-                    />
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-8 relative">
-                    {/* Connector Line */}
-                    <div className="hidden md:block absolute top-11.25 left-[15%] right-[15%] h-0.5 bg-linear-to-r from-transparent via-indigo-500/50 to-transparent" />
-
-                    {steps.map((step, i) => (
-                        <motion.div
-                            key={i}
+                <ol className="grid gap-4 sm:gap-6 md:grid-cols-2" data-testid="how-it-works-steps">
+                    {steps.map((step) => (
+                        <motion.li
+                            key={step.num}
                             initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
-                            className="relative text-center"
+                            className="rounded-3xl border border-white/10 bg-slate-950 p-5 sm:p-6 flex flex-col"
                         >
-                            <div className="w-24 h-24 mx-auto bg-slate-950 border border-white/10 rounded-2xl flex items-center justify-center text-3xl font-bold text-indigo-400 shadow-xl mb-6 relative z-10">
-                                {step.num}
+                            <div className="flex items-start gap-4 mb-5">
+                                <div className="w-12 h-12 shrink-0 bg-slate-900 border border-white/10 rounded-xl flex items-center justify-center text-lg font-bold text-indigo-400">
+                                    {step.num}
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold mb-1">{step.title}</h3>
+                                    <p className="text-slate-400 text-sm">{step.desc}</p>
+                                </div>
                             </div>
-                            <h3 className="text-xl font-bold mb-3">{step.title}</h3>
-                            <p className="text-slate-400 text-sm">{step.desc}</p>
-                        </motion.div>
+                            <div className="mt-auto rounded-2xl border border-white/10 bg-slate-900/70 p-4" aria-hidden="true">
+                                {step.picture}
+                            </div>
+                        </motion.li>
                     ))}
-                </div>
+                </ol>
             </div>
         </section>
     );
