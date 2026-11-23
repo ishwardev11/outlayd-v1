@@ -1,7 +1,24 @@
-"use client";
-
-import { motion } from "framer-motion";
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import Link from "next/link";
 import { Navbar, Footer } from "../page";
+
+export const metadata: Metadata = {
+    title: "Privacy Policy | Outlayd",
+    description: "How Outlayd collects, uses, shares and protects personal data, including the data of your donors and payees.",
+};
+
+const CONTACT = "ishwardev011@gmail.com";
+
+function Section({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+    return (
+        <section className="space-y-4">
+            <h2 className="text-2xl font-bold text-slate-200 mt-10">{n}. {title}</h2>
+            {children}
+        </section>
+    );
+}
+const List = ({ children }: { children: ReactNode }) => <ul className="list-disc pl-6 space-y-2 text-slate-300">{children}</ul>;
 
 export default function PrivacyPolicyPage() {
     return (
@@ -9,94 +26,140 @@ export default function PrivacyPolicyPage() {
             <Navbar />
             <main className="pt-24 pb-32 px-4 relative overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950 to-slate-950 -z-10" />
-                
                 <div className="container mx-auto max-w-4xl">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <div className="mb-12 border-b border-white/10 pb-8">
-                            <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mb-4">Privacy Policy</h1>
-                            <p className="text-slate-400 text-lg">Last Updated: May 8, 2026</p>
-                        </div>
+                    <div className="mb-12 border-b border-white/10 pb-8">
+                        <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mb-4">Privacy Policy</h1>
+                        <p className="text-slate-400 text-lg">Last updated: 23 November 2026</p>
+                    </div>
 
-                        <div className="max-w-none text-slate-300 space-y-6 text-lg leading-relaxed">
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">1. Introduction</h2>
+                    <div className="text-slate-300 space-y-6 text-lg leading-relaxed">
+                        <Section n={1} title="About this policy">
                             <p>
-                                Welcome to Outlayd (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your personal and corporate information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or use our B2B expense management software (collectively, the &quot;Services&quot;).
+                                Outlayd (&quot;we&quot;, &quot;us&quot;) provides bookkeeping and financial statement software for nonprofits and small
+                                businesses: reading receipts and bills with AI, recording money in and out, donor receipts, funds, invoices, assets and
+                                loans, reconciliations and financial statements (together, the &quot;Services&quot;). This policy explains what personal
+                                data we handle, why, who we share it with, and the choices you have. We follow Malaysia&apos;s Personal Data Protection
+                                Act 2010 (PDPA).
                             </p>
                             <p>
-                                By accessing or using the Services, you agree to the collection and use of information in accordance with this Privacy Policy.
+                                There are two kinds of data in Outlayd. <strong>Account data</strong> is about you as a user (your name, email, how you
+                                use the Services); we decide how it is used. <strong>Organisation records</strong> are what your organisation records
+                                in Outlayd, including the names and details of your donors, payees, suppliers and customers. For those records your
+                                organisation decides what is collected and why, and we process them on its behalf to provide the Services.
                             </p>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">2. Information We Collect</h2>
-                            <p>
-                                We collect information that you voluntarily provide to us when you register for the Services, express an interest in obtaining information about us or our products, or otherwise contact us.
-                            </p>
-                            <ul className="list-disc pl-6 space-y-2 mt-4 text-slate-300">
-                                <li><strong>Account and Profile Data:</strong> Name, email address, password, company name, role, and business contact information.</li>
-                                <li><strong>Financial and Transaction Data:</strong> Billing address and subscription details. Payment processing is handled securely by our third-party payment processor (e.g., Stripe), and we do not store your full credit card numbers on our servers.</li>
-                                <li><strong>User-Generated Content:</strong> Receipts, invoices, ledger data, and other documents you upload to the Services for expense tracking and categorization.</li>
-                                <li><strong>Automatically Collected Data:</strong> IP addresses, browser type, operating system, access times, and interaction data via standard tracking technologies to maintain the security and operation of our Services.</li>
-                            </ul>
+                        <Section n={2} title="What we collect">
+                            <List>
+                                <li><strong>Account and team data:</strong> your name, email address, password (stored only as a secure hash by our sign-in provider), the organisations you belong to and your role in each (Admin, Editor or Viewer), and invitations you send or receive.</li>
+                                <li><strong>Organisation settings:</strong> the organisation&apos;s name, legal name, address, registration number, currency, financial year, letterhead image, signatories, payment details for invoices, and tax-exemption reference if you enter one.</li>
+                                <li><strong>Documents you upload:</strong> receipts, bills, invoices, bank statements and attachments, and the details read from them.</li>
+                                <li><strong>Organisation records:</strong> money in and out, donations and donor receipts, payees and donors (names and any address, email or notes you add), invoices, funds, accounts, assets and loans, reconciliations, period locks and their reasons.</li>
+                                <li><strong>History of changes:</strong> to keep your books trustworthy, Outlayd records who created, changed or deleted records, when, and the values before and after. This history cannot be edited.</li>
+                                <li><strong>Billing data:</strong> your subscription status and the customer and subscription references from our payment provider. We never see or store your full card number.</li>
+                                <li><strong>Contact form:</strong> the name, email address and message you send us. To stop abuse we keep a one-way scrambled form of your IP address for up to two days; we never store the address itself.</li>
+                                <li><strong>Technical data:</strong> the cookies described in section 7, and standard server logs (such as time, page requested and errors) kept by our hosting providers to run and secure the Services.</li>
+                            </List>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">3. How We Use Your Information</h2>
+                        <Section n={3} title="How we use it">
+                            <List>
+                                <li>To provide the Services: signing you in, keeping each organisation&apos;s records separate and private to its members, reading your documents, and producing your statements, receipts and exports.</li>
+                                <li>To apply your plan: the features and limits of your subscription, and billing through our payment provider.</li>
+                                <li>To keep the Services secure: preventing misuse, investigating errors, and keeping the history of changes.</li>
+                                <li>To communicate with you: answering your messages, invitations to an organisation, and important notices about your account or these policies.</li>
+                            </List>
                             <p>
-                                We use the information we collect or receive for the legitimate business purposes described below:
+                                We do not sell personal data, we do not use it for advertising, and we do not use your documents or records to train AI
+                                models.
                             </p>
-                            <ul className="list-disc pl-6 space-y-2 mt-4 text-slate-300">
-                                <li><strong>To Provide and Maintain Our Services:</strong> Including facilitating account creation, logging you in, and managing your subscription.</li>
-                                <li><strong>To Process Expense Data (AI Integration):</strong> We utilize third-party artificial intelligence models to provide core functionality, such as Optical Character Recognition (OCR) and automated data extraction from the receipts and invoices you upload.</li>
-                                <li><strong>To Improve Our Platform:</strong> Analyzing usage trends to optimize the user interface and develop new features.</li>
-                                <li><strong>To Communicate With You:</strong> Sending administrative information, security alerts, product updates, and customer support responses.</li>
-                            </ul>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">4. How We Share Your Information</h2>
+                        <Section n={4} title="Who we share it with">
+                            <p>Only with the service providers we need to run Outlayd, each for its own part:</p>
+                            <List>
+                                <li><strong>Supabase:</strong> our database, file storage and sign-in.</li>
+                                <li><strong>Vercel:</strong> hosting of the website and application.</li>
+                                <li><strong>Google (Gemini API):</strong> when you upload a document or bank statement, it is sent to Google&apos;s Gemini API so the details can be read and returned to you. Google&apos;s handling of this data is governed by its terms for API customers.</li>
+                                <li><strong>Stripe:</strong> subscription payments. Stripe collects your card details directly.</li>
+                                <li><strong>Resend:</strong> delivery of messages sent through our contact form.</li>
+                            </List>
                             <p>
-                                We do not sell your personal or corporate data to third parties. We only share information with the following categories of third parties as necessary to provide our Services:
+                                Within your organisation, members see the organisation&apos;s records according to their role. We may also disclose data
+                                where the law requires it, or to protect the rights, property or safety of our users or the public.
                             </p>
-                            <ul className="list-disc pl-6 space-y-2 mt-4 text-slate-300">
-                                <li><strong>Cloud Computing &amp; Storage Providers:</strong> For secure database hosting and document storage.</li>
-                                <li><strong>Payment Processors:</strong> To securely manage subscription billing.</li>
-                                <li><strong>Artificial Intelligence Providers:</strong> Documents uploaded for extraction are temporarily processed via secure APIs (such as Google Generative AI) strictly for the purpose of returning structured data to your dashboard. We do not permit these providers to train their public foundational models on your proprietary business documents.</li>
-                            </ul>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">5. Data Security</h2>
+                        <Section n={5} title="Where it is stored">
                             <p>
-                                We have implemented appropriate technical and organizational security measures designed to protect the security of any personal information we process. However, despite our safeguards and efforts to secure your information, no electronic transmission over the Internet or information storage technology can be guaranteed to be 100% secure.
+                                Our providers may store and process data outside Malaysia. Where they do, we rely on their contractual and security
+                                commitments to protect it to a standard comparable to the PDPA.
                             </p>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">6. Your Data Rights</h2>
-                            <p>
-                                Depending on your location, you may have the right to:
-                            </p>
-                            <ul className="list-disc pl-6 space-y-2 mt-4 text-slate-300">
-                                <li>Access, request a copy of, or correct your personal information.</li>
-                                <li>Request the deletion of your account and associated financial data.</li>
-                                <li>Opt-out of marketing communications.</li>
-                            </ul>
-                            <p>
-                                To exercise these rights, please contact us using the information provided below.
-                            </p>
+                        <Section n={6} title="How long we keep it, and deleting it">
+                            <List>
+                                <li>We keep your organisation&apos;s records for as long as the organisation exists in Outlayd, so you can produce statements for past years and show your auditor what happened.</li>
+                                <li>If you stop paying, nothing is deleted: paid features become read-only and you can still view and export your records.</li>
+                                <li>An Admin can delete the organisation in Settings. This cancels any subscription, permanently deletes all of the organisation&apos;s records, history and uploaded files, and deletes the logins of members who belong to no other organisation. It cannot be undone, so export what you need first.</li>
+                                <li>Copies may remain in our providers&apos; backups for a limited time before they are overwritten.</li>
+                                <li>Contact-form scrambled IP entries are removed after two days; contact messages are kept in our email for as long as needed to deal with them.</li>
+                            </List>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">7. International Data Transfers</h2>
+                        <Section n={7} title="Cookies">
                             <p>
-                                Our servers and primary operations are located in Malaysia. If you are accessing the Services from outside Malaysia, please be aware that your information may be transferred to, stored, and processed by us in our facilities and by those third parties with whom we may share your personal information.
+                                We use only the cookies the Services need: sign-in cookies that keep you logged in, and a cookie that remembers which of
+                                your organisations is active. We do not use advertising or tracking cookies. Some screens also remember small
+                                preferences in your browser (for example, that you hid the &quot;Getting started&quot; card).
                             </p>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">8. Updates to This Policy</h2>
+                        <Section n={8} title="Security">
                             <p>
-                                We may update this Privacy Policy from time to time to reflect changes in our practices or for other operational, legal, or regulatory reasons. The updated version will be indicated by an updated &quot;Last Updated&quot; date at the top of this document.
+                                Data is encrypted in transit. Each organisation&apos;s records are separated in the database itself, so members of one
+                                organisation cannot read another&apos;s, and paid features and roles are enforced on our servers, not only on screen.
+                                Uploaded files are stored privately and served only to members of their organisation. No system is completely secure;
+                                if a breach affects your personal data we will tell the affected organisations without undue delay, and the authorities
+                                where the law requires it.
                             </p>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">9. Contact Us</h2>
+                        <Section n={9} title="Your organisation's responsibilities for donor and payee data">
                             <p>
-                                If you have questions or comments about this policy, you may email us at:<br />
-                                <strong>Email:</strong> <a href="mailto:ishwardev011@gmail.com" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">ishwardev011@gmail.com</a>
+                                If your organisation records the personal data of donors, payees, suppliers or customers in Outlayd, it is responsible
+                                for having a lawful reason to do so and for telling those people how their data is used, as the PDPA requires. Please
+                                record only what you need: a donor&apos;s name and the details needed for a receipt, not identity card numbers, health
+                                information or other sensitive data. Requests from those people about their data should go to your organisation; we
+                                will help your organisation respond.
                             </p>
-                        </div>
-                    </motion.div>
+                        </Section>
+
+                        <Section n={10} title="Your rights">
+                            <p>Under the PDPA you may:</p>
+                            <List>
+                                <li>ask to see the personal data we hold about you, and for a copy;</li>
+                                <li>ask us to correct it if it is wrong;</li>
+                                <li>withdraw your consent, or ask us to stop processing it (this may mean we can no longer provide the Services to you);</li>
+                                <li>ask us to delete your account.</li>
+                            </List>
+                            <p>You can change most account and organisation details yourself in Settings. For anything else, email us (section 12). We may need to confirm your identity first.</p>
+                        </Section>
+
+                        <Section n={11} title="Changes to this policy">
+                            <p>
+                                We will update this policy when our practices or the law change, and change the date at the top. If a change is
+                                significant, we will tell Admins by email or in the app before it takes effect.
+                            </p>
+                        </Section>
+
+                        <Section n={12} title="Contact us">
+                            <p>
+                                Questions or requests about privacy: <a href={`mailto:${CONTACT}`} className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">{CONTACT}</a>, or
+                                use our <Link href="/contact" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">contact form</Link>.
+                            </p>
+                        </Section>
+                    </div>
                 </div>
             </main>
             <Footer />

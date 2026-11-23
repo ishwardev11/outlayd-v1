@@ -30,6 +30,25 @@ export type PlanFeature =
 
 export type PlanAccess = "use" | "read"
 
+// What an organisation that has never paid can do with each feature, written out from
+// org_feature_allowed (the database rule, tested in supabase/tests/plan_flags.test.sql) so the marketing
+// pages can be checked against it (src/utils/plan-comparison.test.ts):
+//   full = use it like a paid plan; read = view existing data only; none = not available
+export const FREE_PLAN_ACCESS: Record<PlanFeature, "full" | "read" | "none"> = {
+    funds: "read",
+    accounts: "read",
+    bank_statements: "read",
+    income: "read",
+    invoices: "read",
+    assets: "read",
+    period_lock: "read",
+    reconciliation: "read",
+    accounting_export: "none",
+    donor_memo: "none",
+    financial_statements: "none",
+    audit_log: "full",
+}
+
 export interface PlanState {
     paid: boolean
     hasBeenPaid: boolean

@@ -1,7 +1,25 @@
-"use client";
-
-import { motion } from "framer-motion";
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import Link from "next/link";
 import { Navbar, Footer } from "../page";
+import { PRICES } from "@/utils/plan-comparison";
+
+export const metadata: Metadata = {
+    title: "Terms of Service | Outlayd",
+    description: "The terms for using Outlayd, bookkeeping and financial statement software for nonprofits and small businesses.",
+};
+
+const CONTACT = "ishwardev011@gmail.com";
+
+function Section({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+    return (
+        <section className="space-y-4">
+            <h2 className="text-2xl font-bold text-slate-200 mt-10">{n}. {title}</h2>
+            {children}
+        </section>
+    );
+}
+const List = ({ children }: { children: ReactNode }) => <ul className="list-disc pl-6 space-y-2 text-slate-300">{children}</ul>;
 
 export default function TermsOfServicePage() {
     return (
@@ -9,107 +27,139 @@ export default function TermsOfServicePage() {
             <Navbar />
             <main className="pt-24 pb-32 px-4 relative overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950 to-slate-950 -z-10" />
-                
                 <div className="container mx-auto max-w-4xl">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <div className="mb-12 border-b border-white/10 pb-8">
-                            <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mb-4">Terms of Service</h1>
-                            <p className="text-slate-400 text-lg">Last Updated: May 8, 2026</p>
-                        </div>
+                    <div className="mb-12 border-b border-white/10 pb-8">
+                        <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mb-4">Terms of Service</h1>
+                        <p className="text-slate-400 text-lg">Last updated: 23 November 2026</p>
+                    </div>
 
-                        <div className="max-w-none text-slate-300 space-y-6 text-lg leading-relaxed">
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">1. Acceptance of Terms</h2>
+                    <div className="text-slate-300 space-y-6 text-lg leading-relaxed">
+                        <Section n={1} title="Agreement">
                             <p>
-                                Welcome to Outlayd (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Outlayd website, application, and any related expense management and AI extraction services (collectively, the &quot;Services&quot;).
+                                These terms govern your use of the Outlayd website and application (the &quot;Services&quot;), provided by Outlayd
+                                (&quot;we&quot;, &quot;us&quot;). By creating an account or using the Services you agree to them. If you use the
+                                Services for an organisation, you confirm you are allowed to accept these terms for it, and &quot;you&quot; includes
+                                that organisation. Our <Link href="/privacy" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">Privacy Policy</Link> explains
+                                how we handle personal data.
                             </p>
+                        </Section>
+
+                        <Section n={2} title="What Outlayd does">
                             <p>
-                                By registering for an account or using the Services, you agree to be bound by these Terms. If you are accepting these Terms on behalf of a company or other legal entity, you represent that you have the authority to bind that entity to these Terms. If you do not agree with these Terms, you may not use the Services.
+                                Outlayd is bookkeeping software for nonprofits and small businesses. It reads receipts, bills and bank statements with
+                                AI; records money in and out, donations and donor receipts, invoices, funds, accounts, assets and loans; and prepares
+                                reconciliations, financial statements and exports from those records. We may improve, change or retire features over
+                                time; if we remove something important from a paid plan, we will tell you in advance.
                             </p>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">2. Description of Services</h2>
+                        <Section n={3} title="Accounts and your team">
+                            <List>
+                                <li>You must be at least 18 and give accurate details. Keep your password private; you are responsible for what happens under your login.</li>
+                                <li>Each organisation has Admins, Editors and Viewers. Admins control the organisation&apos;s settings, members, billing, period locks and deletion, and are responsible for who they invite and the access they give.</li>
+                                <li>Tell us straight away if you think someone has used your account without permission.</li>
+                            </List>
+                        </Section>
+
+                        <Section n={4} title="Plans, prices and payment">
+                            <List>
+                                <li><strong>Free:</strong> one user and five AI document readings a month, with the features shown for the Free plan on our pricing page.</li>
+                                <li><strong>Growth:</strong> RM{PRICES.growth} a month. <strong>Nonprofit:</strong> the same features for RM{PRICES.nonprofit} a month, for registered nonprofits we accept on application; we may ask for proof of registration and may end the nonprofit price if the organisation is no longer eligible, with notice.</li>
+                                <li>Paid plans are billed monthly in advance through Stripe and renew automatically until cancelled. You can cancel at any time from Settings; you keep paid features until the end of the period you have paid for. Except where the law requires otherwise, payments are not refunded, including for part months.</li>
+                                <li>We may change prices with at least 30 days&apos; notice; the new price applies from your next billing period after that.</li>
+                                <li>If a payment fails, you keep access while Stripe retries it; if it still cannot be collected, the subscription may be cancelled and your organisation moves to the Free plan.</li>
+                            </List>
+                        </Section>
+
+                        <Section n={5} title="Your records, and when a subscription ends">
+                            <List>
+                                <li>Your organisation owns its records and documents. You give us permission to store, process and transmit them only as needed to provide the Services, including through the service providers named in our Privacy Policy.</li>
+                                <li>When a paid subscription ends, nothing is deleted: paid features become read-only, and you can still view and export what you recorded.</li>
+                                <li>An Admin can delete the organisation in Settings. Deletion is permanent and removes all of its records, history and files. Export anything you need to keep (for example for statutory record-keeping) before deleting.</li>
+                            </List>
+                        </Section>
+
+                        <Section n={6} title="AI reading, statements and your responsibility">
+                            <List>
+                                <li>AI reading can make mistakes. Nothing read from a document counts until a member of your organisation has checked and approved it, and you are responsible for checking it.</li>
+                                <li>Financial statements, receipts and exports are prepared from the records you enter and approve. The checks Outlayd runs help find common problems; they do not guarantee that your records are complete or correct.</li>
+                                <li>Outlayd is software, not an accountant, auditor, tax adviser or lawyer, and nothing in the Services is professional advice. You remain responsible for your books and for meeting your obligations, for example to the Registrar of Societies, the Inland Revenue Board (LHDN), your funders and your members, and for having your statements audited where required.</li>
+                                <li>Period locks help keep reported figures unchanged, but an Admin can unlock a period (with a recorded reason). Keep your own copies of statements you submit.</li>
+                            </List>
+                        </Section>
+
+                        <Section n={7} title="Donor receipts and tax exemption">
                             <p>
-                                Outlayd provides a B2B SaaS platform designed to assist businesses with ledger management, split categorization, and AI-assisted data extraction from financial documents (such as receipts and invoices).
+                                You may only turn on tax-exempt donation receipts if your organisation holds a current approval for tax-deductible
+                                donations (for example under section 44(6) of the Income Tax Act 1967) and you enter its correct reference. You are
+                                responsible for issuing receipts only for donations you actually received, and for the information on them.
                             </p>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">3. Account Registration and Security</h2>
-                            <ul className="list-disc pl-6 space-y-2 mt-4 text-slate-300">
-                                <li><strong>Eligibility:</strong> You must be at least 18 years old and capable of forming a binding contract to use the Services. The Services are intended strictly for business and commercial use.</li>
-                                <li><strong>Account Security:</strong> You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account.</li>
-                            </ul>
-
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">4. Subscription Fees and Payments</h2>
-                            <ul className="list-disc pl-6 space-y-2 mt-4 text-slate-300">
-                                <li><strong>Billing:</strong> Access to premium features of the Services requires a paid subscription. All payments are processed securely through our third-party payment provider (e.g., Stripe).</li>
-                                <li><strong>Renewals and Cancellations:</strong> Subscriptions automatically renew at the end of each billing cycle unless canceled prior to the renewal date. You may cancel your subscription at any time through your account settings.</li>
-                                <li><strong>No Refunds:</strong> Unless otherwise required by law, all fees paid are non-refundable, including for partial months of service or unused features.</li>
-                            </ul>
-
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">5. AI Extraction and Financial Disclaimer</h2>
-                            <ul className="list-disc pl-6 space-y-2 mt-4 text-slate-300">
-                                <li><strong>AI Technology:</strong> Outlayd utilizes third-party artificial intelligence (including Google Gemini) to perform Optical Character Recognition (OCR) and categorize data from uploaded documents.</li>
-                                <li><strong>Verification Required:</strong> While we strive for high accuracy, AI-generated outputs can occasionally contain errors, omissions, or miscategorizations. You are solely responsible for reviewing, verifying, and approving all extracted data, and ledger entries before relying on them.</li>
-                                <li><strong>Not Accounting Advice:</strong> Outlayd is an administrative software tool, not a certified public accountant, tax advisor, or financial planner. The Services do not constitute professional accounting, tax, or legal advice.</li>
-                            </ul>
-
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">6. User Data and Content</h2>
-                            <ul className="list-disc pl-6 space-y-2 mt-4 text-slate-300">
-                                <li><strong>Your Data:</strong> You retain all ownership rights to the receipts, invoices, vendor quotes, and financial data you upload (&quot;User Content&quot;).</li>
-                                <li><strong>License to Process:</strong> By uploading User Content, you grant Outlayd a worldwide, non-exclusive, royalty-free license to host, copy, process, and transmit such content solely as necessary to provide the Services to you (including routing it through our secure AI sub-processors).</li>
-                                <li><strong>Prohibited Content:</strong> You agree not to upload any documents containing highly sensitive personal data (e.g., medical records, government IDs) unless strictly required for a vendor invoice, or any illegal or fraudulent materials.</li>
-                            </ul>
-
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">7. Intellectual Property Rights</h2>
+                        <Section n={8} title="Acceptable use">
+                            <p>You agree not to:</p>
+                            <List>
+                                <li>use the Services for anything unlawful, fraudulent or misleading, including false receipts, invoices or statements;</li>
+                                <li>upload data you have no right to, or sensitive personal data you do not need (such as identity card numbers or health information);</li>
+                                <li>try to access another organisation&apos;s data, get around plan limits, roles or security, or disrupt the Services;</li>
+                                <li>scrape the Services, or copy, resell or reverse engineer them.</li>
+                            </List>
                             <p>
-                                Outlayd and its original content, features, functionality, codebase, and branding (including the Outlayd logo and &quot;Indigo/Amber&quot; UI design) are owned by us and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws. You may not copy, modify, reverse engineer, or create derivative works from the Services.
+                                We may suspend or close an account that breaks these terms or puts other users at risk. Where we can, we will tell you
+                                first and give you a chance to export your records.
                             </p>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">8. Prohibited Activities</h2>
+                        <Section n={9} title="Our intellectual property">
                             <p>
-                                You agree not to engage in any of the following:
+                                The Services, including the software, design and the Outlayd name and logo, belong to us. These terms give you the right
+                                to use the Services, not ownership of them. If you send us suggestions, we may use them without owing you anything.
                             </p>
-                            <ul className="list-disc pl-6 space-y-2 mt-4 text-slate-300">
-                                <li>Scraping, data mining, or using automated bots to extract data from the Services.</li>
-                                <li>Attempting to bypass, disable, or interfere with security-related features.</li>
-                                <li>Using the Services to compete with Outlayd or build a similar product.</li>
-                                <li>Selling, reselling, or sublicensing your Outlayd account to unauthorized third parties.</li>
-                            </ul>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">9. Disclaimer of Warranties</h2>
-                            <p className="uppercase">
-                                THE SERVICES ARE PROVIDED ON AN &quot;AS-IS&quot; AND &quot;AS-AVAILABLE&quot; BASIS. OUTLAYD DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICES WILL BE UNINTERRUPTED, ERROR-FREE, OR COMPLETELY SECURE.
-                            </p>
-
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">10. Limitation of Liability</h2>
-                            <p className="uppercase">
-                                TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL OUTLAYD, ITS DIRECTORS, EMPLOYEES, OR AGENTS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, DATA, OR GOODWILL, ARISING OUT OF OR RELATED TO YOUR USE OF THE SERVICES. IN NO EVENT SHALL OUR TOTAL CUMULATIVE LIABILITY EXCEED THE AMOUNT YOU PAID TO US IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM.
-                            </p>
-
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">11. Indemnification</h2>
+                        <Section n={10} title="Availability and disclaimers">
                             <p>
-                                You agree to defend, indemnify, and hold harmless Outlayd from any claims, damages, obligations, losses, liabilities, costs, or debt arising from: (i) your use of and access to the Services; (ii) your violation of any term of these Terms; or (iii) your violation of any third-party right, including copyright, property, or privacy rights related to your User Content.
+                                We work to keep the Services available and your data safe, but we provide them &quot;as is&quot; and &quot;as
+                                available&quot;. To the extent the law allows, we make no other promises, including that the Services will be
+                                uninterrupted or error-free, or fit for a particular purpose.
                             </p>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">12. Governing Law and Jurisdiction</h2>
+                        <Section n={11} title="Limits on our liability">
                             <p>
-                                These Terms shall be governed by and construed in accordance with the laws of Malaysia, without regard to its conflict of law provisions. Any legal action or proceeding arising under these Terms shall be brought exclusively in the courts located in Malaysia.
+                                To the extent the law allows, we are not liable for indirect or consequential loss, or for loss of profit, revenue,
+                                data or goodwill, arising from your use of the Services. Our total liability for any claims about the Services is
+                                limited to the amount you paid us in the twelve months before the claim (or RM100 if you are on the Free plan). Nothing
+                                in these terms limits liability that cannot be limited by law.
                             </p>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">13. Changes to Terms</h2>
+                        <Section n={12} title="Indemnity">
                             <p>
-                                We reserve the right to modify or replace these Terms at any time. We will provide notice of any material changes by posting the new Terms on the site or via email. Your continued use of the Services after such changes constitutes acceptance of the new Terms.
+                                You will cover our reasonable losses and costs from claims by others that arise from the records or documents you put in
+                                the Services, or from your breach of these terms or of the law.
                             </p>
+                        </Section>
 
-                            <h2 className="text-2xl font-bold text-slate-200 mt-10 mb-4">14. Contact Us</h2>
+                        <Section n={13} title="Changes to these terms">
                             <p>
-                                If you have any questions about these Terms, please contact us at:<br />
-                                <strong>Email:</strong> <a href="mailto:ishwardev011@gmail.com" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">ishwardev011@gmail.com</a>
+                                We may update these terms. If a change is significant, we will tell Admins by email or in the app at least 30 days
+                                before it takes effect. If you do not agree, you can cancel before then; using the Services after that date means you
+                                accept the new terms.
                             </p>
-                        </div>
-                    </motion.div>
+                        </Section>
+
+                        <Section n={14} title="Governing law">
+                            <p>These terms are governed by the laws of Malaysia, and the courts of Malaysia have jurisdiction over any dispute about them.</p>
+                        </Section>
+
+                        <Section n={15} title="Contact us">
+                            <p>
+                                Questions about these terms: <a href={`mailto:${CONTACT}`} className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">{CONTACT}</a>, or
+                                use our <Link href="/contact" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">contact form</Link>.
+                            </p>
+                        </Section>
+                    </div>
                 </div>
             </main>
             <Footer />

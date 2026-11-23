@@ -4,23 +4,24 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import {
     ArrowRight,
-    CheckCircle2,
     ChevronDown,
     CreditCard,
     LineChart,
     Receipt,
     ShieldCheck,
     Zap,
-    Star,
     Sparkles,
     Database,
     Triangle,
     Atom,
     Menu,
-    X
+    X,
+    HeartHandshake,
+    FileText
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { PlaygroundDemo } from "@/components/marketing/PlaygroundDemo";
+import { PlanCards, PlanComparisonTable } from "@/components/marketing/PlanComparison";
 
 // Animation Variants
 const fadeIn = {
@@ -97,6 +98,7 @@ export function Navbar() {
                     <Link href="/#why-outlayd" id="nav-link-why-outlayd" onClick={(e) => handleSmoothScroll(e, '#why-outlayd')} className="hover:text-white transition-colors">Why Outlayd</Link>
                     <Link href="/#pricing" id="nav-link-pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</Link>
                     <Link href="/#faq" id="nav-link-faq" onClick={(e) => handleSmoothScroll(e, '#faq')} className="hover:text-white transition-colors">FAQ</Link>
+                    <Link href="/nonprofits" id="nav-link-nonprofits" className="hover:text-white transition-colors">Nonprofits</Link>
                 </nav>
 
                 <div className="flex items-center gap-3">
@@ -128,6 +130,7 @@ export function Navbar() {
                     <Link href="/#why-outlayd" onClick={(e) => handleMobileNavClick(e, '#why-outlayd')} className="text-sm font-medium text-slate-300 hover:text-white py-1">Why Outlayd</Link>
                     <Link href="/#pricing" onClick={(e) => handleMobileNavClick(e, '#pricing')} className="text-sm font-medium text-slate-300 hover:text-white py-1">Pricing</Link>
                     <Link href="/#faq" onClick={(e) => handleMobileNavClick(e, '#faq')} className="text-sm font-medium text-slate-300 hover:text-white py-1">FAQ</Link>
+                    <Link href="/nonprofits" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-slate-300 hover:text-white py-1">Nonprofits</Link>
                     <div className="pt-2 border-t border-white/10 flex flex-col gap-2">
                         <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-slate-300 hover:text-white py-1">
                             Log in
@@ -154,20 +157,20 @@ function HeroSection() {
                     >
                         <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-1.5 sm:gap-2 mx-auto px-2.5 sm:px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] sm:text-sm font-medium mb-5 sm:mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both">
                             <span className="flex h-2 w-2 shrink-0 rounded-full bg-indigo-500 animate-pulse"></span>
-                            <span className="min-w-0">Built for SMEs &amp; nonprofits • Early access open</span>
+                            <span className="min-w-0">For Malaysian nonprofits &amp; small businesses • Early access open</span>
                         </div>
 
                         <h1 className="w-full min-w-0 text-[clamp(1.75rem,7vw,2rem)] leading-[1.15] sm:text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight mb-4 sm:mb-6 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 ease-out fill-mode-both break-words">
-                            Expense management <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-cyan-400">built for SMEs and nonprofits.</span>
+                            Bookkeeping and financial statements <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-cyan-400">for nonprofits and small businesses.</span>
                         </h1>
 
                         <p className="w-full min-w-0 text-sm sm:text-base lg:text-lg text-slate-400 mb-6 sm:mb-8 max-w-xl mx-auto lg:mx-0 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 ease-out fill-mode-both break-words">
-                            Whether you&apos;re a nonprofit juggling grant reporting and receipts, or a small business tired of spreadsheet chaos — Outlayd uses AI to turn messy paperwork into an audit-ready ledger.
+                            Snap a receipt and Outlayd&apos;s AI fills in the details. Record donations and invoices, keep every fund separate, and produce the statements your AGM, donors and auditor ask for, without a spreadsheet.
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-4 justify-center lg:justify-start animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 ease-out fill-mode-both w-full">
                             <Link href="/signup" id="hero-signup-btn" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 sm:px-8 py-2.5 sm:py-4 rounded-full text-sm sm:text-base font-medium transition-all shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] active:scale-95 cursor-pointer">
-                                Automate Your Ledger
+                                Start free
                                 <ArrowRight className="w-4 h-4" />
                             </Link>
                             <Link href="/#pricing" id="hero-pricing-btn" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 px-5 sm:px-8 py-2.5 sm:py-4 rounded-full text-sm sm:text-base font-medium transition-all active:scale-95 cursor-pointer">
@@ -212,27 +215,25 @@ function PartnersSection() {
 }
 
 function BenefitsSection() {
+    const box = "bg-linear-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-6 sm:p-8 relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg";
+    const icon = (colour: string, el: React.ReactNode) => <div className={`h-12 w-12 rounded-xl flex items-center justify-center mb-6 ${colour}`}>{el}</div>;
     return (
         <section id="services" className="py-16 sm:py-24 px-3 sm:px-4">
             <div className="container mx-auto max-w-6xl">
                 <div className="text-center mb-10 sm:mb-16">
-                    <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight mb-3 sm:mb-4">Tailored for small businesses &amp; nonprofits</h2>
-                    <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">Focus on your core mission while Outlayd handles receipt scanning, fund tracking, and vendor approvals.</p>
+                    <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight mb-3 sm:mb-4">Your whole year of books, in one place</h2>
+                    <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">From the first receipt to the statements you present at your AGM, with checks that everything adds up.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-                    {/* Bento Box 1 - Large */}
-                    <motion.div
-                        initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
-                        className="md:col-span-2 bg-linear-to-br from-slate-900 to-slate-950 border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 relative overflow-hidden group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
-                    >
+                    <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn} className={`md:col-span-2 group ${box}`}>
                         <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-110 transition-transform duration-700">
                             <Zap className="w-32 h-32 text-indigo-500" />
                         </div>
                         <div className="relative z-10 w-full h-full flex flex-col justify-between">
                             <div className="mb-24">
-                                <h3 className="text-2xl font-bold mb-2">Instant AI Receipt Extraction</h3>
-                                <p className="text-slate-400 max-w-sm">Drop a PDF invoice or a paper receipt photo. Our AI instantly extracts vendor, date, and line items so you can focus on operations, not manual data entry.</p>
+                                <h3 className="text-2xl font-bold mb-2">AI reads your receipts and bills</h3>
+                                <p className="text-slate-400 max-w-sm">Drop a PDF invoice or a photo of a receipt. Outlayd reads the payee, date, amount and lines, flags duplicates, and you check and approve it.</p>
                             </div>
                             <div className="flex items-center justify-between p-4 bg-slate-900/80 border border-white/10 rounded-xl backdrop-blur-md">
                                 <div className="flex items-center gap-3">
@@ -240,77 +241,57 @@ function BenefitsSection() {
                                         <Receipt className="w-5 h-5 text-indigo-400" />
                                     </div>
                                     <div>
-                                        <div className="text-sm font-medium">Uber Ride</div>
-                                        <div className="text-xs text-slate-400">Travel • Grant Fund A</div>
+                                        <div className="text-sm font-medium">Kedai Cetak Maju</div>
+                                        <div className="text-xs text-slate-400">Printing • Education Fund</div>
                                     </div>
                                 </div>
-                                <div className="text-emerald-400 font-medium font-mono">RM42.50</div>
+                                <div className="text-emerald-400 font-medium font-mono">RM350.00</div>
                             </div>
                         </div>
                     </motion.div>
 
-                    {/* Bento Box 2 */}
-                    <motion.div
-                        initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
-                        className="bg-linear-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
-                    >
-                        <div className="h-full flex flex-col">
-                            <div className="h-12 w-12 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center mb-6">
-                                <ShieldCheck className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-2">Simple Approval Workflow</h3>
-                            <p className="text-slate-400 text-sm flex-1">Built for lean teams. Manage vendor quotes, route manager approvals, and ensure every dollar spent aligns with your budget.</p>
-                        </div>
+                    <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn} className={box}>
+                        {icon("bg-emerald-500/10 text-emerald-400", <HeartHandshake className="w-6 h-6" />)}
+                        <h3 className="text-xl font-bold mb-2">Money in and donor receipts</h3>
+                        <p className="text-slate-400 text-sm">Record donations, grants and fees, split across funds, and issue numbered donation receipts, tax-exempt ones too once your organisation is approved.</p>
                     </motion.div>
 
-                    {/* Bento Box 3 */}
-                    <motion.div
-                        initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
-                        className="bg-linear-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
-                    >
-                        <div className="h-full flex flex-col">
-                            <div className="h-12 w-12 bg-cyan-500/10 text-cyan-400 rounded-xl flex items-center justify-center mb-6">
-                                <LineChart className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-2">Grant &amp; Fund Allocation</h3>
-                            <p className="text-slate-400 text-sm flex-1">Categorize spend instantly by specific grant, restricted fund, or department for hassle-free board and donor reporting.</p>
-                        </div>
+                    <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn} className={box}>
+                        {icon("bg-cyan-500/10 text-cyan-400", <LineChart className="w-6 h-6" />)}
+                        <h3 className="text-xl font-bold mb-2">Funds kept separate</h3>
+                        <p className="text-slate-400 text-sm">A fund for each grant or appeal, restricted or not, with its balance always up to date and a warning if a restricted fund is overspent.</p>
                     </motion.div>
 
-                    {/* Bento Box 4 - Medium */}
-                    <motion.div
-                        initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
-                        className="md:col-span-2 bg-linear-to-br from-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg group"
-                    >
+                    <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn} className={`md:col-span-2 group ${box}`}>
                         <div className="flex flex-col md:flex-row h-full gap-8">
                             <div className="flex-1 flex flex-col justify-center">
-                                <div className="h-12 w-12 bg-amber-500/10 text-amber-400 rounded-xl flex items-center justify-center mb-6">
-                                    <CreditCard className="w-6 h-6" />
-                                </div>
-                                <h3 className="text-xl font-bold mb-2">Vendor &amp; Supplier Directory</h3>
-                                <p className="text-slate-400 text-sm">Manage recurring vendors and suppliers in one place. Track outstanding balances automatically and keep accounts payable in check.</p>
+                                {icon("bg-amber-500/10 text-amber-400", <FileText className="w-6 h-6" />)}
+                                <h3 className="text-xl font-bold mb-2">Financial statements, ready to sign</h3>
+                                <p className="text-slate-400 text-sm">Income and Expenditure (or Profit and Loss), Receipts and Payments, Financial Position and Changes in Funds, straight from your records. Checks show what to fix first; the PDF has your letterhead and signatures.</p>
                             </div>
                             <div className="flex-1 flex items-center justify-center">
-                                <div className="w-full max-w-70 bg-slate-900 rounded-xl border border-white/20 p-4 shadow-xl rotate-[-5deg] hover:rotate-0 transition-transform duration-500 flex flex-col gap-3">
-                                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold">OC</div>
-                                            <span className="text-sm font-medium">Office Corp</span>
-                                        </div>
-                                        <div className="text-amber-400 text-xs font-mono">RM1,250.00</div>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold">TC</div>
-                                            <span className="text-sm font-medium">Tech Center</span>
-                                        </div>
-                                        <div className="text-slate-400 text-xs font-mono">RM0.00</div>
-                                    </div>
+                                <div className="w-full max-w-70 bg-white text-slate-800 rounded-xl p-4 shadow-xl rotate-[-3deg] group-hover:rotate-0 transition-transform duration-500 text-xs font-mono">
+                                    <div className="text-center font-sans font-bold text-sm mb-2">Income and Expenditure</div>
+                                    {[["Donations", "30,500.00"], ["Grants", "8,000.00"], ["Programme", "(14,400.00)"], ["Administration", "(9,690.00)"]].map(([l, v]) => (
+                                        <div key={l} className="flex justify-between py-0.5"><span className="font-sans">{l}</span><span>{v}</span></div>
+                                    ))}
+                                    <div className="flex justify-between border-t-2 border-double border-slate-400 mt-1 pt-1 font-bold"><span className="font-sans">Surplus</span><span>7,810.00</span></div>
                                 </div>
                             </div>
                         </div>
                     </motion.div>
 
+                    <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn} className={box}>
+                        {icon("bg-violet-500/10 text-violet-400", <CreditCard className="w-6 h-6" />)}
+                        <h3 className="text-xl font-bold mb-2">Bills and invoices</h3>
+                        <p className="text-slate-400 text-sm">Bills you approve become money you owe; invoices you issue carry your letterhead. Part-payments, and a list of what is overdue.</p>
+                    </motion.div>
+
+                    <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn} className={`md:col-span-2 ${box}`}>
+                        {icon("bg-rose-500/10 text-rose-400", <ShieldCheck className="w-6 h-6" />)}
+                        <h3 className="text-xl font-bold mb-2">A year end your auditor will like</h3>
+                        <p className="text-slate-400 text-sm">Reconcile each bank account at month-end, lock a finished year so nothing in it can change, and see who changed what, when and why in the audit log. Assets and loans are included, with depreciation worked out for you.</p>
+                    </motion.div>
                 </div>
             </div>
         </section>
@@ -332,17 +313,17 @@ function HowItWorksSection() {
         {
             num: "01",
             title: "Upload & Extract",
-            desc: "Simply drag and drop or upload receipts. Our AI handles data entry and vendor matching instantly."
+            desc: "Drag and drop receipts and bills, or snap a photo. Outlayd reads the details and matches the payee."
         },
         {
             num: "02",
             title: "Review & Categorize",
-            desc: "Review extracted data and assign expenses to the correct project or category. Approve with one click."
+            desc: "Check the amount, category and fund, then approve. Record donations and other money in alongside."
         },
         {
             num: "03",
-            title: "Report & Share",
-            desc: "Generate comprehensive operational reports and audit-ready summaries for your board and donors."
+            title: "Report & Submit",
+            desc: "Produce your financial statements with checks that they add up, and download signed PDFs for your AGM, donors and auditor."
         }
     ];
 
@@ -400,85 +381,10 @@ function PricingSection() {
             <div className="container mx-auto max-w-6xl">
                 <div className="text-center mb-16">
                     <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">Simple, transparent pricing</h2>
-                    <p className="text-slate-400 text-lg">Start for free, upgrade when you need more power.</p>
+                    <p className="text-slate-400 text-lg">Start free. Upgrade inside the app when you need your full books. Month to month, cancel any time.</p>
                 </div>
-
-                <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                    {/* Starter Tier */}
-                    <div className="bg-slate-900/50 border border-white/10 rounded-3xl p-8 flex flex-col">
-                        <h3 className="text-lg font-medium text-slate-300 mb-2">Starter</h3>
-                        <div className="mb-6">
-                            <span className="text-4xl font-bold">RM0</span>
-                            <span className="text-slate-400">/month</span>
-                        </div>
-                        <p className="text-sm text-slate-400 mb-8 border-b border-white/10 pb-8">Perfect for small teams and early-stage nonprofits getting started.</p>
-                        <ul className="space-y-4 mb-8 flex-1">
-                            {['Limited to 1 user', 'AI Document Extraction (5/mo)', 'Grant & Fund Categorization', 'Vendor Directory'].map((feature, i) => (
-                                <li key={i} className="flex items-start gap-3 text-sm">
-                                    <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" />
-                                    <span>{feature}</span>
-                                </li>
-                            ))}
-                        </ul>
-                        <Link href="/signup" id="pricing-starter-btn" className="w-full py-3 px-4 rounded-xl border border-white/20 font-medium text-center hover:bg-white/5 transition-all active:scale-95 cursor-pointer">
-                            Get Started
-                        </Link>
-                    </div>
-
-                    {/* Growth Tier */}
-                    <div className="bg-linear-to-b from-indigo-900/50 to-slate-900 border border-indigo-500/50 rounded-3xl p-8 flex flex-col relative shadow-[0_0_50px_-12px_rgba(79,70,229,0.3)]">
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-500 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full">
-                            Most Popular
-                        </div>
-                        <h3 className="text-lg font-medium text-indigo-300 mb-2">Growth</h3>
-                        <div className="mb-6">
-                            <span className="text-4xl font-bold">RM89</span>
-                            <span className="text-slate-400">/month</span>
-                        </div>
-                        <p className="text-sm text-slate-400 mb-8 border-b border-white/10 pb-8">For growing SMEs and organizations needing multi-user approval workflows and fund reports.</p>
-                        <ul className="space-y-4 mb-8 flex-1">
-                            {['Up to 5 users', 'Unlimited AI Extraction', 'Grant & Audit-Ready Export', 'Exportable Board Reports', 'Custom category allocation'].map((feature, i) => (
-                                <li key={i} className="flex items-start gap-3 text-sm">
-                                    <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" />
-                                    <span>{feature}</span>
-                                </li>
-                            ))}
-                        </ul>
-                        <Link href="/signup" id="pricing-growth-btn" className="w-full py-3 px-4 rounded-xl bg-indigo-600 font-medium text-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/25 active:scale-95 cursor-pointer">
-                            Get Started
-                        </Link>
-                    </div>
-
-                    {/* Nonprofit Tier - Dedicated & Gated */}
-                    <div className="bg-slate-900/50 border border-emerald-500/30 rounded-3xl p-8 flex flex-col relative">
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-600 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full">
-                            Grant Eligible
-                        </div>
-                        <h3 className="text-lg font-medium text-emerald-400 mb-2">Nonprofit &amp; NGO</h3>
-                        <div className="mb-6">
-                            <span className="text-4xl font-bold">RM49</span>
-                            <span className="text-slate-400">/month</span>
-                        </div>
-                        <p className="text-sm text-slate-400 mb-8 border-b border-white/10 pb-8">Dedicated pricing for registered NGOs, charities, and social enterprises.</p>
-                        <ul className="space-y-4 mb-8 flex-1">
-                            {[
-                                'All Growth Tier Features Included',
-                                'Unlimited Grant & Fund Tracking',
-                                'Donor & Audit Memo Generator',
-                                'Direct Founder Onboarding',
-                                'Tax Receipt Reconciliation'
-                            ].map((feature, i) => (
-                                <li key={i} className="flex items-start gap-3 text-sm">
-                                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                                    <span>{feature}</span>
-                                </li>
-                            ))}
-                        </ul>
-                        <Link href="/contact?subject=Nonprofit%20Pricing%20Application" id="pricing-nonprofit-btn" className="w-full py-3 px-4 rounded-xl border border-emerald-500/40 text-emerald-300 font-medium text-center hover:bg-emerald-500/10 transition-all active:scale-95 cursor-pointer">
-                            Apply for Nonprofit Pricing
-                        </Link>
-                    </div>
-                </div>
+                <PlanCards />
+                <PlanComparisonTable />
             </div>
         </section>
     );
@@ -496,7 +402,7 @@ function WhyOutlaydSection() {
                     Built out of real expense chaos, for organizations that value clarity.
                 </h2>
                 <p className="text-slate-300 text-lg leading-relaxed max-w-2xl mx-auto mb-10">
-                    We built Outlayd after watching growing SMEs and non-profits drown in paper receipts, manual data entry, and month-end reconciliation headaches. Instead of bloated enterprise software, we built a focused tool that turns receipt chaos into a clean, automated ledger in seconds.
+                    We built Outlayd after watching growing SMEs and non-profits drown in paper receipts, manual data entry, and month-end reconciliation headaches. Instead of bloated enterprise software, we built a focused tool that turns receipts into a clean ledger and the ledger into statements you can sign.
                 </p>
                 <div className="grid sm:grid-cols-3 gap-6 text-left">
                     <div className="bg-slate-950 border border-white/10 p-6 rounded-2xl">
@@ -519,11 +425,12 @@ function WhyOutlaydSection() {
 
 function FAQSection() {
     const faqs = [
-        { q: "How is Outlayd different from tools like Expensify or Zoho Expense?", a: "Unlike enterprise software built for corporate mega-entities, Outlayd is purpose-built for growing SMEs and nonprofits. We focus on local currency support (MYR), grant & restricted fund tracking, and straightforward pricing — eliminating the complex setup and high costs of enterprise tools." },
-        { q: "How exact is the AI receipt extraction?", a: "Our AI extracts data with high accuracy. It handles multiple currencies, messy handwriting, and complex multi-page invoices with line items." },
-        { q: "Can I track expenses by grant or fund for nonprofit reporting?", a: "Yes! Outlayd allows you to tag and filter expenses by specific grant, restricted fund, or department, giving you audit-ready reports for your board and donors in seconds." },
-        { q: "How does the vendor directory work?", a: "It auto-tracks every vendor from your uploaded documents, calculating total outstanding balances automatically without manual entry." },
-        { q: "What's the cancellation policy?", a: "You can cancel your subscription at any time. We don't believe in long-term lock-in contracts for small businesses and nonprofits." }
+        { q: "What statements can Outlayd produce?", a: "On the Growth and Nonprofit plans: the Statement of Income and Expenditure (Profit and Loss for a business), Receipts and Payments, the Statement of Financial Position, the Statement of Changes in Funds, and schedules for fixed assets, money owed and donations. Each comes with checks that it adds up, and as a PDF with your letterhead and signatures. Free plans can look at a sample." },
+        { q: "How accurate is the AI reading?", a: "It reads most printed receipts and invoices well, including foreign currencies and multi-page invoices with line items. Nothing counts until someone in your team has checked and approved it." },
+        { q: "Can I keep grants and restricted funds separate?", a: "Yes. Every receipt, donation and invoice line belongs to a fund, each fund has its own balance, and the statements show restricted and unrestricted funds separately. Creating funds is part of the Growth and Nonprofit plans." },
+        { q: "Do I still need an accountant or auditor?", a: "Outlayd keeps your books and prepares the statements; if your constitution or a funder needs them audited, your auditor still signs them off. It gives them a clean ledger, an audit log of every change, and an export for their own software." },
+        { q: "What happens if I stop paying?", a: "Nothing is deleted. Paid features become read-only, and you can still view and export everything you recorded. You can cancel any time; there are no contracts." },
+        { q: "Is there a discount for nonprofits?", a: "Yes. Registered societies, charities and NGOs get every Growth feature for RM49 a month instead of RM89. Apply on our contact page and we send you a code to use at checkout." }
     ];
 
     return (
@@ -575,9 +482,9 @@ function CTASection() {
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 mix-blend-overlay" />
 
                     <div className="relative z-10 p-12 lg:p-20 text-center">
-                        <h2 className="text-3xl lg:text-5xl font-bold mb-6">Ready to regain control of your finance operations?</h2>
+                        <h2 className="text-3xl lg:text-5xl font-bold mb-6">Ready for a year end without the spreadsheet?</h2>
                         <p className="text-indigo-100 text-lg md:text-xl max-w-2xl mx-auto mb-10">
-                            Join early adopters and growing teams who have simplified their entire expense reporting workflow.
+                            Start with your receipts today. Your statements build themselves as you go.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                             <Link href="/signup" id="cta-signup-btn" className="w-full sm:w-auto bg-white text-indigo-900 font-bold px-8 py-4 rounded-full transition-all active:scale-95 hover:bg-slate-100 cursor-pointer">
@@ -605,7 +512,7 @@ export function Footer() {
                             <span className="text-xl font-bold tracking-tight">Outlayd</span>
                         </Link>
                         <p className="text-slate-400 text-sm max-w-xs mb-6">
-                            The intelligent ledger and spend management platform built specifically for growing SMEs and nonprofits.
+                            Bookkeeping and financial statements for Malaysian nonprofits and small businesses.
                         </p>
 
                     </div>
@@ -616,6 +523,7 @@ export function Footer() {
                             <ul className="space-y-3 text-sm text-slate-400">
                                 <li><Link href="/#services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Features</Link></li>
                                 <li><Link href="/#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</Link></li>
+                                <li><Link href="/nonprofits" className="hover:text-white transition-colors">For nonprofits</Link></li>
                                 <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
                             </ul>
                         </div>
