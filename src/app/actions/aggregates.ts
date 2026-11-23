@@ -15,6 +15,7 @@ import {
     type ReportSummary,
 } from "@/utils/aggregate-types"
 import type { DocumentRow, IdName } from "@/utils/row-types"
+import type { OnboardingProgress } from "@/utils/getting-started"
 
 // A JSON object returned by a database function; every field is checked before use
 type JsonObject = Record<string, unknown>
@@ -116,6 +117,24 @@ export async function getOverdueInvoices(): Promise<Record<"payable" | "receivab
  * Each fund's balance today (spec 5.7), from the opening position onwards (rule R4). Null until the
  * opening position is complete, because the balances would be wrong before it.
  */
+// What the organisation has done so far, for the "Getting started" card. Counts only (head requests),
+// read through the user's own session.
+export async function getOnboardingProgress(): Promise<OnboardingProgress> {
+    const supabase = await createClient()
+    const orgId = await requireOrg()
+    const count = async (q: PromiseLike<{ count: number | null }>) => (await q).count ?? 0
+    const head = { count: "exact" as const, head: true }
+    const [documents, approvedDocuments, members, moneyIn, reconciliations, { data: org }] = await Promise.all([
+        count(supabase.from("documents").select("id", head).eq("organization_id", orgId)),
+        count(supabase.from("documents").select("id", head).eq("organization_id", orgId).in("status", ["awaiting_payment", "paid"])),
+        count(supabase.from("user_roles").select("id", head).eq("organization_id", orgId)),
+        count(supabase.from("transactions").select("id", head).eq("organization_id", orgId).eq("tx_type", "money_in").eq("source", "manual")),
+        count(supabase.from("reconciliations").select("id", head).eq("organization_id", orgId)),
+        supabase.from("organizations").select("opening_position_completed_at").eq("id", orgId).maybeSingle(),
+    ])
+    return { documents, approvedDocuments, members, moneyIn, reconciliations, openingComplete: !!org?.opening_position_completed_at }
+}
+
 export async function getFundBalances(): Promise<{ id: string; name: string; restricted: boolean; isDefault: boolean; balance: number }[] | null> {
     const supabase = await createClient()
     const orgId = await requireOrg()

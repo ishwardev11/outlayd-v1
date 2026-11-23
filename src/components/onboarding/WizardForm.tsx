@@ -214,7 +214,10 @@ export default function WizardForm() {
                         >
                             <div className="mb-8">
                                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Choose a Starter Template</h2>
-                                <p className="text-slate-500 dark:text-slate-400 mt-1">We&apos;ll configure your default categories and funds based on your choice.</p>
+                                <p className="text-slate-500 dark:text-slate-400 mt-1">
+                                    This sets whether you are a nonprofit or a business (which decides how your statements are titled and grouped), and
+                                    adds a starting set of expense categories and funds. You can rename, add or archive any of them later in Settings.
+                                </p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -232,7 +235,7 @@ export default function WizardForm() {
                                     )}
                                     <Building2 className={`w-8 h-8 mb-4 ${formData.templateChoice === "digital_agency" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`} />
                                     <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Digital Agency & SaaS</h3>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3">Standard B2B categories for software, marketing, and professional services.</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">A business: Profit and Loss. Categories for software, marketing, contractors and professional fees; funds for client projects and internal work.</p>
                                 </button>
 
                                 {/* Card 2 */}
@@ -249,7 +252,7 @@ export default function WizardForm() {
                                     )}
                                     <Church className={`w-8 h-8 mb-4 ${formData.templateChoice === "ecommerce" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`} />
                                     <h3 className="font-semibold text-slate-900 dark:text-white mb-2">E-Commerce & Retail</h3>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3">Optimized for inventory, shipping, and merchant fees.</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">A business: Profit and Loss. Categories for cost of goods, shipping, merchant fees and advertising; funds for operations, logistics and marketing.</p>
                                 </button>
 
                                 {/* Card 3 */}
@@ -266,9 +269,13 @@ export default function WizardForm() {
                                     )}
                                     <Users className={`w-8 h-8 mb-4 ${formData.templateChoice === "non_profit" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`} />
                                     <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Non-Profit Org</h3>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3">Built for compliance with grant tracking and fundraising expenses.</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">A society, association or charity: Income and Expenditure. Categories for programmes, fundraising and administration; funds for grants, outreach and a building fund. Donation categories are added too.</p>
                                 </button>
                             </div>
+
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                Next, your dashboard shows a short &quot;Getting started&quot; list. The first step is uploading a receipt or bill.
+                            </p>
 
                             <div className="pt-6 flex justify-between items-center">
                                 <Button id="wizard-back-btn" variant="ghost" onClick={prevStep} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer active:scale-[0.98]">
