@@ -1,68 +1,127 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
-import { buildExport, parseExportParams, toGenericCsv, type ExportDocument } from "./accounting-export"
+import { buildExport, parseExportParams, toGenericCsv, type ExportEntry, type ExportLookups } from "./accounting-export"
 import { parseCsv } from "../test/parse-csv"
-import { docs as fixtureDocs, lookups } from "../test/fixtures/export-docs"
 
-const docs = fixtureDocs as unknown as ExportDocument[]
-const fixture = (name: string) => readFileSync(join(__dirname, "../test/fixtures", name), "utf8")
-const { lines, summary } = buildExport(docs, lookups)
-const generic = toGenericCsv(lines, "MYR")
-const genericRows = parseCsv(generic)
-const header = genericRows[0]
-const remarksCol = header.indexOf("Remarks")
+// A small cash book: a bill payment, a refund, a split donation, an asset purchase, a receipt in
+// another currency from an upload, and remarks that would be formulas in a spreadsheet.
+const lookups: ExportLookups = {
+    funds: new Map([["gen", { name: "General Fund" }], ["edu", { name: "Education Fund" }], ["bld", { name: "Building Fund" }]]),
+    categories: new Map([
+        ["c-print", { name: "Printing", account_code: "6100" }],
+        ["c-rent", { name: "Rent", account_code: "" }],
+        ["c-don", { name: "General donations", account_code: "4000" }],
+    ]),
+    accounts: new Map([["main", { name: "Main Bank" }]]),
+    invoices: new Map([["inv-print", { invoice_no: "CJ-310", due_date: "2026-04-10", direction: "payable" as const }]]),
+    items: new Map([["van", { name: "Van", kind: "fixed_asset" as const }]]),
+    documents: new Map([["doc-rent", { original_currency: "USD", original_amount: 700, exchange_rate: 4.2857 }]]),
+}
 
-test("generic CSV: Remarks is the last column", () => {
-    assert.equal(remarksCol, header.length - 1)
-    assert.equal(header.length, 19)
+const entry = (over: Partial<ExportEntry>): ExportEntry => ({
+    id: "t", tx_type: "money_out", tx_date: "2026-03-31", payee_name: "Cetak Jaya", reference: null, remarks: null,
+    source: "manual", document_id: null, is_refund: false, account_id: "main", lines: [], ...over,
 })
 
-test("generic CSV: every existing column is byte-for-byte what it was before remarks were added", () => {
-    const before = parseCsv(fixture("accounting-generic-before-remarks.csv"))
-    const withoutRemarks = genericRows.map((r) => r.slice(0, -1))
-    assert.deepEqual(withoutRemarks, before)
+const entries: ExportEntry[] = [
+    entry({ id: "t-pay", reference: "CJ-310", lines: [{ line_no: 1, amount: 800, fund_id: "edu", category_id: "c-print", invoice_id: "inv-print", item_id: null }] }),
+    entry({ id: "t-refund", tx_type: "money_in", tx_date: "2026-06-15", reference: "CN-15", is_refund: true, remarks: "=SUM(A1:A9)",
+        lines: [{ line_no: 1, amount: 250, fund_id: "edu", category_id: "c-print", invoice_id: null, item_id: null }] }),
+    entry({ id: "t-don", tx_type: "money_in", tx_date: "2026-09-01", payee_name: "+Puan Aminah", remarks: "split, \"two\" funds\nline two",
+        lines: [
+            { line_no: 2, amount: 1000, fund_id: "edu", category_id: "c-don", invoice_id: null, item_id: null },
+            { line_no: 1, amount: 3000, fund_id: "gen", category_id: "c-don", invoice_id: null, item_id: null },
+        ] }),
+    entry({ id: "t-van", tx_date: "2026-02-01", payee_name: "Toyota", lines: [{ line_no: 1, amount: 36000, fund_id: "bld", category_id: null, invoice_id: null, item_id: "van" }] }),
+    entry({ id: "t-rent", tx_date: "2026-05-02", payee_name: "Landlord", source: "document", document_id: "doc-rent",
+        lines: [{ line_no: 1, amount: 3000, fund_id: "gen", category_id: "c-rent", invoice_id: null, item_id: null }] }),
+]
+
+const { lines, summary } = buildExport(entries, lookups)
+const csv = toGenericCsv(lines, "MYR")
+const rows = parseCsv(csv)
+const header = rows[0]
+const col = (name: string) => header.indexOf(name)
+const rowsOf = (id: string) => rows.slice(1).filter((r) => r[col("Transaction ID")] === id)
+
+test("the first 19 columns keep their names and positions; new columns are added at the end", () => {
+    assert.deepEqual(header.slice(0, 19), [
+        "Date", "Due date", "Paid date", "Type", "Status", "Document no.", "Reference", "Vendor", "Description",
+        "Category", "Account code", "Fund", "Amount (MYR)", "Original currency", "Original amount",
+        "Exchange rate", "Line", "Document ID", "Remarks",
+    ])
+    assert.deepEqual(header.slice(19), ["Money in (MYR)", "Money out (MYR)", "Account", "Source", "Transaction ID"])
 })
 
-test("generic CSV: totals and line count are unchanged", () => {
-    assert.equal(summary.lines, 14)
-    assert.equal(summary.totalCents, 141100)
+test("one row per line; money in and money out totals add up to the cash book", () => {
+    assert.equal(summary.entries, 5)
+    assert.equal(summary.lines, 6)
+    assert.equal(summary.moneyInCents, 425000)   // refund 250 + donation 4,000
+    assert.equal(summary.moneyOutCents, 3980000) // bill 800 + van 36,000 + rent 3,000
+    const sum = (name: string) => rows.slice(1).reduce((s, r) => s + Math.round(Number(r[col(name)] || 0) * 100), 0)
+    assert.equal(sum("Money in (MYR)"), summary.moneyInCents)
+    assert.equal(sum("Money out (MYR)"), summary.moneyOutCents)
+    assert.equal(sum("Amount (MYR)"), summary.moneyInCents + summary.moneyOutCents)
 })
 
-test("generic CSV: remarks come out exactly, with formulas neutralised", () => {
-    const byDoc = new Map(genericRows.slice(1).map((r) => [r[header.indexOf("Document ID")], r[remarksCol]]))
-    const remarkOf = (i: number) => byDoc.get(`0000000${i}-aaaa-bbbb-cccc-dddddddddddd`)
-    assert.equal(remarkOf(0), "Paid by cheque 4471, approved at the March committee") // comma
-    assert.equal(remarkOf(1), 'He said "ok"')                                        // quotes
-    assert.equal(remarkOf(2), "line one\nline two")                                   // line break
-    assert.equal(remarkOf(3), "'=SUM(A1:A9)")                                         // formula
-    assert.equal(remarkOf(4), "'+60123456789")
-    assert.equal(remarkOf(5), "'-refund")
-    assert.equal(remarkOf(6), "'@admin")
-    assert.equal(remarkOf(7), "Bayaran 款项 பணம் café")                                // non-English
-    assert.equal(remarkOf(8), "")                                                     // empty
-    assert.equal(remarkOf(9), "")                                                     // missing
-    assert.equal(remarkOf(10), "padded")                                              // trimmed like other text
-    assert.equal(remarkOf(11), "tab")                                                 // whitespace-only start trimmed
+test("a bill payment carries the bill number and due date, labelled like the cash book", () => {
+    const [r] = rowsOf("t-pay")
+    assert.equal(r[col("Type")], "Bill payment")
+    assert.equal(r[col("Status")], "Paid")
+    assert.equal(r[col("Document no.")], "CJ-310")
+    assert.equal(r[col("Due date")], "2026-04-10")
+    assert.equal(r[col("Paid date")], "2026-03-31")
+    assert.equal(r[col("Description")], "Cetak Jaya - CJ-310")
+    assert.equal(r[col("Account code")], "6100")
+    assert.equal(r[col("Money out (MYR)")], "800.00")
+    assert.equal(r[col("Money in (MYR)")], "")
 })
 
-test("generic CSV: a split document repeats its remarks on every line", () => {
-    const splitRows = genericRows.slice(1).filter((r) => r[header.indexOf("Document ID")].startsWith("split000"))
-    assert.equal(splitRows.length, 2)
-    for (const r of splitRows) assert.equal(r[remarksCol], "split remark")
+test("a refund is money in, labelled Refund received, under the expense it refunds", () => {
+    const [r] = rowsOf("t-refund")
+    assert.deepEqual([r[col("Type")], r[col("Status")], r[col("Category")], r[col("Money in (MYR)")]], ["Refund received", "Received", "Printing", "250.00"])
 })
 
-test("generic CSV: the AI error notes never appear", () => {
-    assert.ok(!generic.includes("AI Extraction Error"))
-    assert.ok(!generic.includes("secret"))
+test("a split entry has one row per line in line order, repeating its remarks", () => {
+    const split = rowsOf("t-don")
+    assert.deepEqual(split.map((r) => [r[col("Line")], r[col("Fund")], r[col("Amount (MYR)")]]), [["1", "General Fund", "3000.00"], ["2", "Education Fund", "1000.00"]])
+    for (const r of split) assert.equal(r[col("Remarks")], "split, \"two\" funds\nline two")
 })
 
-test("only the generic format is accepted; the removed Xero format is refused", () => {
+test("an asset purchase is labelled and shows the asset in the category column", () => {
+    const [r] = rowsOf("t-van")
+    assert.deepEqual([r[col("Type")], r[col("Category")], r[col("Account code")]], ["Asset purchase", "Van", ""])
+})
+
+test("an entry from an upload links to it and carries its original currency", () => {
+    const [r] = rowsOf("t-rent")
+    assert.deepEqual(
+        [r[col("Document ID")], r[col("Source")], r[col("Original currency")], r[col("Original amount")], r[col("Exchange rate")]],
+        ["doc-rent", "Document", "USD", "700.00", "4.2857"],
+    )
+    assert.equal(r[col("Account")], "Main Bank")
+})
+
+test("text that a spreadsheet would run as a formula is neutralised", () => {
+    assert.equal(rowsOf("t-refund")[0][col("Remarks")], "'=SUM(A1:A9)")
+    assert.equal(rowsOf("t-don")[0][col("Vendor")], "'+Puan Aminah")
+})
+
+test("lines with a category but no account code are counted for the warning", () => {
+    assert.equal(summary.linesWithoutAccountCode, 1)
+    assert.deepEqual(summary.categoriesWithoutAccountCode, ["Rent"])
+})
+
+test("the AI error notes never appear", () => {
+    const withNotes = entries.map((e) => ({ ...e, notes: "AI Extraction Error: secret" }) as ExportEntry)
+    assert.ok(!toGenericCsv(buildExport(withNotes, lookups).lines, "MYR").includes("AI Extraction Error"))
+})
+
+test("only the generic format is accepted; old document options are ignored, bad dates refused", () => {
     const q = (extra: string) => new URLSearchParams(`from=2026-11-01&to=2026-11-30${extra}`)
-    const def = parseExportParams(q(""))
-    assert.ok(def.ok && def.value.format === "generic")
-    const generic = parseExportParams(q("&format=generic"))
-    assert.ok(generic.ok && generic.value.format === "generic")
+    assert.deepEqual(parseExportParams(q("")), { ok: true, value: { format: "generic", from: "2026-11-01", to: "2026-11-30" } })
+    assert.deepEqual(parseExportParams(q("&scope=approved&dateField=paid_date")), { ok: true, value: { format: "generic", from: "2026-11-01", to: "2026-11-30" } })
     assert.deepEqual(parseExportParams(q("&format=xero_bills")), { ok: false, error: "Unknown export format" })
+    assert.equal(parseExportParams(new URLSearchParams("from=2026-02-30&to=2026-03-01")).ok, false)
+    assert.equal(parseExportParams(new URLSearchParams("from=2026-03-02&to=2026-03-01")).ok, false)
 })

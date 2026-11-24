@@ -2,11 +2,15 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { getOrganizationId, getCurrentUserRole, getOrganizationCurrency } from "./document-utils"
-import { buildFundMemo, type FundMemoData, type MemoDocInput } from "@/utils/fund-memo"
+import {
+    buildFundMemo, type FundMemoData, type MemoForeignInput, type MemoLedgerRow, type MemoPendingDocInput,
+} from "@/utils/fund-memo"
 import { featureAllowed, planGateMessage } from "@/utils/plan"
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+// "Since the beginning" when a fund has no grant start date
+const EARLIEST_DATE = "1900-01-01"
 const PAGE_SIZE = 1000
 const MAX_PAGES = 20
 
@@ -58,38 +62,62 @@ export async function getFundMemoData(input: {
             .eq("id", organizationId)
             .maybeSingle()
 
-        const { data: categories } = await supabase
-            .from("categories")
-            .select("id, name")
-            .eq("organization_id", organizationId)
-        const categoryNames: Record<string, string> = {}
-        for (const c of categories ?? []) categoryNames[c.id] = c.name
-
+        // The ledger rows behind this fund's column of the Income & Expenditure statement. Read from the
+        // grant start (when earlier than the period) so the award used is counted from the grant start.
+        const grantStart = typeof fund.period_start === "string" && ISO_DATE_RE.test(fund.period_start.slice(0, 10))
+            ? fund.period_start.slice(0, 10)
+            : null
+        const readFrom = grantStart === null ? EARLIEST_DATE : grantStart < periodStart ? grantStart : periodStart
         // Read every page so a large organisation is not silently cut off at 1000 rows
-        const docs: MemoDocInput[] = []
+        const rows: MemoLedgerRow[] = []
         for (let page = 0; page < MAX_PAGES; page++) {
             const from = page * PAGE_SIZE
             const { data, error } = await supabase
-                .from("documents")
-                .select("id, vendor_name, invoice_number, reference_number, document_type, document_date, amount, status, splits, fund_id, category_id, image_url, original_currency, original_amount, exchange_rate, exchange_rate_source, remarks")
-                .eq("organization_id", organizationId)
-                .order("created_at", { ascending: true })
-                .order("id", { ascending: true })
+                .rpc("fund_memo_lines", { p_org: organizationId, p_fund: fundId, p_from: readFrom, p_to: periodEnd })
+                .order("row_date", { ascending: true })
+                .order("row_kind", { ascending: true })
+                .order("row_id", { ascending: true })
+                .order("line_no", { ascending: true })
                 .range(from, from + PAGE_SIZE - 1)
             if (error) {
-                console.error("getFundMemoData: documents query failed", error)
-                return { success: false, error: "Could not load documents for this memo." }
+                console.error("getFundMemoData: fund_memo_lines failed", error)
+                return { success: false, error: "Could not load the ledger for this memo." }
             }
-            docs.push(...((data ?? []) as MemoDocInput[]))
+            rows.push(...((data ?? []) as MemoLedgerRow[]))
             if (!data || data.length < PAGE_SIZE) break
+            if (page === MAX_PAGES - 1) {
+                return { success: false, error: "This fund has too many entries for one memo. Choose a shorter period." }
+            }
         }
+
+        // Foreign-currency details of the uploads the entries came from (shown beside the amount)
+        const documentIds = [...new Set(rows.map((r) => r.document_id).filter((x): x is string => !!x))]
+        const foreign: Record<string, MemoForeignInput> = {}
+        for (let i = 0; i < documentIds.length; i += 200) {
+            const { data } = await supabase
+                .from("documents")
+                .select("id, original_currency, original_amount, exchange_rate, exchange_rate_source")
+                .eq("organization_id", organizationId)
+                .in("id", documentIds.slice(i, i + 200))
+            for (const d of (data ?? []) as (MemoForeignInput & { id: string })[]) foreign[d.id] = d
+        }
+
+        // Uploads not in the ledger yet: counted in a note only, never in a figure
+        const { data: pending, error: pendingError } = await supabase
+            .from("documents")
+            .select("id, document_date, amount, status, splits, fund_id")
+            .eq("organization_id", organizationId)
+            .not("status", "in", "(paid,awaiting_payment,rejected,error)")
+            .limit(PAGE_SIZE * MAX_PAGES)
+        if (pendingError) console.error("getFundMemoData: pending uploads query failed", pendingError)
 
         const currency = org?.base_currency || (await getOrganizationCurrency()) || "MYR"
 
         const memo = buildFundMemo({
             fund,
-            docs,
-            categoryNames,
+            rows,
+            foreign,
+            pendingDocs: (pending ?? []) as MemoPendingDocInput[],
             organization: { name: org?.name || "Organization", registrationId: org?.registration_id || null },
             currency,
             periodStart,

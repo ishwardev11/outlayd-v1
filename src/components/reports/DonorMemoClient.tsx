@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getFundMemoData } from "@/app/actions/memo";
 import { generateFundMemoPdf } from "@/utils/fund-memo-pdf";
-import type { FundMemoData } from "@/utils/fund-memo";
+import type { FundMemoData, MemoAttachment, MemoCategoryRow } from "@/utils/fund-memo";
 
 export interface MemoFundOption {
     id: string;
@@ -31,9 +31,7 @@ const numberFormat = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, 
 const FLAG_LABELS: Record<string, string> = {
     NO_RECEIPT: "No receipt",
     NO_REFERENCE: "No invoice/ref no.",
-    NO_CATEGORY: "No category",
     OUTSIDE_GRANT_PERIOD: "Outside grant period",
-    SPLIT_MISMATCH: "Split mismatch",
 };
 
 function presetRange(preset: string, fund: MemoFundOption | undefined, fiscalYearStart: number, today: string): [string, string] | null {
@@ -150,7 +148,7 @@ export function DonorMemoClient({ funds, fiscalYearStart, today }: { funds: Memo
             <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Donor & Audit Memo</h1>
                 <p className="text-gray-500 dark:text-slate-400 mt-2 text-lg">
-                    Preview a fund&apos;s spending, fix anything flagged, then download a signed-off PDF for your donor, board or auditor.
+                    Preview a fund&apos;s income and spending, fix anything flagged, then download a signed-off PDF for your donor, board or auditor.
                 </p>
             </div>
 
@@ -252,17 +250,24 @@ export function DonorMemoClient({ funds, fiscalYearStart, today }: { funds: Memo
                     {/* Summary cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <Card className="dark:bg-slate-900 dark:border-slate-800">
-                            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Total this period</CardTitle></CardHeader>
-                            <CardContent><div className="text-2xl font-bold dark:text-white">{money(memo.totals.periodTotal)}</div>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{memo.totals.transactionCount} transaction(s)</p></CardContent>
+                            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Income</CardTitle></CardHeader>
+                            <CardContent><div className="text-2xl font-bold dark:text-white" data-testid="memo-income">{money(memo.totals.income)}</div>
+                                {memo.totals.incomeOwed !== 0 && (
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{money(memo.totals.incomeOwed)} still owed to you</p>
+                                )}</CardContent>
                         </Card>
                         <Card className="dark:bg-slate-900 dark:border-slate-800">
-                            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Paid</CardTitle></CardHeader>
-                            <CardContent><div className="text-2xl font-bold dark:text-white">{money(memo.totals.periodPaid)}</div></CardContent>
+                            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Expenditure</CardTitle></CardHeader>
+                            <CardContent><div className="text-2xl font-bold dark:text-white" data-testid="memo-expenditure">{money(memo.totals.expenditure)}</div>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Paid {money(memo.totals.expenditurePaid)} &middot; unpaid bills {money(memo.totals.expenditureUnpaid)}
+                                    {memo.totals.expenditureNonCash !== 0 && <> &middot; non-cash {money(memo.totals.expenditureNonCash)}</>}
+                                </p></CardContent>
                         </Card>
                         <Card className="dark:bg-slate-900 dark:border-slate-800">
-                            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Committed (unpaid)</CardTitle></CardHeader>
-                            <CardContent><div className="text-2xl font-bold dark:text-white">{money(memo.totals.periodCommitted)}</div></CardContent>
+                            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Income less expenditure</CardTitle></CardHeader>
+                            <CardContent><div className={`text-2xl font-bold ${memo.totals.net < 0 ? "text-red-600" : "dark:text-white"}`} data-testid="memo-net">{money(memo.totals.net)}</div>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{memo.totals.transactionCount} entr{memo.totals.transactionCount === 1 ? "y" : "ies"}</p></CardContent>
                         </Card>
                         <Card className="dark:bg-slate-900 dark:border-slate-800">
                             <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Award remaining</CardTitle></CardHeader>
@@ -305,37 +310,10 @@ export function DonorMemoClient({ funds, fiscalYearStart, today }: { funds: Memo
                     </Card>
 
                     {/* By category */}
-                    <Card className="dark:bg-slate-900 dark:border-slate-800">
-                        <CardHeader><CardTitle className="text-base dark:text-white">Spending by category</CardTitle></CardHeader>
-                        <CardContent>
-                            {memo.byCategory.length === 0 ? (
-                                <p className="text-sm text-slate-500">No paid or committed transactions in this period.</p>
-                            ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Category</TableHead>
-                                            <TableHead className="text-right">Paid</TableHead>
-                                            <TableHead className="text-right">Committed</TableHead>
-                                            <TableHead className="text-right">Total</TableHead>
-                                            <TableHead className="text-right">% of total</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {memo.byCategory.map((c) => (
-                                            <TableRow key={c.name}>
-                                                <TableCell className="font-medium">{c.name}</TableCell>
-                                                <TableCell className="text-right">{numberFormat.format(c.paid)}</TableCell>
-                                                <TableCell className="text-right">{numberFormat.format(c.committed)}</TableCell>
-                                                <TableCell className="text-right font-semibold">{numberFormat.format(c.total)}</TableCell>
-                                                <TableCell className="text-right">{c.percent.toFixed(1)}%</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            )}
-                        </CardContent>
-                    </Card>
+                    <CategoryCard title="Income by category" empty="No income in this period." rows={memo.incomeByCategory}
+                        paidLabel="Received" unpaidLabel="Owed to you" total={memo.totals.income} />
+                    <CategoryCard title="Spending by category" empty="No spending in this period." rows={memo.byCategory}
+                        paidLabel="Paid" unpaidLabel="Unpaid" total={memo.totals.expenditure} />
 
                     {/* Transactions */}
                     <Card className="dark:bg-slate-900 dark:border-slate-800">
@@ -349,9 +327,10 @@ export function DonorMemoClient({ funds, fiscalYearStart, today }: { funds: Memo
                                         <TableRow>
                                             <TableHead>No.</TableHead>
                                             <TableHead>Date</TableHead>
-                                            <TableHead>Vendor</TableHead>
+                                            <TableHead>Payee</TableHead>
                                             <TableHead>Invoice / ref</TableHead>
                                             <TableHead>Category</TableHead>
+                                            <TableHead>Type</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead>Receipt</TableHead>
                                             <TableHead className="text-right">Amount</TableHead>
@@ -366,15 +345,18 @@ export function DonorMemoClient({ funds, fiscalYearStart, today }: { funds: Memo
                                                     <TableCell className="font-mono text-xs">{t.txnNo}</TableCell>
                                                     <TableCell className="whitespace-nowrap">{t.date}</TableCell>
                                                     <TableCell className="font-medium">
-                                                        {t.vendor}
+                                                        {t.payee}
                                                         {t.remarks && (
                                                             <div className="text-[11px] font-normal italic text-slate-500 dark:text-slate-400 whitespace-pre-line max-w-xs">{t.remarks}</div>
                                                         )}
                                                     </TableCell>
                                                     <TableCell>{t.reference || "-"}</TableCell>
                                                     <TableCell>{t.category}</TableCell>
-                                                    <TableCell>{t.status === "paid" ? "Paid" : "Committed"}</TableCell>
-                                                    <TableCell className={t.hasReceipt ? "" : "text-red-600 font-semibold"}>{t.hasReceipt ? "Yes" : "No"}</TableCell>
+                                                    <TableCell>{t.kind === "income" ? "Income" : "Spending"}</TableCell>
+                                                    <TableCell className="whitespace-nowrap">{t.statusLabel}</TableCell>
+                                                    <TableCell className={t.hasReceipt || !t.needsEvidence ? "" : "text-red-600 font-semibold"}>
+                                                        {t.attachment ? <FileLink attachment={t.attachment} /> : t.needsEvidence ? "No" : "-"}
+                                                    </TableCell>
                                                     <TableCell className="text-right whitespace-nowrap">
                                                         {numberFormat.format(t.amount)}
                                                         {t.foreign && (
@@ -397,6 +379,45 @@ export function DonorMemoClient({ funds, fiscalYearStart, today }: { funds: Memo
                         </CardContent>
                     </Card>
 
+                    {/* Assets bought: listed, not in the totals (their cost shows as depreciation) */}
+                    {memo.assetsBought.length > 0 && (
+                        <Card className="dark:bg-slate-900 dark:border-slate-800" data-testid="memo-assets">
+                            <CardHeader>
+                                <CardTitle className="text-base dark:text-white">Assets bought from this fund ({money(memo.totals.assetsBought)})</CardTitle>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">Not included in the totals above. Their cost is spread over their useful life as depreciation.</p>
+                            </CardHeader>
+                            <CardContent className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Asset</TableHead>
+                                            <TableHead>Payee</TableHead>
+                                            <TableHead>Ref</TableHead>
+                                            <TableHead>Receipt</TableHead>
+                                            <TableHead className="text-right">Amount</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {memo.assetsBought.map((a, i) => (
+                                            <TableRow key={`${a.date}-${a.item}-${i}`}>
+                                                <TableCell className="whitespace-nowrap">{a.date}</TableCell>
+                                                <TableCell className="font-medium">
+                                                    {a.item}
+                                                    {a.remarks && <div className="text-[11px] font-normal italic text-slate-500 dark:text-slate-400 whitespace-pre-line max-w-xs">{a.remarks}</div>}
+                                                </TableCell>
+                                                <TableCell>{a.payee || "-"}</TableCell>
+                                                <TableCell>{a.reference || "-"}</TableCell>
+                                                <TableCell>{a.attachment ? <FileLink attachment={a.attachment} /> : "-"}</TableCell>
+                                                <TableCell className="text-right whitespace-nowrap">{numberFormat.format(a.amount)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {(memo.excluded.pendingReviewCount > 0 || memo.excluded.duplicateCount > 0) && (
                         <p className="text-sm text-slate-500 dark:text-slate-400">
                             Not included in this memo:
@@ -407,5 +428,64 @@ export function DonorMemoClient({ funds, fiscalYearStart, today }: { funds: Memo
                 </div>
             )}
         </div>
+    );
+}
+
+// Opens the file through /api/files, which checks the organisation and returns a short-lived signed link
+function FileLink({ attachment }: { attachment: MemoAttachment }) {
+    return (
+        <a href={`/api/files/${attachment.kind}/${attachment.id}`} target="_blank" rel="noopener noreferrer"
+            className="text-indigo-600 dark:text-indigo-400 underline">
+            View
+        </a>
+    );
+}
+
+function CategoryCard({ title, empty, rows, paidLabel, unpaidLabel, total }: {
+    title: string; empty: string; rows: MemoCategoryRow[]; paidLabel: string; unpaidLabel: string; total: number;
+}) {
+    const showNonCash = rows.some((c) => c.nonCash !== 0);
+    return (
+        <Card className="dark:bg-slate-900 dark:border-slate-800">
+            <CardHeader><CardTitle className="text-base dark:text-white">{title}</CardTitle></CardHeader>
+            <CardContent className="overflow-x-auto">
+                {rows.length === 0 ? (
+                    <p className="text-sm text-slate-500">{empty}</p>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Category</TableHead>
+                                <TableHead className="text-right">{paidLabel}</TableHead>
+                                <TableHead className="text-right">{unpaidLabel}</TableHead>
+                                {showNonCash && <TableHead className="text-right">Non-cash</TableHead>}
+                                <TableHead className="text-right">Total</TableHead>
+                                <TableHead className="text-right">% of total</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {rows.map((c) => (
+                                <TableRow key={c.name}>
+                                    <TableCell className="font-medium">{c.name}</TableCell>
+                                    <TableCell className="text-right">{numberFormat.format(c.paid)}</TableCell>
+                                    <TableCell className="text-right">{numberFormat.format(c.unpaid)}</TableCell>
+                                    {showNonCash && <TableCell className="text-right">{numberFormat.format(c.nonCash)}</TableCell>}
+                                    <TableCell className="text-right font-semibold">{numberFormat.format(c.total)}</TableCell>
+                                    <TableCell className="text-right">{c.percent.toFixed(1)}%</TableCell>
+                                </TableRow>
+                            ))}
+                            <TableRow>
+                                <TableCell className="font-semibold">Total</TableCell>
+                                <TableCell className="text-right font-semibold">{numberFormat.format(rows.reduce((s, c) => s + c.paid, 0))}</TableCell>
+                                <TableCell className="text-right font-semibold">{numberFormat.format(rows.reduce((s, c) => s + c.unpaid, 0))}</TableCell>
+                                {showNonCash && <TableCell className="text-right font-semibold">{numberFormat.format(rows.reduce((s, c) => s + c.nonCash, 0))}</TableCell>}
+                                <TableCell className="text-right font-semibold">{numberFormat.format(total)}</TableCell>
+                                <TableCell />
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                )}
+            </CardContent>
+        </Card>
     );
 }

@@ -33,7 +33,7 @@ const COPY: Record<PaywallContext, { heading: string; subtext: string }> = {
     accounting_export: {
         heading: "The Accounting Export is a Growth Feature",
         subtext:
-            "Download approved documents as a CSV your accountant or accounting software can import, with account codes per category. Upgrade to Outlayd Growth to unlock it.",
+            "Download your cash book as a CSV your accountant or accounting software can import, with account codes per category. Upgrade to Outlayd Growth to unlock it.",
     },
     bank_statements: {
         heading: "Bank Statement Import is a Growth Feature",

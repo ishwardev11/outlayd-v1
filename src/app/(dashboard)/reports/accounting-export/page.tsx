@@ -30,9 +30,9 @@ export default async function AccountingExportPage() {
                     tagline="Hand your accountant a file they can import, instead of retyping every invoice."
                     heading="The Accounting Export is a Growth feature"
                     features={[
-                        "A CSV of approved documents that opens in Excel or imports into your accounting software",
+                        "A CSV of your cash book that opens in Excel or imports into your accounting software",
                         "An accounting code per category, so each expense posts to the right account",
-                        "A preview that warns about missing account codes and splits that do not add up",
+                        "A preview of the money in and out, with a warning about missing account codes",
                     ]}
                     context="accounting_export"
                     icon={<FileSpreadsheet className="h-4 w-4" />}

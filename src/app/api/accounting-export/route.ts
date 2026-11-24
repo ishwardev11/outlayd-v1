@@ -3,14 +3,15 @@ import { createClient } from "@/utils/supabase/server"
 import { getOrganizationId, getOrganizationCurrency } from "@/app/actions/document-utils"
 import { buildExport, parseExportParams, toGenericCsv } from "@/utils/accounting-export"
 import { featureAllowed, planGateMessage } from "@/utils/plan"
-import { EXPORT_MAX_DOCUMENTS, loadExportData } from "@/utils/accounting-export-data"
+import { EXPORT_MAX_ENTRIES, loadExportData } from "@/utils/accounting-export-data"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-// GET /api/accounting-export?[format=generic&]from=YYYY-MM-DD&to=YYYY-MM-DD
-//     &scope=paid|approved&dateField=document_date|paid_date[&preview=1]
-// Without preview it downloads the CSV; with preview=1 it returns counts and warnings as JSON.
+// GET /api/accounting-export?[format=generic&]from=YYYY-MM-DD&to=YYYY-MM-DD[&preview=1]
+// Exports the cash book (money in and money out) dated in the range. Without preview it downloads the
+// CSV; with preview=1 it returns counts and warnings as JSON. The old scope and dateField options
+// described documents; they are ignored so saved links keep working.
 export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -39,12 +40,12 @@ export async function GET(request: NextRequest) {
         ])
         if ("tooMany" in loaded) {
             return NextResponse.json(
-                { error: `That range has more than ${EXPORT_MAX_DOCUMENTS.toLocaleString()} documents. Choose a shorter date range.` },
+                { error: `That range has more than ${EXPORT_MAX_ENTRIES.toLocaleString()} entries. Choose a shorter date range.` },
                 { status: 422 }
             )
         }
 
-        const { lines, summary } = buildExport(loaded.docs, loaded.lookups)
+        const { lines, summary } = buildExport(loaded.entries, loaded.lookups)
 
         if (request.nextUrl.searchParams.get("preview") === "1") {
             return NextResponse.json({ ...summary, currency }, { headers: { "Cache-Control": "no-store" } })

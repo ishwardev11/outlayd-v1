@@ -147,6 +147,24 @@ Compared with the ledger, the memo misses the Education grant (12,000), the 800 
 as all unpaid), the 250 printing refund, General's donation and rental income, and the van depreciation.
 Step 1 is expected to change these.
 
+## After Step 1 (Donor Memo and Accounting export read the ledger)
+
+These replace the Accounting export and Donor Memo figures above for every later step. Nothing else changed.
+
+### Accounting export (`generic`, 1 Jan to 31 Dec 2026, dated by the day the money moved)
+- **11 rows (11 entries), money in 48,950.00, money out 45,250.00**, equal to the cash book.
+- 24 columns: the first 19 as before, then Money in, Money out, Account, Source, Transaction ID.
+- 8 of 11 lines have a category with no account code (the demo has none set); the 3 others are loan and asset lines.
+
+### Donor & Audit Memo (1 Jan to 31 Dec 2026)
+| Fund | Income | Expenditure | Net | Detail |
+|---|---|---|---|---|
+| Education | 12,000.00 | 1,750.00 | 10,250.00 | grant 12,000; CJ-310 2,000 part-paid (800 paid, 1,200 unpaid); refund CN-15 -250 |
+| General | 5,500.00 | 3,000.00 | 2,500.00 | donation 4,000; rental invoice INV-2 1,500 (received); rent 3,000 |
+| Building | 0.00 | 8,250.00 | (8,250.00) | depreciation 11 x 750 (non-cash); van 36,000 listed under "Assets bought" |
+
+Each fund equals its column of Income & Expenditure "by fund" for the same period.
+
 ## Free Test Club (free plan, Admin, 24 Nov 2026)
 - Dashboard: Awaiting payment RM320.00; Needs review 0; Money out this month RM85.50; no Money in card,
   no fund balances, no getting-started panel. Action queue: Hall Supplies RM320.00.
