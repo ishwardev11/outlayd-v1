@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "11mb",
     },
   },
+  // Pages that moved (simplification plan). Permanent (308), and any query string is passed on, so old
+  // bookmarks, emails and links keep working; e.g. /reconciliations?month=2026-10-31 lands on
+  // /bank?tab=reconciliation&month=2026-10-31.
+  async redirects() {
+    return [
+      { source: "/bank-statements", destination: "/bank", permanent: true },
+      { source: "/bank-statements/:id", destination: "/bank/:id", permanent: true },
+      { source: "/reconciliations", destination: "/bank?tab=reconciliation", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

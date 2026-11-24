@@ -26,7 +26,7 @@ function dbMessage(error: { message?: string } | null | undefined, fallback: str
 }
 
 function revalidateAll() {
-    for (const p of ["/settings", "/reconciliations", "/audit-log", "/ledger", "/invoices", "/assets", "/dashboard", "/reports"]) revalidatePath(p)
+    for (const p of ["/settings", "/bank", "/audit-log", "/ledger", "/invoices", "/assets", "/dashboard", "/reports"]) revalidatePath(p)
 }
 
 // ------------------------------------------------------------------ the lock
@@ -119,6 +119,8 @@ export interface ReconciliationRow {
     difference: number | null
     note: string | null
     suggested_balance: number | null
+    // Which uploaded statement the suggested balance came from, in words
+    suggested_source: string | null
 }
 
 export interface ReconciliationPage {
@@ -163,6 +165,7 @@ export async function getReconciliationPage(requested?: string | null): Promise<
                 outlayd_balance: Number(r.outlayd_balance), reconciliation_id: (r.reconciliation_id as string | null) ?? null,
                 statement_balance: num(r.statement_balance), difference: num(r.difference), note: (r.note as string | null) ?? null,
                 suggested_balance: num(r.suggested_balance),
+                suggested_source: (r.suggested_source as string | null) ?? null,
             }))
             .filter((r) => !r.archived || r.reconciliation_id !== null || r.outlayd_balance !== 0)
             .sort((a, b) => Number(a.archived) - Number(b.archived) || a.account_name.localeCompare(b.account_name)),
@@ -184,7 +187,7 @@ export async function saveReconciliation(raw: unknown): Promise<ActionResult<{ i
         payload: { account_id: r.account_id, period_end: r.period_end, statement_balance: balance, note: note || null },
     })
     if (error || typeof data !== "string") return { success: false, error: dbMessage(error, "Could not save the reconciliation. Please try again.") }
-    revalidatePath("/reconciliations")
+    revalidatePath("/bank")
     revalidatePath("/reports")
     return { success: true, data: { id: data } }
 }
@@ -194,7 +197,7 @@ export async function deleteReconciliation(id: string): Promise<ActionResult> {
     const supabase = await createClient()
     const { error } = await supabase.rpc("delete_reconciliation", { p_id: id })
     if (error) return { success: false, error: dbMessage(error, "Could not remove the reconciliation. Please try again.") }
-    revalidatePath("/reconciliations")
+    revalidatePath("/bank")
     revalidatePath("/reports")
     return { success: true }
 }
@@ -230,7 +233,7 @@ function fixFor(code: string, from: string, to: string, monthEnd: string | null)
         case "balance_check": return { href: "/reports/financial-position", label: "Open the Statement of Financial Position" }
         case "prior_year": return { href: "/reports/changes-in-funds", label: "Open Changes in Funds" }
         case "invoices": return { href: "/invoices", label: "Open Invoices" }
-        case "reconciled": return { href: `/reconciliations${monthEnd ? `?month=${monthEnd}` : ""}`, label: "Open Reconciliations" }
+        case "reconciled": return { href: `/bank?tab=reconciliation${monthEnd ? `&month=${monthEnd}` : ""}`, label: "Open month-end reconciliation" }
         case "restricted_negative": return { href: "/reports/changes-in-funds", label: "Open Changes in Funds" }
         default: return null
     }

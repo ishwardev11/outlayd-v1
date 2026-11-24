@@ -142,7 +142,7 @@ export function YearEndTab() {
 
             <section className="grid gap-3 sm:grid-cols-3">
                 {[
-                    { href: "/reconciliations", title: "Reconciliations", text: "Check each account against the bank statement at month-end." },
+                    { href: "/bank?tab=reconciliation", title: "Month-end reconciliation", text: "Check each account against the bank statement at month-end." },
                     { href: "/audit-log", title: "Audit log", text: "Who changed what, when, and why." },
                     { href: "/settings/opening-position", title: "Opening position", text: "Where things stood on your start date." },
                 ].map((l) => (

@@ -43,13 +43,17 @@ function todayLocal(): string {
 
 // Money in or money out (spec 5.3). Money in is saved as a transaction; money out as a paid document
 // with no file, so existing reports include it. The database checks everything again.
-export function TransactionDialog({ open, onOpenChange, mode, options, edit, readOnly = false }: {
+export function TransactionDialog({ open, onOpenChange, mode, options, edit, readOnly = false, prefill, onSaved }: {
     readOnly?: boolean
     open: boolean
     onOpenChange: (open: boolean) => void
     mode: "in" | "out"
     options: EntryOptions
     edit?: MoneyInEdit | null
+    // A new entry started from a bank statement line: its date, amount, reference and account filled in
+    prefill?: { date: string; amount: string; reference?: string; payeeName?: string; accountId?: string | null } | null
+    // Called after a save with what was created: money in is an entry, money out a paid document
+    onSaved?: (saved: { kind: "transaction" | "document"; id: string }) => void | Promise<void>
 }) {
     const router = useRouter()
     const { symbol } = useCurrency()
@@ -58,16 +62,16 @@ export function TransactionDialog({ open, onOpenChange, mode, options, edit, rea
     const anonymous = options.payees.find((p) => p.is_system && p.name === "Anonymous donor")?.id ?? ""
 
     const editCategory = edit ? options.categories.find((c) => c.id === edit.lines[0]?.category_id) : undefined
-    const [date, setDate] = useState(edit?.tx_date ?? todayLocal())
+    const [date, setDate] = useState(edit?.tx_date ?? prefill?.date ?? todayLocal())
     const [incomeKind, setIncomeKind] = useState<"donation" | "other">(editCategory && editCategory.kind === "income" && editCategory.nature !== "donation" ? "other" : "donation")
     const [isRefund, setIsRefund] = useState(edit?.is_refund ?? false)
-    const [payeeChoice, setPayeeChoice] = useState<string>(edit ? (edit.payee_id ?? TYPED) : mode === "in" && anonymous ? anonymous : TYPED)
-    const [payeeName, setPayeeName] = useState(edit && !edit.payee_id ? edit.payee_name : "")
+    const [payeeChoice, setPayeeChoice] = useState<string>(edit ? (edit.payee_id ?? TYPED) : prefill?.payeeName ? TYPED : mode === "in" && anonymous ? anonymous : TYPED)
+    const [payeeName, setPayeeName] = useState(edit && !edit.payee_id ? edit.payee_name : prefill?.payeeName ?? "")
     const [savePayee, setSavePayee] = useState(false)
-    const [accountId, setAccountId] = useState(edit?.account_id ?? defaultAccount)
-    const [reference, setReference] = useState(edit?.reference ?? "")
+    const [accountId, setAccountId] = useState(edit?.account_id ?? prefill?.accountId ?? defaultAccount)
+    const [reference, setReference] = useState(edit?.reference ?? prefill?.reference ?? "")
     const [remarks, setRemarks] = useState(edit?.remarks ?? "")
-    const [total, setTotal] = useState(edit ? String(edit.lines.reduce((s, l) => s + l.amount, 0)) : "")
+    const [total, setTotal] = useState(edit ? String(edit.lines.reduce((s, l) => s + l.amount, 0)) : prefill?.amount ?? "")
     const [lines, setLines] = useState<Line[]>(edit && edit.lines.length > 0
         ? edit.lines.map((l, i) => ({ key: i, amount: String(l.amount), fundId: l.fund_id, categoryId: l.category_id }))
         : [{ key: 0, amount: "", fundId: defaultFund, categoryId: "" }])
@@ -144,6 +148,7 @@ export function TransactionDialog({ open, onOpenChange, mode, options, edit, rea
                 const res = await recordMoneyOut({ tx_date: date, payee_id: payeeId, payee_name: payeeLabel, reference, remarks, lines: outLines })
                 if (!res.success) return toast.error(res.error)
                 toast.success("Payment recorded")
+                if (onSaved && res.data) await onSaved({ kind: "document", id: res.data.documentId })
             } else {
                 const fd = new FormData()
                 fd.set("payload", JSON.stringify({
@@ -155,6 +160,7 @@ export function TransactionDialog({ open, onOpenChange, mode, options, edit, rea
                 const res = await saveMoneyIn(fd)
                 if (!res.success) return toast.error(res.error)
                 toast.success(edit ? "Entry updated" : "Money in recorded")
+                if (onSaved && res.data) await onSaved({ kind: "transaction", id: res.data.id })
             }
             onOpenChange(false)
             router.refresh()

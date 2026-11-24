@@ -28,7 +28,7 @@ export function gettingStartedSteps(p: OnboardingProgress, paid: boolean): Getti
         steps.push(
             { key: "opening", title: "Set your opening position", text: "Your bank balances, what is owed and what you own on your start date. Your statements start from here.", href: "/settings/opening-position", done: p.openingComplete },
             { key: "money_in", title: "Record money in", text: "A donation, grant or fee, with a numbered receipt for the donor if you like.", href: "/ledger?view=cash", done: p.moneyIn > 0 },
-            { key: "reconcile", title: "Reconcile a month-end", text: "Enter the closing balance from your bank statement and see that it agrees.", href: "/reconciliations", done: p.reconciliations > 0 },
+            { key: "reconcile", title: "Reconcile a month-end", text: "Enter the closing balance from your bank statement and see that it agrees.", href: "/bank?tab=reconciliation", done: p.reconciliations > 0 },
             { key: "team", title: "Invite your team", text: "Add your treasurer or bookkeeper as an Editor, and committee members as Viewers.", href: "/settings?tab=team", done: p.members > 1 },
         )
     }

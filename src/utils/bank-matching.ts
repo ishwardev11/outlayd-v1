@@ -1,7 +1,8 @@
-// Matches bank payments to approved documents. Pure functions, no database code.
+// Matches bank lines to approved documents and to cash book entries. Pure functions, no database code.
 //
-// A payment is only ever *suggested* against a document. A person confirms it, and nothing is
-// marked paid by this file.
+// A line is only ever *suggested* against a candidate. A person confirms it, and nothing is marked
+// paid by this file. Money going out can match a document or an entry going out; money coming in
+// can match an entry coming in (step 3).
 
 export interface MatchTransaction {
     id: string
@@ -24,7 +25,61 @@ export interface MatchDocument {
     paid_date: string | null
 }
 
+// A cash book entry as offered for matching (money in, money out, or a transfer between accounts)
+export interface MatchEntry {
+    id: string
+    direction: "in" | "out"  // seen from the statement's account
+    payee: string | null
+    reference: string | null
+    cents: number           // the entry's total, in the organisation's currency
+    date: string            // the day the money moved
+}
+
+// Anything a line can be matched to, in one shape for scoring. The id is "document:<uuid>" or
+// "transaction:<uuid>", so documents and entries never collide.
+export interface MatchCandidate {
+    id: string
+    direction: "in" | "out"
+    payee: string | null
+    references: (string | null)[]
+    cents: number | null            // comparable with the line, or null when it cannot be compared
+    issued: string | null
+    due: string | null
+    // The day it was paid, when it was paid (entries always are; documents when status is paid)
+    paidOn: string | null
+}
+
+export function documentCandidate(doc: MatchDocument, opts: MatchOptions): MatchCandidate {
+    return {
+        id: `document:${doc.id}`,
+        direction: "out",
+        payee: doc.vendor_name,
+        references: [doc.invoice_number, doc.reference_number],
+        cents: comparableCents(doc, opts),
+        issued: doc.document_date,
+        due: doc.due_date,
+        paidOn: doc.status === "paid" ? doc.paid_date : null,
+    }
+}
+
+// Entries are recorded in the organisation's currency, so a statement in another currency is never
+// compared with them by amount
+export function entryCandidate(e: MatchEntry, opts: MatchOptions): MatchCandidate {
+    const sameCurrency = (opts.statementCurrency ?? opts.baseCurrency) === opts.baseCurrency
+    return {
+        id: `transaction:${e.id}`,
+        direction: e.direction,
+        payee: e.payee,
+        references: [e.reference],
+        cents: sameCurrency ? e.cents : null,
+        issued: e.date,
+        due: e.date,
+        paidOn: e.date,
+    }
+}
+
 export interface MatchSuggestion {
+    // The candidate's id ("document:<uuid>" or "transaction:<uuid>")
     documentId: string
     score: number
     strong: boolean         // safe enough for "confirm all strong matches"
@@ -102,37 +157,38 @@ function comparableCents(doc: MatchDocument, opts: MatchOptions): number | null 
     return null
 }
 
-export function scoreCandidate(txn: MatchTransaction, doc: MatchDocument, opts: MatchOptions): MatchSuggestion | null {
-    if (txn.cents >= 0) return null                       // only money out is matched to expenses
-    const docCents = comparableCents(doc, opts)
-    if (docCents === null) return null
-    if (Math.abs(Math.abs(txn.cents) - docCents) > 1) return null   // the amount has to agree (to the cent)
+// Scores one line against one candidate (a document or an entry). Null when it does not fit at all.
+export function scoreMatch(txn: MatchTransaction, c: MatchCandidate): MatchSuggestion | null {
+    if (txn.cents === 0) return null
+    if ((txn.cents < 0 ? "out" : "in") !== c.direction) return null   // the direction has to agree
+    if (c.cents === null) return null
+    if (Math.abs(Math.abs(txn.cents) - c.cents) > 1) return null       // the amount has to agree (to the cent)
 
     const reasons = ["Same amount"]
     let score = 60
 
-    const sim = vendorSimilarity(doc.vendor_name, txn.description)
-    const numberHit = mentionsNumber(txn.description, doc.invoice_number) || mentionsNumber(txn.description, doc.reference_number)
+    const sim = vendorSimilarity(c.payee, txn.description)
+    const numberHit = c.references.some((r) => mentionsNumber(txn.description, r))
     if (numberHit) {
         score += 30
-        reasons.push("Invoice number appears on the bank line")
+        reasons.push("Reference appears on the bank line")
     } else if (sim >= 0.99) {
         score += 25
-        reasons.push("Vendor name matches")
+        reasons.push("Payee name matches")
     } else if (sim >= 0.5) {
         score += 15
-        reasons.push("Vendor name partly matches")
+        reasons.push("Payee name partly matches")
     }
 
-    // Dates: a paid document should have been paid about when the money left; an unpaid one is
-    // normally paid between its date (a few days early at most) and well after its due date.
+    // Dates: something already paid should have been paid about when the money moved; an unpaid
+    // document is normally paid between its date (a few days early at most) and well after its due date.
     const t = dayNumber(txn.date)
-    const paid = dayNumber(doc.paid_date)
-    const issued = dayNumber(doc.document_date)
-    const due = dayNumber(doc.due_date) ?? issued
+    const paid = dayNumber(c.paidOn)
+    const issued = dayNumber(c.issued)
+    const due = dayNumber(c.due) ?? issued
     let dateOk = false
     if (t !== null) {
-        if (doc.status === "paid" && paid !== null) {
+        if (paid !== null) {
             dateOk = Math.abs(t - paid) <= 3
             if (dateOk) {
                 score += Math.abs(t - paid) <= 1 ? 10 : 6
@@ -146,10 +202,16 @@ export function scoreCandidate(txn: MatchTransaction, doc: MatchDocument, opts: 
             }
         }
     }
-    // An exact amount with a different date and no sign of the vendor is too weak to suggest
+    // An exact amount with a different date and no sign of the payee is too weak to suggest
     if (!dateOk && sim < 0.5 && !numberHit) return null
 
-    return { documentId: doc.id, score, strong: score >= 90 && (sim >= 0.99 || numberHit) && dateOk, reasons }
+    return { documentId: c.id, score, strong: score >= 90 && (sim >= 0.99 || numberHit) && dateOk, reasons }
+}
+
+// A bank payment against an approved document (kept for callers that only have documents)
+export function scoreCandidate(txn: MatchTransaction, doc: MatchDocument, opts: MatchOptions): MatchSuggestion | null {
+    const s = scoreMatch(txn, documentCandidate(doc, opts))
+    return s ? { ...s, documentId: doc.id } : null
 }
 
 export interface MatchResult {
@@ -161,14 +223,16 @@ export interface MatchResult {
 
 // Suggests at most one document per payment and one payment per document. The best pairs are
 // assigned first, so two same-amount invoices are not both offered to the same payment.
-export function suggestMatches(txns: MatchTransaction[], docs: MatchDocument[], opts: MatchOptions): Map<string, MatchResult> {
+// Candidates are documents and entries already turned into MatchCandidate (documentCandidate /
+// entryCandidate); suggestion.documentId is the candidate id.
+export function suggestMatches(txns: MatchTransaction[], candidates: MatchCandidate[]): Map<string, MatchResult> {
     type Pair = { txnId: string; suggestion: MatchSuggestion }
     const pairs: Pair[] = []
     const perTxn = new Map<string, MatchSuggestion[]>()
     for (const txn of txns) {
         const list: MatchSuggestion[] = []
-        for (const doc of docs) {
-            const s = scoreCandidate(txn, doc, opts)
+        for (const cand of candidates) {
+            const s = scoreMatch(txn, cand)
             if (s) {
                 list.push(s)
                 pairs.push({ txnId: txn.id, suggestion: s })

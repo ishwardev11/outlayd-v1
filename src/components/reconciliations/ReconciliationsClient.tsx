@@ -32,7 +32,7 @@ export function ReconciliationsClient({ data }: { data: ReconciliationPage }) {
         <div className="space-y-6">
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reconciliations</h1>
+                    <h2 className="sr-only">Month-end reconciliation</h2>
                     <p className="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
                         At each month-end, enter the closing balance from the bank statement of every account. Outlayd shows its own
                         balance and the difference. A difference is normal while a payment has not cleared or a bank fee is not yet entered;
@@ -40,7 +40,7 @@ export function ReconciliationsClient({ data }: { data: ReconciliationPage }) {
                     </p>
                 </div>
                 <label className="text-xs text-slate-500">Month-end<br />
-                    <select aria-label="Month-end" className={selectClass} value={data.periodEnd} onChange={(e) => router.push(`/reconciliations?month=${e.target.value}`)}>
+                    <select aria-label="Month-end" className={selectClass} value={data.periodEnd} onChange={(e) => router.push(`/bank?tab=reconciliation&month=${e.target.value}`)}>
                         {data.monthEnds.map((m) => (
                             <option key={m.date} value={m.date}>{formatDay(m.date)}{m.reconciled > 0 ? ` (${m.reconciled} reconciled)` : ""}</option>
                         ))}
@@ -85,12 +85,15 @@ export function ReconciliationsClient({ data }: { data: ReconciliationPage }) {
 function Row({ row, periodEnd, editable, money, symbol, onDone }: {
     row: ReconciliationRow; periodEnd: string; editable: boolean; money: (n: number) => string; symbol: string; onDone: () => void
 }) {
-    const [balance, setBalance] = useState(row.statement_balance !== null ? row.statement_balance.toFixed(2) : "")
+    // Not reconciled yet: the balance from an uploaded statement of this account is filled in, to check and save
+    const prefilled = row.statement_balance === null && editable && row.suggested_balance !== null
+    const [balance, setBalance] = useState(row.statement_balance !== null ? row.statement_balance.toFixed(2) : prefilled ? row.suggested_balance!.toFixed(2) : "")
     const [note, setNote] = useState(row.note ?? "")
     const [busy, setBusy] = useState(false)
     const entered = toNumber(balance)
     const diff = entered === null ? null : Math.round((entered - row.outlayd_balance) * 100) / 100
     const changed = balance !== (row.statement_balance !== null ? row.statement_balance.toFixed(2) : "") || note !== (row.note ?? "")
+    const showingSuggestion = row.suggested_balance !== null && entered === row.suggested_balance && row.statement_balance !== row.suggested_balance
     const suggestion = row.suggested_balance !== null && row.suggested_balance !== entered ? row.suggested_balance : null
 
     const run = async (fn: () => Promise<{ success: boolean; error?: string }>, msg: string) => {
@@ -116,9 +119,14 @@ function Row({ row, periodEnd, editable, money, symbol, onDone }: {
             <td className="px-3 py-2.5 align-top">
                 <Input aria-label={`Statement balance of ${row.account_name}`} className="h-9 w-36" inputMode="decimal" placeholder={`${symbol}0.00`}
                     value={balance} disabled={!editable || busy} onChange={(e) => setBalance(e.target.value)} />
+                {editable && showingSuggestion && (
+                    <p className="mt-1 max-w-[16rem] text-xs text-slate-500 dark:text-slate-400" data-testid="reconciliation-source">
+                        Filled in from your {row.suggested_source ?? "uploaded bank statement"}. Check it, then Save.
+                    </p>
+                )}
                 {editable && suggestion !== null && (
-                    <button type="button" className="mt-1 block text-xs text-indigo-600 hover:underline" onClick={() => setBalance(suggestion.toFixed(2))}>
-                        Use {money(suggestion)} from your uploaded bank statement
+                    <button type="button" className="mt-1 block max-w-[16rem] text-left text-xs text-indigo-600 hover:underline" onClick={() => setBalance(suggestion.toFixed(2))}>
+                        Use {money(suggestion)} from your {row.suggested_source ?? "uploaded bank statement"}
                     </button>
                 )}
             </td>

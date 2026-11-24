@@ -13,8 +13,9 @@ export const maxDuration = 60
 // Hosting platforms refuse request bodies above about 4.5 MB, so the limit is set just under that.
 const MAX_BYTES = 4 * 1024 * 1024
 const BUCKET = "receipts"
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// POST /api/bank-statements  (multipart form, field "file": a PDF)
+// POST /api/bank-statements  (multipart form, field "file": a PDF, optional "account_id": the account it belongs to)
 // Saves the PDF, records it as "extracting" and reads it in the background.
 export async function POST(request: NextRequest) {
     const supabase = await createClient()
@@ -38,10 +39,17 @@ export async function POST(request: NextRequest) {
     }
 
     let file: File | null = null
+    let accountId: string | null = null
     try {
         const form = await request.formData()
         const f = form.get("file")
         file = f instanceof File ? f : null
+        const acct = form.get("account_id")
+        // Empty means the main account (set by the database); anything else must be an id
+        if (typeof acct === "string" && acct !== "") {
+            if (!UUID_RE.test(acct)) return NextResponse.json({ error: "Choose a valid account." }, { status: 400 })
+            accountId = acct
+        }
     } catch {
         return NextResponse.json({ error: "Could not read the upload." }, { status: 400 })
     }
@@ -96,11 +104,19 @@ export async function POST(request: NextRequest) {
             file_name: safeName,
             file_hash: fileHash,
             created_by: user.id,
+            account_id: accountId,
         })
         .select("id")
         .single()
     if (insertError || !row) {
         await createAdminClient().storage.from(BUCKET).remove([path])
+        if (insertError?.code === "P0001" && insertError.message) {
+            return NextResponse.json({ error: insertError.message }, { status: 400 })
+        }
+        // The database refuses an account of another organisation with a readable message
+        if (insertError?.code === "P0001" && insertError.message) {
+            return NextResponse.json({ error: insertError.message }, { status: 400 })
+        }
         if (insertError?.code === "23505") {
             return NextResponse.json({ error: "This statement has already been imported." }, { status: 409 })
         }
@@ -111,6 +127,6 @@ export async function POST(request: NextRequest) {
     const base64 = buffer.toString("base64")
     after(() => processBankStatement(row.id, organizationId, base64))
 
-    revalidatePath("/bank-statements")
+    revalidatePath("/bank")
     return NextResponse.json({ id: row.id })
 }

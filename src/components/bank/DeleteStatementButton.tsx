@@ -11,7 +11,7 @@ export function DeleteStatementButton({ id, redirectTo, label = "Delete" }: { id
     const [busy, setBusy] = useState(false)
 
     const remove = async () => {
-        if (!window.confirm("Delete this statement and its payments? Documents that were matched stay as they are.")) return
+        if (!window.confirm("Delete this statement and its lines? Documents and entries that were matched stay as they are.")) return
         setBusy(true)
         const res = await deleteBankStatement(id)
         setBusy(false)
