@@ -204,7 +204,8 @@ export async function updateDocument(id: string, rawUpdates: unknown) {
         return { success: false, error: error.message || "Failed to update document" }
     }
 
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     revalidatePath("/")
     revalidatePath("/vendors")
     revalidatePath("/reports")

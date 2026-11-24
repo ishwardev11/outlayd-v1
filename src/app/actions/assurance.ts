@@ -26,7 +26,7 @@ function dbMessage(error: { message?: string } | null | undefined, fallback: str
 }
 
 function revalidateAll() {
-    for (const p of ["/settings", "/bank", "/audit-log", "/ledger", "/invoices", "/assets", "/dashboard", "/reports"]) revalidatePath(p)
+    for (const p of ["/settings", "/bank", "/audit-log", "/inbox", "/transactions", "/invoices", "/assets", "/dashboard", "/reports"]) revalidatePath(p)
 }
 
 // ------------------------------------------------------------------ the lock
@@ -227,8 +227,8 @@ export interface StatementAssurance {
 function fixFor(code: string, from: string, to: string, monthEnd: string | null): { href: string; label: string } | null {
     const range = `from=${from}&to=${to}`
     switch (code) {
-        case "uncategorised": return { href: `/ledger?view=cash&${range}`, label: "Open the cash book" }
-        case "lines_balanced": return { href: `/ledger?view=cash&${range}`, label: "Open the cash book" }
+        case "uncategorised": return { href: `/transactions?${range}`, label: "Open the cash book" }
+        case "lines_balanced": return { href: `/transactions?${range}`, label: "Open the cash book" }
         case "opening_complete": return { href: "/settings/opening-position", label: "Complete the opening position" }
         case "balance_check": return { href: "/reports/financial-position", label: "Open the Statement of Financial Position" }
         case "prior_year": return { href: "/reports/changes-in-funds", label: "Open Changes in Funds" }

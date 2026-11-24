@@ -17,6 +17,12 @@ const nextConfig: NextConfig = {
       { source: "/bank-statements", destination: "/bank", permanent: true },
       { source: "/bank-statements/:id", destination: "/bank/:id", permanent: true },
       { source: "/reconciliations", destination: "/bank?tab=reconciliation", permanent: true },
+      // Step 4: the Ledger was split. The first rule that matches wins, so the plain /ledger comes last.
+      { source: "/ledger", has: [{ type: "query", key: "view", value: "cash" }], destination: "/transactions", permanent: true },
+      { source: "/ledger", has: [{ type: "query", key: "status", value: "needs_review" }], destination: "/inbox", permanent: true },
+      { source: "/ledger", has: [{ type: "query", key: "status", value: "awaiting_payment" }], destination: "/invoices?status=unpaid", permanent: true },
+      { source: "/ledger", has: [{ type: "query", key: "status", value: "paid" }], destination: "/transactions?type=money_out", permanent: true },
+      { source: "/ledger", destination: "/inbox", permanent: true },
     ];
   },
 };

@@ -188,8 +188,8 @@ BEGIN
   INSERT INTO organizations (name, fiscal_year_start) VALUES ('Free Test Club', 1) RETURNING id INTO o;
   INSERT INTO user_roles (organization_id, email, role) VALUES (o, 'free-admin@example.com', 'Admin'), (o, 'free-viewer@example.com', 'Viewer');
   INSERT INTO documents (organization_id, vendor_name, status, document_type, amount, document_date, due_date, fund_id, category_id, invoice_number)
-  VALUES (o, 'Hall Supplies', 'awaiting_payment', 'invoice', 320, '2026-11-02', '2026-11-30', (SELECT id FROM funds WHERE organization_id = o AND is_default), (SELECT id FROM categories WHERE organization_id = o AND kind = 'expense' ORDER BY name LIMIT 1), 'HS-11');
+  VALUES (o, 'Hall Supplies', 'awaiting_payment', 'invoice', 320, '2026-11-02', '2026-11-30', (SELECT id FROM funds WHERE organization_id = o AND is_default), (SELECT id FROM categories WHERE organization_id = o AND kind = 'expense' AND NOT is_system ORDER BY name LIMIT 1), 'HS-11');
   INSERT INTO documents (organization_id, vendor_name, status, document_type, amount, document_date, paid_date, fund_id, category_id)
-  VALUES (o, 'Kedai Runcit', 'paid', 'receipt', 85.5, '2026-11-05', '2026-11-05', (SELECT id FROM funds WHERE organization_id = o AND is_default), (SELECT id FROM categories WHERE organization_id = o AND kind = 'expense' ORDER BY name LIMIT 1));
+  VALUES (o, 'Kedai Runcit', 'paid', 'receipt', 85.5, '2026-11-05', '2026-11-05', (SELECT id FROM funds WHERE organization_id = o AND is_default), (SELECT id FROM categories WHERE organization_id = o AND kind = 'expense' AND NOT is_system ORDER BY name LIMIT 1));
 END $$;
 COMMIT;

@@ -33,7 +33,8 @@ function dbMessage(error: { message?: string } | null | undefined, fallback: str
 }
 
 function revalidateMoney() {
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     revalidatePath("/dashboard")
     revalidatePath("/vendors")
 }

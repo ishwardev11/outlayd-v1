@@ -112,8 +112,8 @@ export function reportSections(orgType: string | null | undefined, access: Repor
                 {
                     key: "cash_book_csv",
                     title: "Cash book CSV",
-                    description: "Every payment in and out, with your own filters. Open the cash book and choose Export CSV. Handy for your own checks.",
-                    href: "/ledger?view=cash",
+                    description: "Every payment in and out, with your own filters. Open Transactions and choose Export CSV. Handy for your own checks.",
+                    href: "/transactions",
                     lock: null,
                 },
             ],

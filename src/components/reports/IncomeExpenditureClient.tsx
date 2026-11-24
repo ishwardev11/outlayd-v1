@@ -34,10 +34,10 @@ export const amountCell = (value: number | undefined, strong = false) => (
 export function cashBookLink(filters: IEFilters, priorRange: { from: string; to: string } | null) {
     return (col: IEColumn, categoryId: string) => {
         const range = col.key === "prior" && priorRange ? priorRange : { from: filters.from, to: filters.to };
-        const p = new URLSearchParams({ view: "cash", from: range.from, to: range.to, category: categoryId });
+        const p = new URLSearchParams({ from: range.from, to: range.to, category: categoryId });
         const fund = col.fundId ?? filters.fund;
         if (fund) p.set("fund", fund);
-        return `/ledger?${p.toString()}`;
+        return `/transactions?${p.toString()}`;
     };
 }
 

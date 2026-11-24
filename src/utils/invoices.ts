@@ -34,7 +34,8 @@ export interface InvoiceRow {
 
 export interface InvoiceFilters {
     tab: InvoiceDirection
-    status: "all" | DerivedStatus
+    // "unpaid": everything still to pay or collect (open, part-paid or overdue), the old "Awaiting payment"
+    status: "all" | "unpaid" | DerivedStatus
     q: string
     page: number
     open: string
@@ -50,6 +51,7 @@ export const INVOICE_MAX_LINES = 100
 
 export const STATUS_OPTIONS: { value: InvoiceFilters["status"]; label: string }[] = [
     { value: "all", label: "All statuses" },
+    { value: "unpaid", label: "Still to pay" },
     { value: "draft", label: "Draft" },
     { value: "open", label: "Open" },
     { value: "part_paid", label: "Part-paid" },

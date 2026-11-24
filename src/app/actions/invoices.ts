@@ -25,6 +25,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "application/pdf"]
 const MAX_FILE_BYTES = 10 * 1024 * 1024
 const EXPORT_MAX_ROWS = 10000
+// "Still to pay" (the old Ledger's "Awaiting payment"): open, part-paid or overdue
+const UNPAID_STATUSES = ["open", "part_paid", "overdue"]
 const SUMMARY_COLUMNS = "id, direction, invoice_no, payee_id, payee_name, issue_date, due_date, reference, remarks, total, paid, balance, status, derived_status, days_overdue, ageing_bucket, is_opening_balance, source, document_id, attachment_url, void_reason"
 
 // The database raises readable messages ("This payment is more than the balance..."); show those
@@ -36,7 +38,8 @@ function dbMessage(error: { message?: string } | null | undefined, fallback: str
 
 function revalidateInvoices() {
     revalidatePath("/invoices")
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     revalidatePath("/dashboard")
     revalidatePath("/reports")
 }
@@ -84,7 +87,8 @@ function listQuery(supabase: Supabase, organizationId: string, f: InvoiceFilters
     if (onlyIds) q = q.in("id", onlyIds.length ? onlyIds : ["00000000-0000-0000-0000-000000000000"])
     if (f.from) q = q.gte("issue_date", f.from)
     if (f.to) q = q.lte("issue_date", f.to)
-    if (f.status !== "all") q = q.eq("derived_status", f.status)
+    if (f.status === "unpaid") q = q.in("derived_status", UNPAID_STATUSES)
+    else if (f.status !== "all") q = q.eq("derived_status", f.status)
     if (f.q) {
         const like = `%${f.q.replace(/[\\%_,()]/g, (c) => "\\" + c)}%`
         q = q.or(`payee_name.ilike.${like},invoice_no.ilike.${like},reference.ilike.${like}`)

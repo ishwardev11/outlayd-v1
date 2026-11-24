@@ -58,7 +58,7 @@ const COPY: Record<PaywallContext, { heading: string; subtext: string }> = {
     invoices: {
         heading: "Invoices are a Growth Feature",
         subtext:
-            "Create bills and invoices, number and send invoices with your letterhead, record part-payments and see what is overdue. Bills you approve in the Ledger keep appearing here on every plan.",
+            "Create bills and invoices, number and send invoices with your letterhead, record part-payments and see what is overdue. Bills you approve in the Inbox keep appearing in Bills & Invoices on every plan, and you can mark them paid there.",
     },
     assets: {
         heading: "Assets and Loans are a Growth Feature",

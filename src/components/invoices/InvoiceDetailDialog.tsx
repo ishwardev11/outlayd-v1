@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Ban, Download, Loader2, Paperclip, Pencil, Trash2, Wallet } from "lucide-react"
@@ -19,6 +18,9 @@ import { statusLabel } from "@/utils/invoices"
 import { StatusBadge } from "./StatusBadge"
 import { LockedNotice, useLock } from "@/components/LockProvider"
 import { RecordHistory } from "@/components/audit/RecordHistory"
+import { useRole } from "@/components/RoleProvider"
+import { markUploadedBillPaid } from "@/app/actions/ledger"
+import { DocumentOpener } from "@/components/ledger/DocumentOpener"
 
 const selectClass = "h-9 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white"
 
@@ -41,7 +43,9 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
     const inv = detail.invoice
     const payable = inv.direction === "payable"
     const money = (n: number) => `${symbol}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    const [mode, setMode] = useState<"view" | "pay" | "void">("view")
+    const { isViewer } = useRole()
+    const [mode, setMode] = useState<"view" | "pay" | "void" | "markPaid">("view")
+    const [paidOn, setPaidOn] = useState(todayLocal())
     const [busy, setBusy] = useState(false)
     const [pay, setPay] = useState({ amount: inv.balance.toFixed(2), date: todayLocal(), account: options.accounts.find((a) => a.is_default)?.id ?? "", reference: "", remarks: "" })
     const [reason, setReason] = useState("")
@@ -55,6 +59,10 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
     const canVoid = canWrite && !fromBill && inv.status !== "void" && inv.paid === 0 && !locked
     const canDelete = canWrite && !fromBill && inv.status === "draft" && !inv.invoice_no && !locked
     const payDateLocked = lock.isLocked(pay.date)
+    // A bill from an upload is paid through its document, on every plan (Admin or Editor). Paid plans can
+    // also record part-payments with "Record payment".
+    const canMarkPaid = fromBill && !isViewer && payable && inv.status === "open" && inv.balance > 0 && detail.document?.status === "awaiting_payment"
+    const paidOnLocked = lock.isLocked(paidOn)
     const accountChoices = options.accounts.filter((a) => !a.archived)
 
     const run = async (fn: () => Promise<{ success: boolean; error?: string }>, done: string) => {
@@ -99,10 +107,8 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
 
                 {fromBill && (
                     <p className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-3 text-sm text-slate-600 dark:text-slate-300">
-                        From an uploaded bill. Change the amounts, supplier or dates on the document; marking the document paid records the payment here.{" "}
-                        {detail.document && (
-                            <Link href={`/ledger?status=${detail.document.status}&q=${encodeURIComponent(detail.document.vendor_name ?? "")}`} className="text-indigo-600 hover:underline">Open the bill</Link>
-                        )}
+                        From an uploaded bill. Change the amounts, supplier or dates on the document; marking it paid records the payment here.{" "}
+                        {detail.document && <DocumentOpener documentId={detail.document.id} label="Open the bill" className="text-indigo-600 hover:underline" />}
                     </p>
                 )}
                 {locked && canWrite && (
@@ -199,6 +205,26 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                     </div>
                 )}
 
+                {mode === "markPaid" && (
+                    <div className="space-y-3 rounded-lg border border-indigo-200 dark:border-indigo-900 p-4" data-testid="mark-paid-form">
+                        <h3 className="text-sm font-semibold">Mark this bill as paid</h3>
+                        <div className="space-y-1.5 max-w-xs"><Label htmlFor="paid-on">Date paid</Label>
+                            <Input id="paid-on" type="date" value={paidOn} max={todayLocal()} onChange={(e) => setPaidOn(e.target.value)} /></div>
+                        <p className="text-xs text-slate-500">
+                            Records the {inv.paid > 0 ? `remaining ${money(inv.balance)}` : `full ${money(inv.total)}`} as paid from your main account on that day,
+                            and the payment appears in Transactions.
+                        </p>
+                        {paidOnLocked && <LockedNotice text={`That date is in a locked period. ${lock.message}`} />}
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setMode("view")} disabled={busy}>Cancel</Button>
+                            <Button disabled={busy || paidOnLocked || !paidOn} className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                onClick={() => detail.document && run(() => markUploadedBillPaid(detail.document!.id, paidOn), "Bill marked as paid. The payment is in Transactions.")}>
+                                {busy && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Mark as paid
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 {mode === "void" && (
                     <div className="space-y-3 rounded-lg border border-red-200 dark:border-red-900 p-4">
                         <p className="text-sm">The invoice stays on record marked void{inv.invoice_no ? ` and its number ${inv.invoice_no} is never reused` : ""}. It is no longer counted anywhere.</p>
@@ -226,12 +252,17 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                         <div className="flex flex-wrap gap-2">
                             {!payable && <Button variant="outline" onClick={downloadPdf} disabled={busy}><Download className="h-4 w-4 mr-1" />Download PDF</Button>}
                             {canEdit && <Button variant="outline" onClick={onEdit}><Pencil className="h-4 w-4 mr-1" />Edit</Button>}
+                            {canMarkPaid && (
+                                <Button variant={canPay ? "outline" : "default"} className={canPay ? "" : "bg-indigo-600 hover:bg-indigo-700 text-white"} onClick={() => setMode("markPaid")} data-testid="mark-paid">
+                                    <Wallet className="h-4 w-4 mr-1" />Mark as paid
+                                </Button>
+                            )}
                             {canPay && (
                                 <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setMode("pay")}>
                                     <Wallet className="h-4 w-4 mr-1" />Record payment
                                 </Button>
                             )}
-                            {!canPay && inv.status === "open" && inv.balance > 0 && !canWrite && (
+                            {!canPay && !canMarkPaid && inv.status === "open" && inv.balance > 0 && !canWrite && (
                                 <span className="self-center text-xs text-slate-500" title={statusLabel(inv.derived_status)}>Only Admins and Editors on a paid plan can record payments.</span>
                             )}
                         </div>

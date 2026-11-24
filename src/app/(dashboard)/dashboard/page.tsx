@@ -110,7 +110,7 @@ export default async function Home() {
             <AlertCircle className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <Link href="/ledger?status=awaiting_payment" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="awaiting-payment">
+            <Link href="/invoices?status=unpaid" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="awaiting-payment">
               {symbol}{money(awaitingPaymentTotal)}
             </Link>
           </CardContent>
@@ -124,7 +124,7 @@ export default async function Home() {
             <FileText className="h-4 w-4 text-indigo-500" />
           </CardHeader>
           <CardContent>
-            <Link href="/ledger?status=needs_review" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="needs-review">
+            <Link href="/inbox" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="needs-review">
               {needsReviewCount}
             </Link>
           </CardContent>
@@ -138,7 +138,7 @@ export default async function Home() {
             <ArrowUpRight className="h-4 w-4 text-indigo-500" />
           </CardHeader>
           <CardContent>
-            <Link href={`/ledger?view=cash&type=money_out&from=${cash.from}&to=${cash.to}`} className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="money-out-month">
+            <Link href={`/transactions?type=money_out&from=${cash.from}&to=${cash.to}`} className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="money-out-month">
               {symbol}{money(cash.moneyOut)}
             </Link>
             {needsReviewAmountTotal > 0 && (
@@ -158,7 +158,7 @@ export default async function Home() {
               <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
             </CardHeader>
             <CardContent>
-              <Link href={`/ledger?view=cash&type=money_in&from=${cash.from}&to=${cash.to}`} className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 hover:underline" data-testid="money-in-month">
+              <Link href={`/transactions?type=money_in&from=${cash.from}&to=${cash.to}`} className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 hover:underline" data-testid="money-in-month">
                 {symbol}{money(cash.moneyIn)}
               </Link>
             </CardContent>

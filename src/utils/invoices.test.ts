@@ -77,3 +77,7 @@ test("CSV: every invoice, formula-safe", () => {
     assert.deepEqual(rows[1].slice(0, 11), ["'=1+1", "Bill", 'Kedai "Maju"', "2026-10-01", "2026-10-31", "500.00", "200.00", "300.00", "Overdue", "22", ""])
     assert.equal(rows[1][11], "Uploaded bill")
 })
+
+test("\"Still to pay\" (unpaid) is a status filter: what the old Ledger called Awaiting payment", () => {
+    assert.equal(parseInvoiceFilters({ status: "unpaid" }).status, "unpaid")
+})

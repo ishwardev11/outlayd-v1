@@ -34,7 +34,8 @@ export async function issueDonationReceipt(transactionId: string): Promise<Actio
     const { data, error } = await supabase.rpc("issue_donation_receipt", { p_tx: transactionId })
     const row = (Array.isArray(data) ? data[0] : data) as { id?: string; receipt_no?: string } | null
     if (error || !row?.id) return { success: false, error: dbMessage(error, "Could not issue the receipt. Please try again.") }
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     return { success: true, data: { id: row.id, receiptNo: String(row.receipt_no) } }
 }
 
@@ -51,7 +52,8 @@ export async function voidDonationReceipt(receiptId: string, reason: string): Pr
     const supabase = await createClient()
     const { error } = await supabase.rpc("void_donation_receipt", { p_receipt: receiptId, p_reason: clean })
     if (error) return { success: false, error: dbMessage(error, "Could not void the receipt. Please try again.") }
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     return { success: true }
 }
 

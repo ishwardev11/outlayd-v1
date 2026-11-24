@@ -303,7 +303,7 @@ export function DonorMemoClient({ funds, fiscalYearStart, today }: { funds: Memo
                                     {memo.exceptions.map((e) => <li key={e.code}>{e.message}</li>)}
                                 </ul>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
-                                    Fix these in the <Link href="/ledger" className="underline">Ledger</Link>, then click Preview memo again. Flagged rows are tagged in the table below.
+                                    Fix these in <Link href="/transactions" className="underline">Transactions</Link> or <Link href="/invoices" className="underline">Bills &amp; Invoices</Link>, then click Preview memo again. Flagged rows are tagged in the table below.
                                 </p>
                             </CardContent>
                         )}

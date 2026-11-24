@@ -25,7 +25,7 @@ function dbMessage(error: { message?: string; code?: string } | null | undefined
 }
 
 function revalidateBalance() {
-    for (const p of ["/assets", "/settings", "/settings/opening-position", "/ledger", "/dashboard", "/reports"]) revalidatePath(p)
+    for (const p of ["/assets", "/settings", "/settings/opening-position", "/inbox", "/transactions", "/dashboard", "/reports"]) revalidatePath(p)
 }
 
 // ------------------------------------------------------------------ accounts

@@ -12,7 +12,7 @@ import { amountCell, downloadCsv } from "./IncomeExpenditureClient";
 // Where each line leads: the entries or register behind it
 function lineLink(l: BSLine): string | null {
     switch (l.section) {
-        case "cash": return l.refId ? `/ledger?view=cash&account=${l.refId}` : null;
+        case "cash": return l.refId ? `/transactions?account=${l.refId}` : null;
         case "receivables": return "/invoices?tab=receivable";
         case "payables": return "/invoices";
         case "funds": return "/reports/changes-in-funds";

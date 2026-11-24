@@ -40,6 +40,8 @@ export async function updateSession(request: NextRequest) {
     const isProtectedPath =
         pathname.startsWith('/dashboard') ||
         pathname.startsWith('/ledger') ||
+        pathname.startsWith('/inbox') ||
+        pathname.startsWith('/transactions') ||
         pathname.startsWith('/invoices') ||
         pathname.startsWith('/assets') ||
         pathname.startsWith('/reconciliations') ||

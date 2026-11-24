@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { approvedDestination } from "@/utils/inbox";
 import {
     Dialog,
     DialogContent,
@@ -64,6 +66,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
     const [splits, setSplits] = useState<Split[]>([]);
     const [lineItems, setLineItems] = useState<LineItemRow[]>([]);
     const { isViewer } = useRole();
+    const router = useRouter();
     const { paid } = usePlan();
     const lock = useLock();
     const { symbol, currency: baseCurrency } = useCurrency();
@@ -257,13 +260,17 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                 return;
             }
 
-            toast.success(
-                document.status === "paid"
-                    ? "Changes saved."
-                    : document.status === "awaiting_payment"
-                        ? "Invoice marked as paid."
-                        : "Document approved successfully."
-            );
+            if (document.status === "paid") {
+                toast.success("Changes saved.");
+            } else if (document.status === "awaiting_payment") {
+                toast.success("Bill marked as paid. It is now in Transactions.", {
+                    action: { label: "Open Transactions", onClick: () => router.push("/transactions?type=money_out") },
+                });
+            } else {
+                // Says where the approved document went: Transactions (paid receipt) or Bills & Invoices
+                const dest = approvedDestination(formData.document_type);
+                toast.success(dest.message, { action: { label: dest.label, onClick: () => router.push(dest.href) } });
+            }
 
             if (onNext) onNext();
             else onClose();
@@ -276,7 +283,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
         } finally {
             setIsSubmitting(false);
         }
-    }, [formData, splits, lineItems, isValidAmount, totalSplitAmount, document?.id, document?.status, onClose, onNext, fx, isForeign, baseCurrency]);
+    }, [formData, splits, lineItems, isValidAmount, totalSplitAmount, document?.id, document?.status, onClose, onNext, fx, isForeign, baseCurrency, router]);
 
     // Keyboard handling
     useEffect(() => {
@@ -328,7 +335,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                 toast.error("Could not read the document again", { description: res.error });
                 return;
             }
-            toast.success("Reading the document again", { description: "The details will appear in the ledger in a moment." });
+            toast.success("Reading the document again", { description: "The details will appear in the Inbox in a moment." });
             onClose();
         } catch (e) {
             toast.error("Could not read the document again", { description: errorMessage(e) });

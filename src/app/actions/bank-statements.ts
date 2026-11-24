@@ -454,7 +454,8 @@ async function applyMatch(a: Access, lineId: string, kind: MatchKind, targetId: 
 
 function revalidateBank() {
     revalidatePath("/bank", "layout")
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
 }
 
 export async function confirmBankMatch(lineId: string, kind: MatchKind, targetId: string, markPaid: boolean): Promise<ActionResult> {

@@ -21,13 +21,13 @@ export interface GettingStartedStep {
 
 export function gettingStartedSteps(p: OnboardingProgress, paid: boolean): GettingStartedStep[] {
     const steps: GettingStartedStep[] = [
-        { key: "upload", title: "Upload your first receipt or bill", text: "Drop a photo or PDF on Quick upload. Outlayd reads the payee, date and amount for you.", href: "/ledger", done: p.documents > 0 },
-        { key: "approve", title: "Check it and approve it", text: "Open it from Needs review, check the amount, category and fund, then approve it.", href: "/ledger?status=needs_review", done: p.approvedDocuments > 0 },
+        { key: "upload", title: "Upload your first receipt or bill", text: "Drop a photo or PDF on Quick upload. Outlayd reads the payee, date and amount for you.", href: "/inbox", done: p.documents > 0 },
+        { key: "approve", title: "Check it and approve it", text: "Open it from the Inbox, check the amount, category and fund, then approve it.", href: "/inbox?status=needs_review", done: p.approvedDocuments > 0 },
     ]
     if (paid) {
         steps.push(
             { key: "opening", title: "Set your opening position", text: "Your bank balances, what is owed and what you own on your start date. Your statements start from here.", href: "/settings/opening-position", done: p.openingComplete },
-            { key: "money_in", title: "Record money in", text: "A donation, grant or fee, with a numbered receipt for the donor if you like.", href: "/ledger?view=cash", done: p.moneyIn > 0 },
+            { key: "money_in", title: "Record money in", text: "A donation, grant or fee, with a numbered receipt for the donor if you like.", href: "/transactions", done: p.moneyIn > 0 },
             { key: "reconcile", title: "Reconcile a month-end", text: "Enter the closing balance from your bank statement and see that it agrees.", href: "/bank?tab=reconciliation", done: p.reconciliations > 0 },
             { key: "team", title: "Invite your team", text: "Add your treasurer or bookkeeper as an Editor, and committee members as Viewers.", href: "/settings?tab=team", done: p.members > 1 },
         )

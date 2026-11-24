@@ -4,8 +4,10 @@ import { Fragment, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, ChevronRight as ChevronRightSmall, Download, Loader2, Lock, Paperclip, Pencil } from "lucide-react"
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, ChevronRight as ChevronRightSmall, Download, Loader2, Lock, Paperclip, Pencil, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DocumentOpener } from "./DocumentOpener"
 import { Input } from "@/components/ui/input"
 import { useRole } from "@/components/RoleProvider"
 import { useCurrency } from "@/components/CurrencyProvider"
@@ -18,8 +20,9 @@ import { ReceiptActions } from "./ReceiptActions"
 
 const selectClass = "h-9 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white"
 
-// The cash book (spec 5.2): every movement of cash, read from transactions only. Paid documents
-// arrive through the database mirror and open in Documents; money in is entered and edited here.
+// The cash book (spec 5.2), shown on Transactions: every movement of cash, read from transactions only.
+// Paid uploads arrive through the database mirror and open their document in place; money in is
+// entered and edited here.
 export function CashBook({ rows, total, page, pageSize, filters, options }: {
     rows: CashBookRow[]
     total: number
@@ -48,7 +51,7 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
     const paywall = usePaywall("income")
 
     const go = (f: CashBookFilters) => {
-        const p = new URLSearchParams({ view: "cash" })
+        const p = new URLSearchParams()
         for (const [k, v] of Object.entries(f)) if (v && v !== "all" && !(k === "page" && v === 1)) p.set(k, String(v))
         router.push(`${pathname}?${p.toString()}`)
     }
@@ -97,15 +100,29 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-2">
                     {paywall.modal}
-                    <Button onClick={() => (options.paid ? setDialog({ mode: "in", edit: null, key: Date.now() }) : paywall.open())} disabled={isViewer}
-                        title={isViewer ? "Viewers cannot record money in" : !options.paid ? "Recording income and donations is part of the Growth and Nonprofit plans" : ""}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                        {options.paid ? <ArrowDownLeft className="h-4 w-4 mr-1.5" /> : <Lock className="h-4 w-4 mr-1.5" />}Money in
-                    </Button>
-                    <Button onClick={() => setDialog({ mode: "out", edit: null, key: Date.now() })} disabled={isViewer}
-                        title={isViewer ? "Viewers cannot record money out" : "A payment without a receipt to upload"} variant="outline">
-                        <ArrowUpRight className="h-4 w-4 mr-1.5" />Money out
-                    </Button>
+                    {/* One "New" button: money in, money out, or a transfer between funds */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button disabled={isViewer} title={isViewer ? "Viewers cannot record entries" : ""} className="bg-indigo-600 hover:bg-indigo-700 text-white" data-testid="new-entry">
+                                <Plus className="h-4 w-4 mr-1.5" />New<ChevronDown className="h-4 w-4 ml-1" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-64">
+                            <DropdownMenuItem onSelect={() => (options.paid ? setDialog({ mode: "in", edit: null, key: Date.now() }) : paywall.open())}
+                                title={!options.paid ? "Recording income and donations is part of the Growth and Nonprofit plans" : ""}>
+                                {options.paid ? <ArrowDownLeft className="h-4 w-4 text-emerald-600" /> : <Lock className="h-4 w-4" />}
+                                <span>Money in<span className="block text-xs text-slate-500">A donation, grant, fee or refund</span></span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setDialog({ mode: "out", edit: null, key: Date.now() })}>
+                                <ArrowUpRight className="h-4 w-4" />
+                                <span>Money out<span className="block text-xs text-slate-500">A payment without a receipt to upload</span></span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => router.push("/settings?tab=accounts")}>
+                                <ArrowLeftRight className="h-4 w-4" />
+                                <span>Fund transfer<span className="block text-xs text-slate-500">Move money between funds (in Settings for now)</span></span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
                 <Button variant="outline" onClick={exportCsv} disabled={exporting || total === 0}>
                     {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Download className="h-4 w-4 mr-1.5" />}Export CSV
@@ -208,7 +225,7 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                                                         {loadingEdit === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}{isViewer ? "View" : "Edit"}
                                                     </button>
                                                 ) : r.documentId ? (
-                                                    <Link href={`/ledger?status=paid&q=${encodeURIComponent(r.payee)}`} className="text-indigo-600 hover:underline text-xs" title="This entry comes from a document. Change it there.">Open document</Link>
+                                                    <DocumentOpener documentId={r.documentId} title="This entry comes from an upload. Open it to see the document and its history, or change it there." />
                                                 ) : null}
                                             </div>
                                         </td>

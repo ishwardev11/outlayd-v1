@@ -6,13 +6,13 @@ import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { after } from "next/server"
 
-import { getOrganizationId, updateDocument, checkWriteAccess } from "./document-utils"
-import { startOfMonthInstant, isValidTimezone, DEFAULT_TIMEZONE } from "@/utils/dates"
+import { getOrganizationId, getOrganizationTimezone, updateDocument, checkWriteAccess } from "./document-utils"
+import { startOfMonthInstant, isValidTimezone, DEFAULT_TIMEZONE, todayInTimezone } from "@/utils/dates"
 import { sanitizeVendorUpdates, assertOwnedIds, UpdateValidationError } from "@/utils/sanitize-updates"
 import { runExtraction } from "./ai"
 import { toStoragePath } from "@/utils/storage-paths"
 import { getPlanState, requireFeature } from "@/utils/plan"
-import { isLockError } from "@/utils/lock"
+import { isLockError, lockedMessage } from "@/utils/lock"
 import { errorMessage, type ExtractionFlagRow } from "@/utils/row-types";
 export { getOrganizationId, updateDocument }
 
@@ -99,7 +99,8 @@ export async function createFund(name: string) {
         throw new Error("Failed to create fund")
     }
 
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     return data
 }
 
@@ -119,7 +120,8 @@ export async function createCategory(name: string) {
         throw new Error("Failed to create category")
     }
 
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     return data
 }
 
@@ -139,7 +141,8 @@ export async function deleteDocument(id: string): Promise<{ success: true } | { 
         return { success: false, error: "Failed to delete document" }
     }
 
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     revalidatePath("/")
     revalidatePath("/vendors")
     revalidatePath("/reports")
@@ -182,7 +185,8 @@ export async function deleteVendor(id: string): Promise<{ action: "archived" | "
     }
 
     revalidatePath("/vendors")
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     revalidatePath("/")
     revalidatePath("/reports")
     return { action }
@@ -197,7 +201,8 @@ export async function restorePayee(id: string) {
         throw new Error("Failed to restore payee")
     }
     revalidatePath("/vendors")
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
 }
 
 export async function createPayee(name: string, payeeType: string = "vendor") {
@@ -222,7 +227,8 @@ export async function createPayee(name: string, payeeType: string = "vendor") {
     }
 
     revalidatePath("/vendors")
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     return data
 }
 
@@ -265,7 +271,8 @@ export async function updateVendor(id: string, rawUpdates: unknown) {
     }
 
     revalidatePath("/vendors")
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     revalidatePath("/")
     revalidatePath("/reports")
     return data
@@ -309,7 +316,8 @@ export async function mergeVendors(primaryId: string, secondaryId: string) {
     }
 
     revalidatePath("/vendors")
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     revalidatePath("/")
     revalidatePath("/reports")
 
@@ -456,7 +464,8 @@ export async function processUpload(formData: FormData) {
                 throw new Error(`Database record creation failed: ${docError.message}`)
             }
 
-            revalidatePath("/ledger")
+            revalidatePath("/inbox")
+    revalidatePath("/transactions")
             revalidatePath("/")
             return docData
         }
@@ -539,7 +548,8 @@ export async function processUpload(formData: FormData) {
                     throw new Error(`Database record creation failed: ${dupError.message}`)
                 }
 
-                revalidatePath("/ledger")
+                revalidatePath("/inbox")
+    revalidatePath("/transactions")
                 revalidatePath("/")
                 return dupData;
             }
@@ -555,7 +565,8 @@ export async function processUpload(formData: FormData) {
         // runExtraction enforces a deadline and always moves the document out of "extracting".
         after(() => runExtraction(docData.id, mimeType, base64Data, organization_id ?? undefined))
 
-        revalidatePath("/ledger")
+        revalidatePath("/inbox")
+    revalidatePath("/transactions")
         revalidatePath("/")
         return docData
     } catch (error) {
@@ -644,7 +655,8 @@ async function retryExtractionOrThrow(documentId: string) {
 
     after(() => runExtraction(documentId, mimeType, base64Data, organization_id))
 
-    revalidatePath("/ledger")
+    revalidatePath("/inbox")
+    revalidatePath("/transactions")
     revalidatePath("/")
     return { success: true }
 }
@@ -658,4 +670,54 @@ export async function retryExtraction(documentId: string): Promise<{ success: tr
     } catch (e) {
         return { success: false, error: errorMessage(e) || "Could not read the document again." }
     }
+}
+
+// "Mark as paid" for a bill that came from an upload, on Bills & Invoices (simplification step 4).
+// It goes through the same path as the review drawer's "Mark as paid" (updateDocument: role, ownership,
+// currency checks and the audit log), so it works on every plan: free organisations can read their
+// bills and must be able to pay them. The payment is recorded in the main account by the database
+// mirror, like every paid upload; the chosen day is then set as the payment date.
+export async function markUploadedBillPaid(documentId: string, paidDate: string): Promise<{ success: true } | { success: false; error: string }> {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!UUID_RE.test(documentId ?? "")) return { success: false, error: "That bill was not found" }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(paidDate ?? "") || Number.isNaN(Date.parse(`${paidDate}T00:00:00Z`))
+        || new Date(`${paidDate}T00:00:00Z`).toISOString().slice(0, 10) !== paidDate) {
+        return { success: false, error: "Enter the date the bill was paid" }
+    }
+    try {
+        await checkWriteAccess()
+    } catch {
+        return { success: false, error: "Only Admins and Editors can mark bills as paid." }
+    }
+    const supabase = await createClient()
+    const organizationId = await getOrganizationId()
+    if (!organizationId) return { success: false, error: "No active organization" }
+
+    const { data: doc } = await supabase.from("documents").select("id, status, document_type, document_date")
+        .eq("id", documentId).eq("organization_id", organizationId).maybeSingle()
+    if (!doc) return { success: false, error: "That bill was not found" }
+    if (doc.status !== "awaiting_payment") return { success: false, error: "This bill is not waiting for payment" }
+
+    const { data: org } = await supabase.from("organizations").select("lock_date").eq("id", organizationId).maybeSingle()
+    const lockDate = (org?.lock_date as string | null) ?? null
+    if (lockDate && paidDate <= lockDate) {
+        return { success: false, error: `${lockedMessage(lockDate)} Choose a later payment date.` }
+    }
+    const today = todayInTimezone(await getOrganizationTimezone())
+    if (paidDate > today) return { success: false, error: "The payment date cannot be in the future" }
+
+    const result = await updateDocument(documentId, { status: "paid" })
+    if (!result?.success) return { success: false, error: ("error" in result && result.error) || "Could not mark the bill as paid." }
+
+    // updateDocument stamps today; the person chose the day the money actually left
+    const { error: dateError } = await supabase.from("documents").update({ paid_date: paidDate })
+        .eq("id", documentId).eq("organization_id", organizationId)
+    if (dateError) {
+        console.error("markUploadedBillPaid: could not set the payment date:", dateError)
+        return { success: false, error: isLockError(dateError) ? errorMessage(dateError) : "The bill was marked paid today, but the payment date could not be changed. Open the bill to correct it." }
+    }
+    revalidatePath("/invoices")
+    revalidatePath("/transactions")
+    revalidatePath("/dashboard")
+    return { success: true }
 }

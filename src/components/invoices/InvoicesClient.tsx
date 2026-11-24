@@ -19,7 +19,7 @@ import { UpgradeNotice, usePaywall } from "@/components/ui/UpgradeNotice"
 
 const selectClass = "h-9 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white"
 
-// The Invoices page (spec 5.4): bills to pay and invoices you issued, with what is still owed by age.
+// The Bills & Invoices page (spec 5.4): bills to pay and invoices you issued, with what is still owed by age.
 export function InvoicesClient({ data, filters, options }: { data: InvoicesPage; filters: InvoiceFilters; options: EntryOptions }) {
     const router = useRouter()
     const { isViewer } = useRole()
@@ -113,7 +113,7 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
         <div className="space-y-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Invoices</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Bills &amp; Invoices</h1>
                     <p className="text-gray-500 mt-2 dark:text-slate-400">Bills you owe and invoices you issued, with what is still outstanding.</p>
                 </div>
                 <Button onClick={() => (options.paid ? setForm({ edit: null, key: Date.now() }) : paywall.open())} disabled={isViewer}
@@ -126,8 +126,8 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
 
             {!options.paid && (
                 <UpgradeNotice context="invoices">
-                    Bills you approve in the Ledger appear here automatically, and you mark them paid in the Ledger as usual.
-                    Creating invoices, invoicing others and recording part-payments are part of the Growth and Nonprofit plans.
+                    Bills you approve in the Inbox appear here automatically. Open one and choose Mark as paid when you pay it.
+                    Creating bills and invoices, invoicing others and recording part-payments are part of the Growth and Nonprofit plans.
                 </UpgradeNotice>
             )}
 
@@ -195,7 +195,7 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {data.rows.length === 0 && (
                             <tr><td colSpan={9} className="px-4 py-10 text-center text-slate-500">
-                                {payable ? "No bills match. Bills you approve in the Ledger appear here automatically." : "No invoices match. Create one with the button above."}
+                                {payable ? "No bills match. Bills you approve in the Inbox appear here automatically." : "No invoices match. Create one with the button above."}
                             </td></tr>
                         )}
                         {data.rows.map((r) => (
