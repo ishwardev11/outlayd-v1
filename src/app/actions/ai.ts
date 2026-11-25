@@ -1,4 +1,6 @@
-import { GoogleGenerativeAI, SchemaType, type GenerationConfig } from "@google/generative-ai"
+import { SchemaType, type GenerationConfig } from "@google/generative-ai"
+import { aiConfigured, generateFromDocument } from "@/lib/ai/gemini"
+import { claimAiCall, finishAiCall } from "@/lib/ai/usage"
 import { updateDocument, getOrganizationId, getOrganizationCurrency } from "./document-utils"
 import { getCurrencyDetails } from "@/utils/currency"
 import { createClient } from "@/utils/supabase/server"
@@ -9,7 +11,7 @@ import { errorMessage, errorProp } from "@/utils/row-types";
 // NOTE: deliberately NOT a "use server" file. Its only caller is processUpload (server side), and a
 // "use server" export can be invoked directly by any signed-in browser, which would let someone run
 // paid AI extractions without going through the upload limits.
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
+// The AI call itself goes through the shared module src/lib/ai (same model, timeout and retries).
 
 // One Gemini request is given 30s. The whole extraction (Gemini, FX lookup, database writes) must
 // finish inside EXTRACTION_DEADLINE_MS, which is kept under the 60s page/function limit so a slow
@@ -152,7 +154,7 @@ export async function extractDocumentData(
     base64Data: string,
     organizationId?: string
 ) {
-    if (!process.env.GEMINI_API_KEY) {
+    if (!aiConfigured()) {
         throw new Error("GEMINI_API_KEY is missing from environment variables")
     }
 
@@ -160,10 +162,7 @@ export async function extractDocumentData(
     const { symbol } = getCurrencyDetails(orgCurrency);
     const extractionPrompt = getExtractionSystemPrompt(orgCurrency, symbol);
 
-    const generationConfig: GenerationConfig = {
-        temperature: 0.1,
-        responseMimeType: "application/json",
-        responseSchema: {
+    const responseSchema: GenerationConfig["responseSchema"] = {
             type: SchemaType.OBJECT,
             properties: {
                 vendor: {
@@ -226,55 +225,20 @@ export async function extractDocumentData(
                 }
             },
             required: ["vendor", "invoice_details", "financial_summary", "line_items"]
-        }
     }
 
     try {
-        let result;
-        const maxRetries = 2;
-
-        // Gemini 2.5 Flash "thinks" before it answers by default. Reading a document does not need
-        // that, and it adds many seconds, so the thinking budget is set to 0. The SDK's types do not
-        // list thinkingConfig yet, but it is passed straight through to the API.
-        const model = genAI.getGenerativeModel(
-            {
-                model: "gemini-2.5-flash",
-                generationConfig: { ...generationConfig, thinkingConfig: { thinkingBudget: 0 } } as GenerationConfig,
-            },
-            { timeout: GEMINI_ATTEMPT_TIMEOUT_MS }
-        );
-
-        for (let attempt = 0; attempt <= maxRetries; attempt++) {
-            try {
-                // Pass system prompt and the document inline for extraction
-                result = await model.generateContent([
-                    extractionPrompt,
-                    {
-                        inlineData: {
-                            data: base64Data,
-                            mimeType
-                        }
-                    }
-                ]);
-
-                // If successful, break out of the retry loop
-                break;
-            } catch (error) {
-                const status = errorProp(error, "status") || errorProp(errorProp(error, "response"), "status");
-                const isRateLimitOrUnavailable = status === 503 || status === 429 || errorMessage(error).includes("503") || errorMessage(error).includes("429");
-
-                // Only "busy" errors are retried. A request that timed out is not retried: it already
-                // used its 30s, and a second attempt would run into the overall deadline.
-                if (isRateLimitOrUnavailable && attempt < maxRetries) {
-                    const waitTime = Math.pow(2, attempt) * 1000;
-                    console.warn(`Gemini API unavailable or rate limited. Retrying in ${waitTime}ms... (Attempt ${attempt + 1} of ${maxRetries})`);
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
-                    continue;
-                }
-
-                throw error;
-            }
-        }
+        // Busy answers (429/503) are tried twice more, waiting 1s then 2s. A request that timed out is
+        // not retried: it already used its 30s, and a second attempt would run into the overall deadline.
+        const result = await generateFromDocument({
+            prompt: extractionPrompt,
+            file: { data: base64Data, mimeType },
+            schema: responseSchema,
+            temperature: 0.1,
+            timeoutMs: GEMINI_ATTEMPT_TIMEOUT_MS,
+            retries: 2,
+            retryDelayMs: (attempt) => Math.pow(2, attempt) * 1000,
+        });
 
         if (!result) {
             throw new Error("Failed to generate content after max retries");
@@ -489,6 +453,9 @@ export async function runExtraction(
     base64Data: string,
     organizationId?: string
 ) {
+    // Counted in ai_usage only: receipt reading keeps its own limits (5 uploads a month on Free)
+    const usageOrg = organizationId ?? (await getOrganizationId().catch(() => null))
+    if (usageOrg) await claimAiCall(usageOrg, "receipt_extraction")
     let timer: ReturnType<typeof setTimeout> | undefined
     const deadline = new Promise<"timeout">((resolve) => {
         timer = setTimeout(() => resolve("timeout"), EXTRACTION_DEADLINE_MS)
@@ -498,6 +465,7 @@ export async function runExtraction(
             extractDocumentData(documentId, mimeType, base64Data, organizationId).then(() => "done" as const),
             deadline,
         ])
+        if (outcome === "done" && usageOrg) await finishAiCall(usageOrg, "receipt_extraction", true)
         if (outcome === "timeout") {
             console.error(`Extraction of ${documentId} passed ${EXTRACTION_DEADLINE_MS}ms; marking it for manual review`)
             await markExtractionFailed(documentId, "EXTRACTION_TIMED_OUT", `no result within ${EXTRACTION_DEADLINE_MS / 1000}s`)

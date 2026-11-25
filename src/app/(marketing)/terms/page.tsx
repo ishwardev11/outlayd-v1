@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Navbar, Footer } from "../page";
+import { Navbar, Footer } from "@/components/marketing/SiteChrome";
 import { PRICES } from "@/utils/plan-comparison";
 
 export const metadata: Metadata = {

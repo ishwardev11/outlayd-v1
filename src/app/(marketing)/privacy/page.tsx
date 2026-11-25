@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Navbar, Footer } from "../page";
+import { Navbar, Footer } from "@/components/marketing/SiteChrome";
 
 export const metadata: Metadata = {
     title: "Privacy Policy | Outlayd",
@@ -29,7 +29,7 @@ export default function PrivacyPolicyPage() {
                 <div className="container mx-auto max-w-4xl">
                     <div className="mb-12 border-b border-white/10 pb-8">
                         <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mb-4">Privacy Policy</h1>
-                        <p className="text-slate-400 text-lg">Last updated: 23 November 2026</p>
+                        <p className="text-slate-400 text-lg">Last updated: 25 November 2026</p>
                     </div>
 
                     <div className="text-slate-300 space-y-6 text-lg leading-relaxed">
@@ -80,7 +80,7 @@ export default function PrivacyPolicyPage() {
                             <List>
                                 <li><strong>Supabase:</strong> our database, file storage and sign-in.</li>
                                 <li><strong>Vercel:</strong> hosting of the website and application.</li>
-                                <li><strong>Google (Gemini API):</strong> when you upload a document or bank statement, it is sent to Google&apos;s Gemini API so the details can be read and returned to you. Google&apos;s handling of this data is governed by its terms for API customers.</li>
+                                <li><strong>Google (Gemini API):</strong> our AI provider. To read and suggest details for you, financial documents you upload (receipts, bills, invoices, payment slips and bank statements) are sent to Google&apos;s Gemini API, and where a feature needs it, a few details of an entry (such as the payee name, description and line items, to suggest a category). Only what that feature needs is sent: never full bank account numbers, and nothing from another organisation. The AI only suggests; nothing is saved to your records until a person confirms it. Google&apos;s handling of this data is governed by its terms for API customers.</li>
                                 <li><strong>Stripe:</strong> subscription payments. Stripe collects your card details directly.</li>
                                 <li><strong>Resend:</strong> delivery of messages sent through our contact form.</li>
                             </List>

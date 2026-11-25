@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BookOpenCheck, FileText, HeartHandshake, Landmark, ShieldCheck, Users } from "lucide-react";
-import { Navbar, Footer } from "../page";
+import { Navbar, Footer } from "@/components/marketing/SiteChrome";
 import { PlanCards, PlanComparisonTable } from "@/components/marketing/PlanComparison";
 
 export const metadata: Metadata = {

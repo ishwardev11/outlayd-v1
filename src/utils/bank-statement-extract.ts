@@ -1,11 +1,11 @@
-import { GoogleGenerativeAI, SchemaType, type GenerationConfig } from "@google/generative-ai"
+import { SchemaType, type GenerationConfig } from "@google/generative-ai"
 import { createClient } from "@/utils/supabase/server"
 import { parseStatement, type RawStatement } from "@/utils/bank-statement-parse"
-import { errorMessage, errorProp } from "@/utils/row-types";
+import { errorMessage } from "@/utils/row-types";
+import { aiConfigured, generateFromDocument } from "@/lib/ai/gemini"
+import { claimAiCall, finishAiCall } from "@/lib/ai/usage"
 
 type Supabase = Awaited<ReturnType<typeof createClient>>
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
 // A request gets 40s and the whole job 52s, inside the 60s limit of the page or route that starts
 // it, so a statement that cannot be read ends as "failed" with a message and never stays "reading".
@@ -33,7 +33,7 @@ Rules:
 - If a row has both a debit and a credit, return both.
 - If you cannot read a value, use null. Never make one up.`
 
-const schema = {
+const schema: GenerationConfig["responseSchema"] = {
     type: SchemaType.OBJECT,
     properties: {
         bank_name: { type: SchemaType.STRING, nullable: true },
@@ -64,33 +64,19 @@ const schema = {
 export class StatementError extends Error {}
 
 async function readStatementWithAI(base64Pdf: string): Promise<RawStatement> {
-    if (!process.env.GEMINI_API_KEY) throw new StatementError("The AI service is not set up (missing GEMINI_API_KEY).")
+    if (!aiConfigured()) throw new StatementError("The AI service is not set up (missing GEMINI_API_KEY).")
 
-    // thinkingConfig is not in the SDK's types yet but is passed straight through to the API
-    const generationConfig = {
+    // One more try after 2s if the AI service is busy (429/503)
+    const result = await generateFromDocument({
+        prompt: PROMPT,
+        file: { data: base64Pdf, mimeType: "application/pdf" },
+        schema,
         temperature: 0,
-        responseMimeType: "application/json",
-        responseSchema: schema,
+        timeoutMs: GEMINI_TIMEOUT_MS,
+        retries: 1,
+        retryDelayMs: () => 2000,
         maxOutputTokens: 32768,
-        thinkingConfig: { thinkingBudget: 0 },
-    } as unknown as GenerationConfig
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig }, { timeout: GEMINI_TIMEOUT_MS })
-
-    let result
-    for (let attempt = 0; attempt <= 1; attempt++) {
-        try {
-            result = await model.generateContent([PROMPT, { inlineData: { data: base64Pdf, mimeType: "application/pdf" } }])
-            break
-        } catch (error) {
-            const status = errorProp(error, "status") || errorProp(errorProp(error, "response"), "status")
-            const busy = status === 503 || status === 429 || /503|429/.test(String(errorMessage(error)))
-            if (busy && attempt < 1) {
-                await new Promise((r) => setTimeout(r, 2000))
-                continue
-            }
-            throw error
-        }
-    }
+    })
     if (!result) throw new StatementError("The AI service did not answer.")
 
     // If the answer was cut off, the last rows are missing, so refuse rather than import half of it
@@ -174,6 +160,8 @@ async function readAndStore(supabase: Supabase, statementId: string, organizatio
 // "ready" or "failed".
 export async function processBankStatement(statementId: string, organizationId: string, base64Pdf: string) {
     const supabase = await createClient()
+    // Counted in ai_usage only: statement import keeps its own rule (paid plans)
+    await claimAiCall(organizationId, "bank_statement")
     let timer: ReturnType<typeof setTimeout> | undefined
     const deadline = new Promise<"timeout">((resolve) => {
         timer = setTimeout(() => resolve("timeout"), STATEMENT_DEADLINE_MS)
@@ -183,6 +171,7 @@ export async function processBankStatement(statementId: string, organizationId: 
             readAndStore(supabase, statementId, organizationId, base64Pdf).then(() => "done" as const),
             deadline,
         ])
+        if (outcome === "done") await finishAiCall(organizationId, "bank_statement", true)
         if (outcome === "timeout") {
             console.error(`Statement ${statementId} passed ${STATEMENT_DEADLINE_MS}ms`)
             await failStatement(supabase, statementId, "Reading this statement took too long. Try a shorter period, or upload it again.")

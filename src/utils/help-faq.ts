@@ -32,4 +32,8 @@ export const HELP_FAQ: Faq[] = [
         q: "What do the extraction check scores mean?",
         a: "After the AI reads a document, Outlayd checks the result for problems: a missing total, vendor or date, figures that do not add up, line items that do not match, or an amount in a different currency. The score starts at 100 and drops for each problem found, and the problems are listed when you open the document. 90% or more means no significant problems were found. It is not a measure of how sure the AI is, so always check the key fields before approving.",
     },
+    {
+        q: "Who reads my documents when the AI is used?",
+        a: "Outlayd uses Google's Gemini API as its AI provider. When you upload a receipt, bill, invoice, payment slip or bank statement, the file is sent to Gemini so the details can be read and filled in for you. Only what the feature needs is sent, never full bank account numbers, and your documents are not used to train AI models. The AI only suggests: nothing is saved to your records until you check it and press Save or Confirm. This is how we process your data under the PDPA; see the Privacy Policy for the details.",
+    },
 ]
