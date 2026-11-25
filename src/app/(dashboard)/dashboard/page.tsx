@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getDashboardSummary, getBillsToPay, getExtractingCount, getCashThisMonth, getOverdueInvoices, getFundBalances, getOnboardingProgress } from "@/app/actions/aggregates";
+import { getDashboardSummary, getBillsToPay, getExtractingCount, getCashThisMonth, getOverdueInvoices, getFundBalances, getOnboardingProgress, getPendingIncome } from "@/app/actions/aggregates";
 import { getInboxCounts } from "@/app/actions/inbox";
 import { GettingStarted } from "@/components/dashboard/GettingStarted";
 import { gettingStartedSteps } from "@/utils/getting-started";
@@ -13,7 +13,7 @@ import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
 import { QuickUpload } from "@/components/dashboard/QuickUpload";
 import { ExtractionPoller } from "@/components/ExtractionPoller";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Receipt, Inbox, ArrowDownLeft, ArrowUpRight, Info, Clock } from "lucide-react";
+import { Receipt, Inbox, ArrowDownLeft, ArrowUpRight, Info, Clock, HandCoins, Paperclip } from "lucide-react";
 
 const money = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -51,7 +51,7 @@ export default async function Home() {
   // waiting in the Inbox, the bills to pay, and money in and out this month. The action queue and the
   // recent activity list went; the Inbox and Bills & Invoices show the same things in full.
   const supabase = await createClient();
-  const [summary, inbox, bills, extractingCount, cash, canRecordIncome, overdue, { data: orgRow }, fundBalances, progress] = await Promise.all([
+  const [summary, inbox, bills, extractingCount, cash, canRecordIncome, overdue, { data: orgRow }, fundBalances, progress, pending] = await Promise.all([
     getDashboardSummary(),
     getInboxCounts(),
     getBillsToPay(),
@@ -62,6 +62,7 @@ export default async function Home() {
     supabase.from("organizations").select("opening_position_completed_at").eq("id", orgId).maybeSingle(),
     getFundBalances(),
     getOnboardingProgress(),
+    getPendingIncome(),
   ]);
   // Paid organisations are asked once to set up their opening position (spec 5.6)
   const needsOpening = canRecordIncome && !orgRow?.opening_position_completed_at;
@@ -79,6 +80,10 @@ export default async function Home() {
   ].filter(Boolean);
   // Money in is a paid feature; a free organisation still sees it if it has any (refunds, credit notes)
   const showMoneyIn = canRecordIncome || cash.moneyIn > 0;
+  // Invoices you issue are a paid feature; a downgraded organisation still sees what is owed to it
+  const showPending = canRecordIncome || pending.count > 0;
+  const cardCount = 3 + (showMoneyIn ? 1 : 0) + (showPending ? 1 : 0);
+  const gridCols = cardCount === 5 ? "lg:grid-cols-3 2xl:grid-cols-5" : cardCount === 4 ? "xl:grid-cols-4" : "lg:grid-cols-3";
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -102,9 +107,19 @@ export default async function Home() {
         </div>
       )}
 
+      {/* Invoices you issued that are paid (or part-paid) but have a payment without its receipt */}
+      {pending.receiptsMissing > 0 && (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm" data-testid="receipts-missing-strip">
+          <span className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-300"><Paperclip className="h-4 w-4" />Receipts missing</span>
+          <Link href="/invoices?tab=receivable&status=receipt_missing" className="text-amber-800 dark:text-amber-300 hover:underline" data-testid="receipts-missing">
+            {pending.receiptsMissing} {pending.receiptsMissing === 1 ? "invoice has a payment" : "invoices have payments"} without a receipt. Add {pending.receiptsMissing === 1 ? "it" : "them"} to close {pending.receiptsMissing === 1 ? "it" : "them"}.
+          </Link>
+        </div>
+      )}
+
       {/* Top Row: KPI Cards */}
       {/* One row of four cards (step 7); a free organisation without money in sees three */}
-      <div className={`grid gap-6 md:grid-cols-2 ${showMoneyIn ? "xl:grid-cols-4" : "lg:grid-cols-3"}`}>
+      <div className={`grid gap-6 md:grid-cols-2 ${gridCols}`}>
         <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
             <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
@@ -142,6 +157,30 @@ export default async function Home() {
             </p>
           </CardContent>
         </Card>
+        {showPending && (
+          <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
+              <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
+                Pending Income
+                <CardNote text="Invoices you issued that are not fully paid yet, with what is still owed to you after any deposits: the same total as the Receivable tab. Overdue ones are in red." />
+              </CardTitle>
+              <HandCoins className="h-4 w-4 text-emerald-600" />
+            </CardHeader>
+            <CardContent>
+              <Link href="/invoices?tab=receivable&status=unpaid" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="pending-income">
+                {symbol}{money(pending.total)}
+              </Link>
+              <p className="text-xs text-slate-400 mt-1 font-medium">
+                {pending.count === 0 ? "Nothing owed to you" : `${pending.count} ${pending.count === 1 ? "invoice" : "invoices"}`}
+                {pending.overdueCount > 0 && (
+                  <Link href="/invoices?tab=receivable&status=overdue" className="text-red-600 dark:text-red-400 hover:underline">
+                    {" · "}{symbol}{money(pending.overdueTotal)} overdue
+                  </Link>
+                )}
+              </p>
+            </CardContent>
+          </Card>
+        )}
         {showMoneyIn && (
           <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">

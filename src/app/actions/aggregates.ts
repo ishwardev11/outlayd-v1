@@ -5,7 +5,7 @@ import { getOrganizationId, getOrganizationTimezone } from "./document-utils"
 import { formatShortDate, monthBounds, todayInTimezone } from "@/utils/dates"
 import type { DashboardSummary } from "@/utils/aggregate-types"
 import type { OnboardingProgress } from "@/utils/getting-started"
-import { billsToPay, type BillAgeing, type BillsToPay } from "@/utils/dashboard"
+import { billsToPay, pendingIncome, type BillAgeing, type BillsToPay, type PendingIncome } from "@/utils/dashboard"
 
 // A JSON object returned by a database function; every field is checked before use
 type JsonObject = Record<string, unknown>
@@ -92,6 +92,21 @@ export async function getBillsToPay(): Promise<BillsToPay> {
         return billsToPay([])
     }
     return billsToPay((data ?? []) as { balance: number | string; ageing_bucket: BillAgeing | null }[])
+}
+
+// Invoices you issued: what is still to collect (same rows as the Receivable tab's total owed to you),
+// and how many have a payment without its receipt
+export async function getPendingIncome(): Promise<PendingIncome> {
+    const supabase = await createClient()
+    const orgId = await requireOrg()
+    const { data, error } = await supabase.from("invoice_summary").select("balance, ageing_bucket, receipts_missing")
+        .eq("organization_id", orgId).eq("direction", "receivable")
+        .or("ageing_bucket.not.is.null,receipts_missing.gt.0").limit(10000)
+    if (error) {
+        console.error("Error loading pending income:", error)
+        return pendingIncome([])
+    }
+    return pendingIncome((data ?? []) as { balance: number | string; ageing_bucket: BillAgeing | null; receipts_missing: number | null }[])
 }
 
 /**

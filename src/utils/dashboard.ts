@@ -30,3 +30,18 @@ export function billsToPay(rows: { balance: number | string; ageing_bucket: Bill
     }
     return { count, total: cents / 100, overdueCount, overdueTotal: overdueCents / 100 }
 }
+
+// The dashboard's "Pending income" card and "Receipts missing" notice (invoices and AI plan, step 4).
+// Pending income is worked out exactly like "Bills to pay", from invoices you issued: every one still
+// open with something left to collect (it has an ageing bucket), so it matches the total owed to you on
+// the Receivable tab. receiptsMissing counts invoices you issued with a payment that has no receipt.
+export interface PendingIncome extends BillsToPay {
+    receiptsMissing: number
+}
+
+export function pendingIncome(rows: { balance: number | string; ageing_bucket: BillAgeing | null; receipts_missing: number | string | null }[]): PendingIncome {
+    return {
+        ...billsToPay(rows),
+        receiptsMissing: rows.filter((r) => Number(r.receipts_missing ?? 0) > 0).length,
+    }
+}
