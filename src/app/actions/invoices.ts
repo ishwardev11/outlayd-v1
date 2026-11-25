@@ -27,7 +27,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024
 const EXPORT_MAX_ROWS = 10000
 // "Still to pay" (the old Ledger's "Awaiting payment"): open, part-paid or overdue
 const UNPAID_STATUSES = ["open", "part_paid", "overdue"]
-const SUMMARY_COLUMNS = "id, direction, invoice_no, payee_id, payee_name, issue_date, due_date, reference, remarks, total, paid, balance, status, derived_status, days_overdue, ageing_bucket, is_opening_balance, source, document_id, attachment_url, void_reason"
+const SUMMARY_COLUMNS = "id, direction, invoice_no, payee_id, payee_name, issue_date, due_date, reference, remarks, total, paid, balance, status, derived_status, days_overdue, ageing_bucket, is_opening_balance, source, document_id, attachment_url, void_reason, receipts_missing"
 
 // The database raises readable messages ("This payment is more than the balance..."); show those
 function dbMessage(error: { message?: string } | null | undefined, fallback: string): string {
@@ -67,6 +67,7 @@ function toRow(r: Record<string, unknown>): InvoiceRow {
         document_id: (r.document_id as string | null) ?? null,
         has_attachment: !!r.attachment_url,
         void_reason: (r.void_reason as string | null) ?? null,
+        receipts_missing: Number(r.receipts_missing ?? 0),
     }
 }
 
@@ -88,6 +89,7 @@ function listQuery(supabase: Supabase, organizationId: string, f: InvoiceFilters
     if (f.from) q = q.gte("issue_date", f.from)
     if (f.to) q = q.lte("issue_date", f.to)
     if (f.status === "unpaid") q = q.in("derived_status", UNPAID_STATUSES)
+    else if (f.status === "receipt_missing") q = q.gt("receipts_missing", 0)
     else if (f.status !== "all") q = q.eq("derived_status", f.status)
     if (f.q) {
         const like = `%${f.q.replace(/[\\%_,()]/g, (c) => "\\" + c)}%`

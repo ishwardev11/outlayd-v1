@@ -1,4 +1,4 @@
-import { statusLabel, type DerivedStatus } from "@/utils/invoices"
+import { displayStatusLabel, isPaidReceiptMissing, type DerivedStatus, type InvoiceDirection } from "@/utils/invoices"
 
 const STYLES: Record<DerivedStatus, string> = {
     draft: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
@@ -10,6 +10,10 @@ const STYLES: Record<DerivedStatus, string> = {
 }
 
 // Paid, part-paid and overdue are worked out from the payments and today's date, never stored
-export function StatusBadge({ status }: { status: DerivedStatus }) {
-    return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STYLES[status]}`}>{statusLabel(status)}</span>
+// An invoice you issued that is paid but still has a payment without its receipt shows amber
+// "Paid · receipt missing": it is not closed until every receipt is attached.
+export function StatusBadge({ status, direction = "payable", receiptsMissing = 0 }: { status: DerivedStatus; direction?: InvoiceDirection; receiptsMissing?: number }) {
+    const row = { direction, derived_status: status, receipts_missing: receiptsMissing }
+    const style = isPaidReceiptMissing(row) ? STYLES.part_paid : STYLES[status]
+    return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${style}`} data-testid="invoice-status">{displayStatusLabel(row)}</span>
 }

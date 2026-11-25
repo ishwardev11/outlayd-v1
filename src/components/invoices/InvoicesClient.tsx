@@ -11,7 +11,7 @@ import { useRole } from "@/components/RoleProvider"
 import { useCurrency } from "@/components/CurrencyProvider"
 import { exportInvoicesCsv, getInvoiceDetail, type InvoiceDetail, type InvoicesPage } from "@/app/actions/invoices"
 import type { EntryOptions } from "@/app/actions/transactions"
-import { AGEING_LABELS, STATUS_OPTIONS, type AgeingBucket, type InvoiceFilters } from "@/utils/invoices"
+import { AGEING_LABELS, statusOptionsFor, type AgeingBucket, type InvoiceFilters } from "@/utils/invoices"
 import { StatusBadge } from "./StatusBadge"
 import { InvoiceDialog } from "./InvoiceDialog"
 import { InvoiceDetailDialog } from "./InvoiceDetailDialog"
@@ -166,7 +166,7 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
             <div className="flex flex-wrap items-end justify-between gap-3">
                 <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); router.push(href({ status: draft.status, q: draft.q.trim(), page: 1 })) }}>
                     <select aria-label="Status" className={selectClass} value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as InvoiceFilters["status"] })}>
-                        {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        {statusOptionsFor(filters.tab).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                     <Input aria-label="Search" placeholder="Search contact, number, reference" className="h-9 w-64" value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })} />
                     <Button type="submit" size="sm" className="h-9">Apply</Button>
@@ -213,7 +213,7 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
                                 <td className="px-3 py-2.5 text-right tabular-nums">{money(r.total)}</td>
                                 <td className="px-3 py-2.5 text-right tabular-nums">{money(r.paid)}</td>
                                 <td className="px-3 py-2.5 text-right tabular-nums font-medium">{money(r.balance)}</td>
-                                <td className="px-3 py-2.5"><StatusBadge status={r.derived_status} /></td>
+                                <td className="px-3 py-2.5"><StatusBadge status={r.derived_status} direction={r.direction} receiptsMissing={r.receipts_missing} /></td>
                                 <td className="px-3 py-2.5 text-xs text-slate-500 whitespace-nowrap">{r.source === "document" ? "Uploaded bill" : "Entered"}</td>
                             </tr>
                         ))}

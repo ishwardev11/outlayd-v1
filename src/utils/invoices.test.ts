@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { ageingSummary, buildInvoicesCsv, parseInvoiceFilters, parseInvoiceInput, parsePaymentInput, statusLabel, type InvoiceRow } from "./invoices"
+import { ageingSummary, buildInvoicesCsv, displayStatusLabel, isPaidReceiptMissing, parseInvoiceFilters, parseInvoiceInput, parsePaymentInput, statusLabel, statusOptionsFor, type InvoiceRow } from "./invoices"
 import { parseCsv } from "../test/parse-csv"
 
 const P = "00000000-0000-4000-8000-000000000001"
@@ -70,12 +70,32 @@ test("CSV: every invoice, formula-safe", () => {
         id: P, direction: "payable", invoice_no: "=1+1", payee_id: null, payee_name: 'Kedai "Maju"', issue_date: "2026-10-01",
         due_date: "2026-10-31", reference: null, remarks: "x", total: 500, paid: 200, balance: 300, status: "open",
         derived_status: "overdue", days_overdue: 22, ageing_bucket: "1_30", is_opening_balance: false, source: "document",
-        document_id: C, has_attachment: false, void_reason: null,
+        document_id: C, has_attachment: false, void_reason: null, receipts_missing: 0,
     }
     const rows = parseCsv(buildInvoicesCsv([row], "MYR"))
     assert.equal(rows[0][5], "Total (MYR)")
-    assert.deepEqual(rows[1].slice(0, 11), ["'=1+1", "Bill", 'Kedai "Maju"', "2026-10-01", "2026-10-31", "500.00", "200.00", "300.00", "Overdue", "22", ""])
-    assert.equal(rows[1][11], "Uploaded bill")
+    assert.equal(rows[0][9], "Receipts missing")
+    assert.deepEqual(rows[1].slice(0, 12), ["'=1+1", "Bill", 'Kedai "Maju"', "2026-10-01", "2026-10-31", "500.00", "200.00", "300.00", "Overdue", "", "22", ""])
+    assert.equal(rows[1][12], "Uploaded bill")
+
+    const paidNoReceipt = parseCsv(buildInvoicesCsv([{ ...row, direction: "receivable", derived_status: "paid", paid: 500, balance: 0, days_overdue: 0, receipts_missing: 2 }], "MYR"))
+    assert.deepEqual(paidNoReceipt[1].slice(8, 10), ["Paid · receipt missing", "2"])
+})
+
+test("Receipt missing: a paid invoice you issued is not closed until every payment has its receipt", () => {
+    const base = { direction: "receivable" as const, derived_status: "paid" as const, receipts_missing: 0 }
+    assert.equal(displayStatusLabel(base), "Paid")
+    assert.equal(isPaidReceiptMissing(base), false)
+    assert.equal(displayStatusLabel({ ...base, receipts_missing: 1 }), "Paid · receipt missing")
+    assert.equal(isPaidReceiptMissing({ ...base, receipts_missing: 1 }), true)
+    // part-paid keeps its status; bills never show it
+    assert.equal(displayStatusLabel({ ...base, derived_status: "part_paid", receipts_missing: 1 }), "Part-paid")
+    assert.equal(displayStatusLabel({ ...base, direction: "payable", receipts_missing: 1 }), "Paid")
+    // the filter exists on the Receivable tab only
+    assert.equal(parseInvoiceFilters({ tab: "receivable", status: "receipt_missing" }).status, "receipt_missing")
+    assert.equal(parseInvoiceFilters({ tab: "payable", status: "receipt_missing" }).status, "all")
+    assert.ok(statusOptionsFor("receivable").some((o) => o.value === "receipt_missing"))
+    assert.ok(!statusOptionsFor("payable").some((o) => o.value === "receipt_missing"))
 })
 
 test("\"Still to pay\" (unpaid) is a status filter: what the old Ledger called Awaiting payment", () => {

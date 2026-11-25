@@ -226,10 +226,13 @@ RESET ROLE;
 
 -- Money received for an invoice you issued needs its receipt (invoices and AI plan, step 1)
 DO $$
-DECLARE c i_ctx; v_path text;
+DECLARE c i_ctx; v_path text; v_status text;
 BEGIN
   SELECT * INTO c FROM i_ctx;
   v_path := c.org || '/transactions/test-receipt.pdf';
+  SELECT derived_status INTO v_status FROM invoice_summary WHERE id = c.inv_rec;
+  ASSERT (SELECT receipts_missing FROM invoice_summary WHERE id = c.inv_rec) = 0, 'no receipt missing when every payment has one';
+  ASSERT (SELECT receipts_missing FROM invoice_summary WHERE id = c.inv_pay) = 0, 'bills never count a receipt missing';
   ASSERT (SELECT attachment_url FROM transactions WHERE id = c.rec_pay) = v_path, 'the receipt is saved with the payment';
 
   PERFORM pg_temp.sign_in(c.u_editor, 'iv-editor@example.com');
@@ -246,6 +249,8 @@ BEGIN
 
   -- An older payment without a receipt (from before this rule) can get one
   UPDATE transactions SET attachment_url = NULL WHERE id = c.rec_pay;
+  ASSERT (SELECT receipts_missing FROM invoice_summary WHERE id = c.inv_rec) = 1, 'a payment without its receipt is counted';
+  ASSERT (SELECT derived_status FROM invoice_summary WHERE id = c.inv_rec) = v_status, 'the derived status itself is unchanged';
   PERFORM pg_temp.sign_in(c.u_viewer, 'iv-viewer@example.com');
   SET LOCAL ROLE authenticated;
   PERFORM pg_temp.expect_error(format($q$SELECT set_invoice_payment_receipt('%s', '%s')$q$, c.rec_pay, v_path), 'Only Admins and Editors', 'a Viewer adding a receipt');
@@ -272,6 +277,7 @@ BEGIN
   PERFORM set_invoice_payment_receipt(c.rec_pay, v_path);
   RESET ROLE;
   ASSERT (SELECT attachment_url FROM transactions WHERE id = c.rec_pay) = v_path, 'the receipt is added to the older payment';
+  ASSERT (SELECT receipts_missing FROM invoice_summary WHERE id = c.inv_rec) = 0, 'adding the receipt clears receipt missing';
   ASSERT (SELECT attachment_url FROM transactions WHERE id = c.pay1) IS NULL, 'bills are paid without a receipt, as before';
   RAISE NOTICE 'PASS a payment received needs its receipt; older payments can get one, not in a locked period';
 END $$;

@@ -30,12 +30,15 @@ export interface InvoiceRow {
     document_id: string | null
     has_attachment: boolean
     void_reason: string | null
+    // Invoices you issued: payments with no receipt attached (always 0 for bills)
+    receipts_missing: number
 }
 
 export interface InvoiceFilters {
     tab: InvoiceDirection
     // "unpaid": everything still to pay or collect (open, part-paid or overdue), the old "Awaiting payment"
-    status: "all" | "unpaid" | DerivedStatus
+    // "receipt_missing": invoices you issued with a payment that has no receipt (Receivable tab only)
+    status: "all" | "unpaid" | "receipt_missing" | DerivedStatus
     q: string
     page: number
     open: string
@@ -58,7 +61,23 @@ export const STATUS_OPTIONS: { value: InvoiceFilters["status"]; label: string }[
     { value: "overdue", label: "Overdue" },
     { value: "paid", label: "Paid" },
     { value: "void", label: "Void" },
+    { value: "receipt_missing", label: "Receipt missing" },
 ]
+
+// The status choices for a tab: "Receipt missing" only applies to invoices you issue
+export function statusOptionsFor(tab: InvoiceDirection): typeof STATUS_OPTIONS {
+    return tab === "receivable" ? STATUS_OPTIONS : STATUS_OPTIONS.filter((o) => o.value !== "receipt_missing")
+}
+
+// Paid in full, but a payment still has no receipt: not closed yet
+export function isPaidReceiptMissing(r: Pick<InvoiceRow, "direction" | "derived_status" | "receipts_missing">): boolean {
+    return r.direction === "receivable" && r.derived_status === "paid" && r.receipts_missing > 0
+}
+
+// The status as shown to people (badge and CSV)
+export function displayStatusLabel(r: Pick<InvoiceRow, "direction" | "derived_status" | "receipts_missing">): string {
+    return isPaidReceiptMissing(r) ? "Paid · receipt missing" : statusLabel(r.derived_status)
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -67,13 +86,14 @@ const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v
 
 // Reads the Invoices page filters from the URL. Anything unexpected is dropped, never guessed.
 export function parseInvoiceFilters(sp: SearchParams): InvoiceFilters {
+    const tab: InvoiceDirection = first(sp.tab) === "receivable" ? "receivable" : "payable"
     const status = first(sp.status)
     const page = Number.parseInt(first(sp.page), 10)
     const id = (v: string) => (UUID_RE.test(v) ? v : "")
     const date = (v: string) => (realDate(v) ?? "")
     return {
-        tab: first(sp.tab) === "receivable" ? "receivable" : "payable",
-        status: STATUS_OPTIONS.some((o) => o.value === status) ? (status as InvoiceFilters["status"]) : "all",
+        tab,
+        status: statusOptionsFor(tab).some((o) => o.value === status) ? (status as InvoiceFilters["status"]) : "all",
         q: first(sp.q).trim().slice(0, 60),
         page: Number.isFinite(page) && page > 0 ? page : 1,
         open: id(first(sp.open)),
@@ -217,13 +237,13 @@ export function parsePaymentInput(raw: unknown): Result<PaymentInput> {
 
 export function buildInvoicesCsv(rows: InvoiceRow[], currency: string): string {
     const header = ["Number", "Type", "Payee", "Invoice date", "Due date", `Total (${currency})`, `Paid (${currency})`,
-        `Balance (${currency})`, "Status", "Days overdue", "Opening balance", "Source", "Reference", "Remarks"]
+        `Balance (${currency})`, "Status", "Receipts missing", "Days overdue", "Opening balance", "Source", "Reference", "Remarks"]
     const lines = [csvRow(header.map(csvText))]
     for (const r of rows) {
         lines.push(csvRow([
             csvText(r.invoice_no), csvText(r.direction === "payable" ? "Bill" : "Invoice issued"), csvText(r.payee_name),
             csvText(r.issue_date), csvText(r.due_date), r.total.toFixed(2), r.paid.toFixed(2),
-            r.balance.toFixed(2), csvText(statusLabel(r.derived_status)), csvNumber(r.days_overdue || ""),
+            r.balance.toFixed(2), csvText(displayStatusLabel(r)), csvNumber(r.receipts_missing || ""), csvNumber(r.days_overdue || ""),
             csvText(r.is_opening_balance ? "Yes" : ""), csvText(r.source === "document" ? "Uploaded bill" : "Entered"),
             csvText(r.reference), csvText(r.remarks),
         ]))

@@ -116,7 +116,7 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
         <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="flex flex-wrap items-center gap-2">{title} <StatusBadge status={inv.derived_status} /></DialogTitle>
+                    <DialogTitle className="flex flex-wrap items-center gap-2">{title} <StatusBadge status={inv.derived_status} direction={inv.direction} receiptsMissing={inv.receipts_missing} /></DialogTitle>
                     <DialogDescription>
                         {payable ? "From" : "To"} {inv.payee_name} · dated {inv.issue_date}{inv.due_date ? ` · due ${inv.due_date}` : ""}
                         {inv.days_overdue > 0 ? ` · ${inv.days_overdue} days overdue` : ""}
