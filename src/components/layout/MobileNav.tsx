@@ -3,14 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-    Menu,
-    X,
-    LayoutDashboard,
-    FileText,
-    Users,
-    BarChart3
-} from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 
 export function MobileNav() {
@@ -35,13 +28,6 @@ export function MobileNav() {
             document.body.style.overflow = "";
         };
     }, [isOpen]);
-
-    const bottomTabs = [
-        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { href: "/inbox", label: "Inbox", icon: FileText },
-        { href: "/vendors", label: "Payees", icon: Users },
-        { href: "/reports", label: "Reports", icon: BarChart3 },
-    ];
 
     return (
         <>
@@ -91,7 +77,7 @@ export function MobileNav() {
                             </button>
                         </div>
 
-                        {/* Navigation inside drawer */}
+                        {/* The same navigation as the sidebar (src/utils/nav.ts), with Settings and the profile menu */}
                         <div className="flex-1 overflow-y-auto">
                             <Sidebar
                                 // h-full! beats the sidebar's own h-screen: below the drawer header a full screen height
@@ -105,7 +91,6 @@ export function MobileNav() {
                 </div>
             )}
 
-            {/* Bottom Navigation Bar Removed */}
         </>
     );
 }

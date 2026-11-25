@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { Landmark, FileText } from "lucide-react"
 import { createClient } from "@/utils/supabase/server"
@@ -11,6 +12,8 @@ import { BankStatementUpload } from "@/components/bank/BankStatementUpload"
 import { StatementsPoller } from "@/components/bank/StatementsPoller"
 import { DeleteStatementButton } from "@/components/bank/DeleteStatementButton"
 import { ReconciliationsClient } from "@/components/reconciliations/ReconciliationsClient"
+
+export const metadata: Metadata = { title: "Bank" }
 
 export const dynamic = "force-dynamic"
 

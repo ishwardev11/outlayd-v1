@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getFunds, getCategories } from "@/app/actions/ledger";
 import { getExtractingCount } from "@/app/actions/aggregates";
 import { getInboxCounts, getInboxPage } from "@/app/actions/inbox";
@@ -5,6 +6,8 @@ import { InboxClient } from "@/components/inbox/InboxClient";
 import { UploadButton } from "@/components/ledger/UploadButton";
 import { ExtractionPoller } from "@/components/ExtractionPoller";
 import { parseInboxFilters } from "@/utils/inbox";
+
+export const metadata: Metadata = { title: "Inbox" };
 
 export const dynamic = "force-dynamic";
 // Uploads started from this page extract their data in the background (see processUpload), and that

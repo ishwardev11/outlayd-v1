@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { getCashBook, getEntryOptions } from "@/app/actions/transactions";
 import { CashBook } from "@/components/ledger/CashBook";
 import { parseCashBookFilters } from "@/utils/cash-book";
+
+export const metadata: Metadata = { title: "Transactions" };
 
 export const dynamic = "force-dynamic";
 

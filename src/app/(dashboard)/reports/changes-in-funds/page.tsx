@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getChangesInFundsPage } from "@/app/actions/statements";
 import { ChangesInFundsClient } from "@/components/reports/ChangesInFundsClient";
@@ -5,6 +6,8 @@ import { IncomeExpenditureLocked } from "@/components/reports/IncomeExpenditureL
 import { OpeningPositionPrompt } from "@/components/reports/OpeningPositionPrompt";
 import { buildChangesInFunds } from "@/utils/financial-position";
 import { periodHeading } from "@/utils/income-expenditure";
+
+export const metadata: Metadata = { title: "Changes in Funds" };
 
 export const dynamic = "force-dynamic";
 

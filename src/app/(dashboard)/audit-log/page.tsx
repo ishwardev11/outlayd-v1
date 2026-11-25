@@ -1,8 +1,11 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { getAuditActors, getChanges } from "@/app/actions/assurance"
 import { AUDIT_KINDS, type AuditKind } from "@/utils/audit-changes"
 import { isIsoDay } from "@/utils/lock"
 import { ChangeList } from "@/components/audit/ChangeList"
+
+export const metadata: Metadata = { title: "Audit log" }
 
 export const dynamic = "force-dynamic"
 

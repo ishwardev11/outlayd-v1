@@ -144,7 +144,7 @@ export async function deleteDocument(id: string): Promise<{ success: true } | { 
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     revalidatePath("/")
-    revalidatePath("/vendors")
+    revalidatePath("/payees")
     revalidatePath("/reports")
     return { success: true }
 }
@@ -184,7 +184,7 @@ export async function deleteVendor(id: string): Promise<{ action: "archived" | "
         action = "deleted"
     }
 
-    revalidatePath("/vendors")
+    revalidatePath("/payees")
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     revalidatePath("/")
@@ -200,7 +200,7 @@ export async function restorePayee(id: string) {
         console.error("Error restoring payee:", error)
         throw new Error("Failed to restore payee")
     }
-    revalidatePath("/vendors")
+    revalidatePath("/payees")
     revalidatePath("/inbox")
     revalidatePath("/transactions")
 }
@@ -226,7 +226,7 @@ export async function createPayee(name: string, payeeType: string = "vendor") {
         throw new Error("Failed to create payee")
     }
 
-    revalidatePath("/vendors")
+    revalidatePath("/payees")
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     return data
@@ -270,7 +270,7 @@ export async function updateVendor(id: string, rawUpdates: unknown) {
         throw new Error("Failed to update vendor")
     }
 
-    revalidatePath("/vendors")
+    revalidatePath("/payees")
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     revalidatePath("/")
@@ -315,7 +315,7 @@ export async function mergeVendors(primaryId: string, secondaryId: string) {
         throw new Error("Failed to delete secondary vendor")
     }
 
-    revalidatePath("/vendors")
+    revalidatePath("/payees")
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     revalidatePath("/")

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/utils/supabase/server";
 import { getOrganizationId, getOrganizationTimezone } from "@/app/actions/document-utils";
 import { todayInTimezone } from "@/utils/dates";
@@ -5,6 +6,8 @@ import { getOrganizationSettings, getSettingsFunds } from "@/app/actions/setting
 import { DonorMemoClient } from "@/components/reports/DonorMemoClient";
 import { DonorMemoLocked } from "@/components/reports/DonorMemoLocked";
 import { featureAllowed } from "@/utils/plan";
+
+export const metadata: Metadata = { title: "Donor & Audit Memo" };
 
 export const dynamic = "force-dynamic";
 

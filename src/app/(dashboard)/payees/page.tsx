@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getDocuments, getVendors, getCategories } from "@/app/actions/ledger";
 import { VendorsClient } from "@/components/vendors/VendorsClient";
 import type { PayeeListItem } from "@/utils/payee-types";
@@ -28,6 +29,8 @@ interface PayeeRow {
     is_system: boolean | null;
     default_category_id: string | null;
 }
+
+export const metadata: Metadata = { title: "Payees" };
 
 export const dynamic = "force-dynamic";
 

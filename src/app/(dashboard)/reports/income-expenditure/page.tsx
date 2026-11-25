@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getIncomeExpenditurePage } from "@/app/actions/statements";
 import { IncomeExpenditureClient } from "@/components/reports/IncomeExpenditureClient";
 import { IncomeExpenditureLocked } from "@/components/reports/IncomeExpenditureLocked";
 import { buildStatement, columnLabel, periodHeading } from "@/utils/income-expenditure";
+
+export const metadata: Metadata = { title: "Income & Expenditure" };
 
 export const dynamic = "force-dynamic";
 

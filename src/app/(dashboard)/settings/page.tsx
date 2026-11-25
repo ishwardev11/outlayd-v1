@@ -1,9 +1,12 @@
+import type { Metadata } from "next"
 import { getOrganizationSettings, getSettingsFunds, getFundBudgetSummary, getSettingsCategories, getTeamMembers } from "@/app/actions/settings"
 import { SettingsLayout } from "@/components/settings/SettingsLayout"
 import { getReceiptSettings } from "@/app/actions/receipts"
 import { createClient } from "@/utils/supabase/server"
 import { getAssetsPage } from "@/app/actions/balance"
 import { getEntryOptions } from "@/app/actions/transactions"
+
+export const metadata: Metadata = { title: "Settings" }
 
 export const dynamic = "force-dynamic"
 

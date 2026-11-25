@@ -207,7 +207,7 @@ export async function updateDocument(id: string, rawUpdates: unknown) {
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     revalidatePath("/")
-    revalidatePath("/vendors")
+    revalidatePath("/payees")
     revalidatePath("/reports")
     return { success: true, data }
 }

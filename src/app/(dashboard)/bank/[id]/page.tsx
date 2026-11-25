@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowLeft, Landmark } from "lucide-react"
@@ -9,6 +10,8 @@ import { getPlanState } from "@/utils/plan"
 import { ReadOnlyPlanBanner } from "@/components/ui/ReadOnlyPlanBanner"
 import { FeatureLocked } from "@/components/ui/FeatureLocked"
 import { StatementReconciliation } from "@/components/bank/StatementReconciliation"
+
+export const metadata: Metadata = { title: "Bank statement" }
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60

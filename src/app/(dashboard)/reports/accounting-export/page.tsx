@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { FileSpreadsheet } from "lucide-react"
 import { createClient } from "@/utils/supabase/server"
 import { getOrganizationId, getOrganizationTimezone } from "@/app/actions/document-utils"
@@ -5,6 +6,8 @@ import { featureAllowed } from "@/utils/plan"
 import { todayInTimezone } from "@/utils/dates"
 import { AccountingExportClient } from "@/components/reports/AccountingExportClient"
 import { FeatureLocked } from "@/components/ui/FeatureLocked"
+
+export const metadata: Metadata = { title: "Accounting export" }
 
 export const dynamic = "force-dynamic"
 

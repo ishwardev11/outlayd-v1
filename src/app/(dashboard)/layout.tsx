@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { RoleProvider } from "@/components/RoleProvider";
@@ -10,6 +11,9 @@ import { getMyPendingInvites } from "@/app/actions/settings";
 import { PendingInviteBanner } from "@/components/layout/PendingInviteBanner";
 import { LockProvider } from "@/components/LockProvider";
 import { getLockState } from "@/app/actions/assurance";
+
+// Browser tab titles: each page gives its own ("Inbox"), shown as "Inbox | Outlayd" (simplification step 8)
+export const metadata: Metadata = { title: { template: "%s | Outlayd", default: "Outlayd" } };
 
 export default async function DashboardLayout({
     children,

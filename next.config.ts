@@ -30,6 +30,9 @@ const nextConfig: NextConfig = {
       // tab=general, or the passed-on query would match this rule again and loop forever.
       { source: "/assets", destination: "/settings?tab=assets", permanent: true },
       { source: "/settings", has: [{ type: "query", key: "tab", value: "general" }], destination: "/settings?tab=organization&account=1", permanent: true },
+      // Step 8: the Payees page has the address its name says
+      { source: "/vendors", destination: "/payees", permanent: true },
+      { source: "/vendors/:path*", destination: "/payees/:path*", permanent: true },
     ];
   },
 };

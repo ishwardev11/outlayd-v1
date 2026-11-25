@@ -188,7 +188,7 @@ export function PlaygroundDemo() {
             <div className="flex-1 flex flex-col justify-between">
                 <div className="space-y-4">
                     <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                        <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">Live Account Ledger</span>
+                        <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">Live Transactions</span>
                         <div className="flex items-center gap-1.5">
                             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
                             <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Active Feed</span>
@@ -213,7 +213,7 @@ export function PlaygroundDemo() {
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px] font-mono">
                                     <div>
-                                        <span className="text-[9px] uppercase font-bold text-slate-500 block">Vendor</span>
+                                        <span className="text-[9px] uppercase font-bold text-slate-500 block">Payee</span>
                                         <span className="text-slate-300 block truncate min-h-4">{typedData.vendor || "—"}</span>
                                     </div>
                                     <div>

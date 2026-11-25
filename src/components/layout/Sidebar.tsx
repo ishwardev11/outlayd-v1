@@ -10,21 +10,32 @@ import {
     Inbox,
     Users,
     BarChart3,
-    FileCheck,
     Settings,
     HelpCircle,
     X,
     ChevronDown,
     Lock,
-    ScrollText,
     Landmark,
     ReceiptText,
-    Package,
+    type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
 import { ProfileMenu } from "@/components/layout/ProfileMenu";
+import { NAV_ITEMS, activeNav, showLockBadge, type NavId, type NavItem } from "@/utils/nav";
+import { HELP_FAQ } from "@/utils/help-faq";
+
+const ICONS: Record<NavId, LucideIcon> = {
+    dashboard: LayoutDashboard,
+    inbox: Inbox,
+    transactions: FileText,
+    invoices: ReceiptText,
+    payees: Users,
+    reports: BarChart3,
+    bank: Landmark,
+    settings: Settings,
+};
 
 interface SidebarProps {
     className?: string;
@@ -104,11 +115,26 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
         };
     }, [pathname]); // Re-fetch on navigation to ensure status is fresh after upgrade
 
-    const faqs = [
-        { q: "How do I change categories?", a: "Go to Settings > Categories to add, edit, or delete the industry categories available in your ledger." },
-        { q: "How do I invite team members?", a: "Navigate to Settings > Organization to invite new members via email and assign them roles." },
-        { q: "What do the extraction check scores mean?", a: "After the AI reads a document, Outlayd checks the result for problems: a missing total, vendor or date, figures that do not add up, line items that do not match, or an amount in a different currency. The score starts at 100 and drops for each problem found, and the problems are listed when you open the document. 90% or more means no significant problems were found. It is not a measure of how sure the AI is, so always check the key fields before approving." }
-    ];
+    const active = activeNav(pathname);
+    // One link, one style: the active item is highlighted, and a page that is only a locked screen on
+    // the free plan carries the same lock badge as every other locked item
+    const navLink = (item: NavItem) => {
+        const Icon = ICONS[item.id];
+        return (
+            <Link key={item.id} id={`sidebar-link-${item.id}`} href={item.href} prefetch={item.id !== "settings"} onClick={() => onNavigate?.()}
+                aria-current={active === item.id ? "page" : undefined}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${active === item.id ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Icon size={20} />
+                <span className="flex-1">{item.label}</span>
+                {showLockBadge(item, { paid: isPro, hasBeenPaid }) && (
+                    <span className="ml-auto bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1 shrink-0" title="Part of the Growth and Nonprofit plans" data-testid="nav-lock">
+                        <Lock size={9} strokeWidth={2.5} />
+                        Pro
+                    </span>
+                )}
+            </Link>
+        );
+    };
 
     return (
         <div className={`w-52 bg-white/85 dark:bg-slate-950/70 border-r border-slate-200 dark:border-slate-800/80 h-screen p-4 flex flex-col text-slate-900 dark:text-slate-100 backdrop-blur-md ${className}`}>
@@ -119,61 +145,14 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
             )}
 
             <WorkspaceSwitcher />
+            {/* The navigation (simplification step 8): one list in src/utils/nav.ts, shown the same way in
+                the phone menu. Settings sits at the bottom, above the profile menu. */}
             <nav className="flex-1 space-y-2">
-                <Link id="sidebar-link-dashboard" href="/dashboard" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/dashboard' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
-                    <LayoutDashboard size={20} />
-                    <span>Dashboard</span>
-                </Link>
-                <Link id="sidebar-link-inbox" href="/inbox" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/inbox' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
-                    <Inbox size={20} />
-                    <span>Inbox</span>
-                </Link>
-                <Link id="sidebar-link-transactions" href="/transactions" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/transactions' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
-                    <FileText size={20} />
-                    <span>Transactions</span>
-                </Link>
-                <Link id="sidebar-link-invoices" href="/invoices" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/invoices' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
-                    <ReceiptText size={20} />
-                    <span>Bills &amp; Invoices</span>
-                </Link>
-                <Link id="sidebar-link-assets" href="/settings?tab=assets" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${false ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
-                    <Package size={20} />
-                    <span>Assets &amp; Loans</span>
-                </Link>
-                <Link id="sidebar-link-vendors" href="/vendors" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/vendors' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
-                    <Users size={20} />
-                    <span>Payees</span>
-                </Link>
-                <Link id="sidebar-link-reports" href="/reports" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/reports' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
-                    <BarChart3 size={20} />
-                    <span>Reports</span>
-                </Link>
-                <Link id="sidebar-link-donor-memo" href="/reports/donor-memo" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/reports/donor-memo' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
-                    <FileCheck size={20} />
-                    <span className="flex-1">Donor Memo</span>
-                    {/* An organisation that has been on a paid plan keeps the memo for its existing data */}
-                    {isPro === false && !hasBeenPaid && (
-                        <span className="ml-auto bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1 shrink-0">
-                            <Lock size={9} strokeWidth={2.5} />
-                            Pro
-                        </span>
-                    )}
-                </Link>
-                <Link id="sidebar-link-audit-log" href="/audit-log" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/audit-log' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
-                    <ScrollText size={20} />
-                    <span>Audit Log</span>
-                </Link>
-                <Link id="sidebar-link-bank" href="/bank" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${(pathname === '/bank' || pathname.startsWith('/bank/')) ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
-                    <Landmark size={20} />
-                    <span>Bank</span>
-                </Link>
+                {NAV_ITEMS.filter((item) => item.id !== "settings").map(navLink)}
             </nav>
 
             <div className="mt-auto flex flex-col gap-2">
-                <Link id="sidebar-link-settings" href="/settings" onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/settings' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
-                    <Settings size={20} />
-                    <span>Settings</span>
-                </Link>
+                {navLink(NAV_ITEMS.find((item) => item.id === "settings")!)}
                 {/* The signed-in person's own things: account, theme, text size, help, sign out (step 6) */}
                 <ProfileMenu onHelp={() => setIsHelpOpen(true)} onNavigate={onNavigate} />
             </div>
@@ -194,7 +173,7 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                         <div className="flex-1 overflow-y-auto p-4 space-y-4 text-left" data-lenis-prevent="true">
                             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Common questions to help you get started with Outlayd.</p>
 
-                            {faqs.map((faq, idx) => (
+                            {HELP_FAQ.map((faq, idx) => (
                                 <div key={idx} className="border border-slate-250 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-sm">
                                     <button
                                         type="button"

@@ -10,6 +10,16 @@ test("moved pages redirect permanently to their new place", async () => {
     assert.deepEqual(map["/bank-statements"], { destination: "/bank", permanent: true })
     assert.deepEqual(map["/bank-statements/:id"], { destination: "/bank/:id", permanent: true })
     assert.deepEqual(map["/reconciliations"], { destination: "/bank?tab=reconciliation", permanent: true })
+    // Step 8: Payees lives at /payees
+    assert.deepEqual(map["/vendors"], { destination: "/payees", permanent: true })
+    assert.deepEqual(map["/vendors/:path*"], { destination: "/payees/:path*", permanent: true })
+})
+
+// The navigation points only at pages that exist under their current address, never at one that redirects
+test("no navigation item points at an address that redirects", async () => {
+    const { NAV_ITEMS } = await import("./nav")
+    const sources = (await nextConfig.redirects!()).filter((r) => !r.has).map((r) => r.source)
+    for (const item of NAV_ITEMS) assert.ok(!sources.includes(item.href), `${item.label} points at ${item.href}, which redirects`)
 })
 
 // The Ledger was split (step 4). Rules on the same address are tried in order, so the query-specific

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getDashboardSummary, getBillsToPay, getExtractingCount, getCashThisMonth, getOverdueInvoices, getFundBalances, getOnboardingProgress } from "@/app/actions/aggregates";
 import { getInboxCounts } from "@/app/actions/inbox";
 import { GettingStarted } from "@/components/dashboard/GettingStarted";
@@ -27,6 +28,8 @@ function CardNote({ text }: { text: string }) {
     </>
   );
 }
+
+export const metadata: Metadata = { title: "Dashboard" };
 
 export const dynamic = "force-dynamic";
 // Uploads started from this page extract their data in the background (see processUpload), and that

@@ -166,7 +166,7 @@ function HeroSection() {
                         </h1>
 
                         <p className="w-full min-w-0 text-sm sm:text-base lg:text-lg text-slate-400 mb-6 sm:mb-8 max-w-xl mx-auto lg:mx-0 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 ease-out fill-mode-both break-words">
-                            Snap a receipt and Outlayd&apos;s AI fills in the details. Record donations and invoices, keep every fund separate, and produce the statements your AGM, donors and auditor ask for, without a spreadsheet.
+                            Snap a receipt and Outlayd&apos;s AI fills in the details. Record donations and invoices, keep every fund separate, and produce the statements your donors and auditor ask for, without a spreadsheet.
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-4 justify-center lg:justify-start animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 ease-out fill-mode-both w-full">
@@ -328,12 +328,12 @@ function HowItWorksSection() {
         {
             num: "02",
             title: "Check it and approve",
-            desc: "Choose the category and the fund it belongs to, then approve. Unpaid bills wait in Invoices until you mark them paid.",
+            desc: "Choose the category and the fund it belongs to, then approve. Unpaid bills wait in Bills & Invoices until you record the payment.",
             picture: (
                 <div className="text-xs">
                     {field("Category", "Printing")}
                     {field("Fund", "Education Fund (restricted)")}
-                    {field("Status", "Awaiting payment")}
+                    {field("Document type", "Invoice (Unpaid)")}
                     <div className="mt-3 flex justify-end gap-2">
                         <span className="rounded-md border border-white/10 px-2.5 py-1 text-slate-400">Cancel</span>
                         <span className="rounded-md bg-indigo-600 px-2.5 py-1 font-medium text-white">Approve</span>

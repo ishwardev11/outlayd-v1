@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/utils/supabase/server";
 import { getOrganizationId, getOrganizationTimezone } from "@/app/actions/document-utils";
 import { ReportHub } from "@/components/reports/ReportHub";
@@ -6,6 +7,8 @@ import { featureAllowed } from "@/utils/plan";
 import { todayInTimezone } from "@/utils/dates";
 import { clampToToday, financialYear, longDate } from "@/utils/income-expenditure";
 import { reportSections } from "@/utils/report-hub";
+
+export const metadata: Metadata = { title: "Reports" };
 
 export const dynamic = "force-dynamic";
 

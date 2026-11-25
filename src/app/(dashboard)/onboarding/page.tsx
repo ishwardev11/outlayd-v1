@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { Receipt } from "lucide-react";
 import WizardForm from "@/components/onboarding/WizardForm";
+
+export const metadata: Metadata = { title: "Welcome" };
 
 export default function OnboardingPage() {
     return (

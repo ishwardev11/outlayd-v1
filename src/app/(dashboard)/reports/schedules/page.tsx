@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSchedulesPage } from "@/app/actions/statements";
 import { SchedulesClient } from "@/components/reports/SchedulesClient";
 import { IncomeExpenditureLocked } from "@/components/reports/IncomeExpenditureLocked";
 import { periodHeading } from "@/utils/income-expenditure";
+
+export const metadata: Metadata = { title: "Schedules" };
 
 export const dynamic = "force-dynamic";
 

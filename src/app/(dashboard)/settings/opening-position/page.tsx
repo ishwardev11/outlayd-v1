@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getOpeningPosition } from "@/app/actions/balance";
 import { OpeningPositionWizard } from "@/components/settings/OpeningPositionWizard";
+
+export const metadata: Metadata = { title: "Opening position" };
 
 export const dynamic = "force-dynamic";
 

@@ -36,7 +36,7 @@ function revalidateMoney() {
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     revalidatePath("/dashboard")
-    revalidatePath("/vendors")
+    revalidatePath("/payees")
 }
 
 // ------------------------------------------------------------------ options for the forms

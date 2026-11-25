@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getReceiptsPaymentsPage } from "@/app/actions/statements";
 import { ReceiptsPaymentsClient } from "@/components/reports/ReceiptsPaymentsClient";
 import { IncomeExpenditureLocked } from "@/components/reports/IncomeExpenditureLocked";
 import { columnLabel, periodHeading } from "@/utils/income-expenditure";
 import { buildReceiptsPayments } from "@/utils/receipts-payments";
+
+export const metadata: Metadata = { title: "Receipts & Payments" };
 
 export const dynamic = "force-dynamic";
 

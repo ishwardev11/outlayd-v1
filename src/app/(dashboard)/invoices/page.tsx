@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { getInvoicesPage } from "@/app/actions/invoices";
 import { getEntryOptions } from "@/app/actions/transactions";
 import { InvoicesClient } from "@/components/invoices/InvoicesClient";
 import { parseInvoiceFilters } from "@/utils/invoices";
+
+export const metadata: Metadata = { title: "Bills & Invoices" };
 
 export const dynamic = "force-dynamic";
 

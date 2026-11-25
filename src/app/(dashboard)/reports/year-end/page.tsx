@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import type { ReactNode } from "react"
 import Link from "next/link"
 import { ArrowLeft, ArrowRight, CheckCircle2, CircleDashed, AlertTriangle, ScrollText } from "lucide-react"
@@ -6,6 +7,8 @@ import { ReadyToSubmit } from "@/components/reports/StatementAssurance"
 import { LockBooks } from "@/components/year-end/LockBooks"
 import { formatDay } from "@/utils/lock"
 import { STEP_STATUS_LABELS, type StepStatus } from "@/utils/year-end"
+
+export const metadata: Metadata = { title: "Year end" }
 
 export const dynamic = "force-dynamic"
 

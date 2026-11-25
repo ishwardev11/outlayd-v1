@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getFinancialPositionPage } from "@/app/actions/statements";
 import { FinancialPositionClient } from "@/components/reports/FinancialPositionClient";
@@ -5,6 +6,8 @@ import { IncomeExpenditureLocked } from "@/components/reports/IncomeExpenditureL
 import { OpeningPositionPrompt } from "@/components/reports/OpeningPositionPrompt";
 import { buildFinancialPosition } from "@/utils/financial-position";
 import { longDate } from "@/utils/income-expenditure";
+
+export const metadata: Metadata = { title: "Financial Position" };
 
 export const dynamic = "force-dynamic";
 
