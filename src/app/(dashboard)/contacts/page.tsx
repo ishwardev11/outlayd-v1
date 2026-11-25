@@ -3,6 +3,7 @@ import { getDocuments, getVendors, getCategories } from "@/app/actions/ledger";
 import { VendorsClient } from "@/components/vendors/VendorsClient";
 import type { PayeeListItem } from "@/utils/payee-types";
 import type { CategoryRow, SplitRow } from "@/utils/row-types";
+import { countCategories, mostUsed } from "@/utils/category-suggest";
 
 // The document fields this page reads. Money columns arrive from the database as numbers.
 interface PayeeDoc {
@@ -53,29 +54,8 @@ export default async function VendorsPage() {
             lastActivity = sortedDocs[0].document_date || "—";
         }
 
-        // Calculate most frequent category from past documents for smart suggestion
-        const categoryCounts = new Map<string, number>();
-        for (const doc of vendorDocs) {
-            if (doc.category_id) {
-                categoryCounts.set(doc.category_id, (categoryCounts.get(doc.category_id) || 0) + 1);
-            }
-            if (doc.splits && Array.isArray(doc.splits)) {
-                for (const split of doc.splits) {
-                    if (split?.category_id) {
-                        categoryCounts.set(split.category_id, (categoryCounts.get(split.category_id) || 0) + 1);
-                    }
-                }
-            }
-        }
-
-        let suggestedCategoryId: string | null = null;
-        let maxCount = 0;
-        for (const [catId, count] of categoryCounts.entries()) {
-            if (count > maxCount) {
-                maxCount = count;
-                suggestedCategoryId = catId;
-            }
-        }
+        // Smart suggestion: the category this payee's documents used most (shared with the Uncategorised queue)
+        const suggestedCategoryId = mostUsed(countCategories(vendorDocs))?.id ?? null;
 
         return {
             id: v.id,

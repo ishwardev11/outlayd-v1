@@ -39,6 +39,31 @@ export interface DocumentRequest {
     maxOutputTokens?: number
 }
 
+export type TextRequest = Omit<DocumentRequest, "file">
+
+// Sends text only (no document) and asks for JSON in the given schema, with the same retries
+export async function generateFromText(req: TextRequest): Promise<GenerateContentResult> {
+    const generationConfig = {
+        temperature: req.temperature,
+        responseMimeType: "application/json",
+        responseSchema: req.schema,
+        ...(req.maxOutputTokens ? { maxOutputTokens: req.maxOutputTokens } : {}),
+        thinkingConfig: { thinkingBudget: 0 },
+    } as unknown as GenerationConfig
+    const model = genAI.getGenerativeModel({ model: AI_MODEL, generationConfig }, { timeout: req.timeoutMs })
+    for (let attempt = 0; ; attempt++) {
+        try {
+            return await model.generateContent(req.prompt)
+        } catch (error) {
+            if (isBusyError(error) && attempt < req.retries) {
+                await new Promise((resolve) => setTimeout(resolve, req.retryDelayMs(attempt)))
+                continue
+            }
+            throw error
+        }
+    }
+}
+
 // Sends one document with a prompt and asks for JSON in the given schema. "Busy" errors are retried;
 // anything else (including a timed-out request, which already used its time) is thrown at once.
 // Returns the raw result, so each feature reads the answer and its finish reason the way it needs.
