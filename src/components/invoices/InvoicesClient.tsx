@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ChevronLeft, ChevronRight, Download, Loader2, Lock, Paperclip, Plus, Sparkles, UploadCloud } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, Loader2, Lock, Paperclip, Plus, ScanLine, Sparkles, UploadCloud } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useRole } from "@/components/RoleProvider"
@@ -14,7 +14,9 @@ import type { EntryOptions } from "@/app/actions/transactions"
 import { AGEING_LABELS, statusOptionsFor, type AgeingBucket, type InvoiceFilters } from "@/utils/invoices"
 import { StatusBadge } from "./StatusBadge"
 import { InvoiceDialog } from "./InvoiceDialog"
-import { InvoiceDetailDialog } from "./InvoiceDetailDialog"
+import { InvoiceDetailDialog, type SlipPayment } from "./InvoiceDetailDialog"
+import { SlipMatchDialog } from "./SlipMatchDialog"
+import { readPaymentSlip, type SlipReading } from "@/app/actions/payment-slip"
 import { UpgradeNotice, usePaywall } from "@/components/ui/UpgradeNotice"
 import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal"
 import { processUpload } from "@/app/actions/ledger"
@@ -34,6 +36,11 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
     const uploadRef = useRef<HTMLInputElement>(null)
     const [uploading, setUploading] = useState(false)
     const [uploadLimit, setUploadLimit] = useState(false)
+    // "Upload payment slip": what the AI read, then the invoice the person picks opens Record payment
+    const slipRef = useRef<HTMLInputElement>(null)
+    const [readingSlip, setReadingSlip] = useState(false)
+    const [slipMatch, setSlipMatch] = useState<{ reading: SlipReading; file: File } | null>(null)
+    const [slipStart, setSlipStart] = useState<SlipPayment | null>(null)
     const [loading, setLoading] = useState<string | null>(null)
     const [exporting, setExporting] = useState(false)
 
@@ -122,6 +129,34 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
         }
     }
 
+    const onSlipPicked = async (file: File | undefined) => {
+        if (!file) return
+        setReadingSlip(true)
+        try {
+            const fd = new FormData()
+            fd.set("file", file)
+            fd.set("tab", filters.tab)
+            const res = await readPaymentSlip(fd)
+            if (!res.success) return toast.error(res.error, { duration: 8000 })
+            setSlipMatch({ reading: res.data, file })
+        } finally {
+            setReadingSlip(false)
+        }
+    }
+    const pickSlipInvoice = async (invoiceId: string) => {
+        if (!slipMatch) return
+        setLoading(invoiceId)
+        try {
+            const d = await getInvoiceDetail(invoiceId)
+            if (!d) return toast.error("That invoice could not be opened")
+            setSlipStart({ slip: slipMatch.reading.slip, file: slipMatch.file, currencyMismatch: slipMatch.reading.currencyMismatch })
+            setSlipMatch(null)
+            setDetail(d)
+        } finally {
+            setLoading(null)
+        }
+    }
+
     const fromStatement = !!(filters.from || filters.to || filters.category || filters.fund)
     const categoryName = options.categories.find((c) => c.id === filters.category)?.name
     const fundName = options.funds.find((f) => f.id === filters.fund)?.name
@@ -146,6 +181,13 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
                     <p className="text-gray-500 mt-2 dark:text-slate-400">Bills you owe and invoices you issued, with what is still outstanding.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                <input ref={slipRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="hidden"
+                    onChange={(e) => { onSlipPicked(e.target.files?.[0]); e.target.value = "" }} />
+                <Button variant="outline" disabled={isViewer || readingSlip} onClick={() => (options.paid ? slipRef.current?.click() : paywall.open())}
+                    title={isViewer ? "Viewers cannot record payments" : !options.paid ? "Recording payments is part of the Growth and Nonprofit plans" : "The AI reads the slip and finds the invoice it pays"} data-testid="upload-slip-page">
+                    {readingSlip ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : options.paid ? <ScanLine className="h-4 w-4 mr-1.5" /> : <Lock className="h-4 w-4 mr-1.5" />}
+                    {readingSlip ? "Reading the slip…" : "Upload payment slip"}
+                </Button>
                 <input ref={uploadRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="hidden"
                     onChange={(e) => { onUploadPicked(e.target.files?.[0]); e.target.value = "" }} />
                 {payable ? (
@@ -276,11 +318,16 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
                 </div>
             )}
 
+            {slipMatch && (
+                <SlipMatchDialog reading={slipMatch.reading} fileName={slipMatch.file.name} busy={loading !== null}
+                    onPick={pickSlipInvoice} onClose={() => setSlipMatch(null)} />
+            )}
             {detail && !form && (
                 <InvoiceDetailDialog key={detail.invoice.id + detail.invoice.paid + detail.invoice.status} detail={detail} options={options} canWrite={canWrite}
-                    onClose={() => { setDetail(null); if (filters.open) router.replace(href({})) }}
+                    startFromSlip={slipStart}
+                    onClose={() => { setDetail(null); setSlipStart(null); if (filters.open) router.replace(href({})) }}
                     onEdit={() => setForm({ edit: detail, key: Date.now() })}
-                    onChanged={refreshDetail} />
+                    onChanged={() => { setSlipStart(null); refreshDetail() }} />
             )}
             {form && (
                 <InvoiceDialog key={form.key} open direction={form.edit?.invoice.direction ?? filters.tab} options={options} edit={form.edit} autoFillFile={form.autoFillFile}

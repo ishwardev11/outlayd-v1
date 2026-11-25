@@ -120,7 +120,7 @@ export function vendorSimilarity(vendor: string | null | undefined, description:
     return hits / v.length
 }
 
-function mentionsNumber(description: string, ref: string | null | undefined): boolean {
+export function mentionsNumber(description: string, ref: string | null | undefined): boolean {
     const clean = String(ref ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
     if (clean.length < 4) return false
     return description.toLowerCase().replace(/[^a-z0-9]/g, "").includes(clean)

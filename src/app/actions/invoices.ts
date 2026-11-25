@@ -343,7 +343,8 @@ function formFile(formData: FormData, name = "file"): File | null {
 // formData: "payload" (JSON: invoice_id, amount, tx_date, account_id?, reference?, remarks?) and "file"
 // (the receipt). Money received for an invoice you issued needs its receipt: the file is uploaded first
 // and the database function saves the payment and the receipt together (it refuses one without the
-// other), so a payment never exists without its receipt. Bills are paid exactly as before.
+// other), so a payment never exists without its receipt. A bill's payment may carry a receipt too
+// (for example the payment slip it was recorded from); it does not need one.
 export async function recordInvoicePayment(formData: FormData): Promise<ActionResult<{ id: string }>> {
     try {
         await checkWriteAccess()
@@ -371,7 +372,7 @@ export async function recordInvoicePayment(formData: FormData): Promise<ActionRe
     if (receivable && !file) return { success: false, error: "Attach the receipt for this payment (an image or a PDF)." }
 
     let path: string | null = null
-    if (receivable && file) {
+    if (file) {
         path = await uploadReceipt(organizationId, "receipt", file)
         if (!path) return { success: false, error: "The receipt could not be uploaded, so the payment was not recorded. Please try again." }
     }

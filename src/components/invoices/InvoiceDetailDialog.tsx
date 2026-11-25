@@ -3,13 +3,15 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Ban, Download, Loader2, Paperclip, Pencil, Trash2, Wallet } from "lucide-react"
+import { AlertTriangle, Ban, Download, Loader2, Paperclip, Pencil, ScanLine, Trash2, Wallet } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useCurrency } from "@/components/CurrencyProvider"
+import { readPaymentSlip } from "@/app/actions/payment-slip"
+import type { PaymentSlip } from "@/utils/slip-matching"
 import { addInvoicePaymentReceipt, deleteInvoice, deleteInvoicePayment, getInvoiceForPdf, recordInvoicePayment, voidInvoice, type InvoiceDetail } from "@/app/actions/invoices"
 import { buildInvoiceContent } from "@/utils/invoice-document"
 import { buildInvoicePdf } from "@/utils/invoice-pdf"
@@ -31,14 +33,25 @@ function todayLocal(): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 
+// A payment read from a payment slip (step 7): the Record payment form opens with these filled in and
+// the slip attached as the receipt. Nothing is recorded until the person presses Save payment.
+export interface SlipPayment {
+    slip: PaymentSlip
+    file: File
+    // The slip is in another currency: the amount is left to be entered
+    currencyMismatch: boolean
+}
+
 // One invoice: its lines and payments, and what can be done with it. canWrite: Admin or Editor on a paid plan.
-export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit, onChanged }: {
+export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit, onChanged, startFromSlip }: {
     detail: InvoiceDetail
     options: EntryOptions
     canWrite: boolean
     onClose: () => void
     onEdit: () => void
     onChanged: () => void
+    // Opened from "Upload payment slip" on the Invoices page, with the invoice the person picked
+    startFromSlip?: SlipPayment | null
 }) {
     const router = useRouter()
     const { symbol } = useCurrency()
@@ -46,12 +59,23 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
     const payable = inv.direction === "payable"
     const money = (n: number) => `${symbol}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     const { isViewer } = useRole()
-    const [mode, setMode] = useState<"view" | "pay" | "void" | "markPaid">("view")
+    const [mode, setMode] = useState<"view" | "pay" | "void" | "markPaid">(startFromSlip && canWrite && inv.status === "open" && inv.balance > 0 ? "pay" : "view")
     const [paidOn, setPaidOn] = useState(todayLocal())
     const [busy, setBusy] = useState(false)
-    const [pay, setPay] = useState({ amount: inv.balance.toFixed(2), date: todayLocal(), account: options.accounts.find((a) => a.is_default)?.id ?? "", reference: "", remarks: "" })
+    const slipPrefill = (sp: SlipPayment) => ({
+        amount: !sp.currencyMismatch && sp.slip.amount !== null ? sp.slip.amount.toFixed(2) : sp.currencyMismatch ? "" : inv.balance.toFixed(2),
+        date: sp.slip.date ?? todayLocal(),
+        reference: (sp.slip.reference ?? "").slice(0, 100),
+    })
+    const [pay, setPay] = useState(() => ({
+        amount: inv.balance.toFixed(2), date: todayLocal(), account: options.accounts.find((a) => a.is_default)?.id ?? "", reference: "", remarks: "",
+        ...(startFromSlip ? slipPrefill(startFromSlip) : {}),
+    }))
     const [reason, setReason] = useState("")
-    const [receipt, setReceipt] = useState<File | null>(null)
+    const [receipt, setReceipt] = useState<File | null>(startFromSlip?.file ?? null)
+    // The payment slip the form was filled from, if any
+    const [slipUsed, setSlipUsed] = useState<SlipPayment | null>(startFromSlip ?? null)
+    const [readingSlip, setReadingSlip] = useState(false)
 
     const lock = useLock()
     // An invoice dated in a locked period cannot change; it can still be paid after the lock date
@@ -71,9 +95,29 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
     const savePayment = () => {
         const fd = new FormData()
         fd.set("payload", JSON.stringify({ invoice_id: inv.id, amount: pay.amount, tx_date: pay.date, account_id: pay.account || null, reference: pay.reference, remarks: pay.remarks }))
-        if (!payable && receipt) fd.set("file", receipt)
+        if (receipt) fd.set("file", receipt)
         return recordInvoicePayment(fd)
     }
+    // "Upload payment slip" on this invoice: read it, then open Record payment filled in (no matching)
+    const uploadSlip = async (file: File | undefined) => {
+        if (!file) return
+        setReadingSlip(true)
+        try {
+            const fd = new FormData()
+            fd.set("file", file)
+            fd.set("invoice_id", inv.id)
+            const res = await readPaymentSlip(fd)
+            if (!res.success) return toast.error(res.error, { duration: 8000 })
+            const sp: SlipPayment = { slip: res.data.slip, file, currencyMismatch: res.data.currencyMismatch }
+            setSlipUsed(sp)
+            setPay((p) => ({ ...p, ...slipPrefill(sp) }))
+            setReceipt(file)
+            setMode("pay")
+        } finally {
+            setReadingSlip(false)
+        }
+    }
+    const slipAmountOver = slipUsed && !slipUsed.currencyMismatch && slipUsed.slip.amount !== null && slipUsed.slip.amount > inv.balance
     const addReceipt = (transactionId: string, file: File | undefined) => {
         if (!file) return
         const fd = new FormData()
@@ -90,6 +134,7 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
             toast.success(done)
             setMode("view")
             setReceipt(null)
+            setSlipUsed(null)
             onChanged()
             router.refresh()
         } finally {
@@ -211,6 +256,18 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                 {mode === "pay" && (
                     <div className="space-y-3 rounded-lg border border-indigo-200 dark:border-indigo-900 p-4">
                         <h3 className="text-sm font-semibold">{payable ? "Record a payment of this bill" : "Record money received for this invoice"}</h3>
+                        {slipUsed && (
+                            <div className="space-y-1 rounded-md bg-indigo-50/60 dark:bg-indigo-950/30 p-2 text-xs text-slate-600 dark:text-slate-300" data-testid="slip-prefill">
+                                <p>
+                                    Filled in from the payment slip <span className="font-medium">{slipUsed.file.name}</span>
+                                    {slipUsed.slip.payerName ? <>, paid by <span className="font-medium">{slipUsed.slip.payerName}</span></> : null}
+                                    {slipUsed.slip.recipientName ? <> to <span className="font-medium">{slipUsed.slip.recipientName}</span></> : null}. Check it before saving.
+                                </p>
+                                {slipUsed.currencyMismatch && <p className="flex gap-1 text-amber-700 dark:text-amber-400"><AlertTriangle className="h-3.5 w-3.5 shrink-0" />The slip is in {slipUsed.slip.currency}. Enter the amount received in {symbol.trim() || "your currency"}.</p>}
+                                {slipAmountOver && <p className="flex gap-1 text-red-600"><AlertTriangle className="h-3.5 w-3.5 shrink-0" />The slip is for {money(slipUsed.slip.amount!)}, more than the balance of {money(inv.balance)}. Record at most the balance.</p>}
+                                {!slipUsed.slip.date && <p className="flex gap-1 text-amber-700 dark:text-amber-400"><AlertTriangle className="h-3.5 w-3.5 shrink-0" />No date was found on the slip. Check the date.</p>}
+                            </div>
+                        )}
                         <div className="grid gap-3 sm:grid-cols-2">
                             <div className="space-y-1.5"><Label htmlFor="pay-amount">Amount ({symbol})</Label>
                                 <Input id="pay-amount" inputMode="decimal" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} /></div>
@@ -225,7 +282,13 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                             <div className="space-y-1.5"><Label htmlFor="pay-ref">Reference (cheque or bank ref.)</Label>
                                 <Input id="pay-ref" value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} maxLength={100} /></div>
                         </div>
-                        {!payable && (
+                        {slipUsed && receipt === slipUsed.file ? (
+                            <div className="flex flex-wrap items-center gap-2 text-sm">
+                                <Paperclip className="h-3.5 w-3.5 text-slate-500" />
+                                <span>Receipt: <span className="font-medium">{receipt.name}</span> (the payment slip)</span>
+                                <button type="button" className="text-xs text-indigo-600 hover:underline" onClick={() => setReceipt(null)}>Use a different file</button>
+                            </div>
+                        ) : !payable && (
                             <div className="space-y-1.5"><Label htmlFor="pay-receipt">Receipt (required)</Label>
                                 <Input id="pay-receipt" type="file" accept={RECEIPT_ACCEPT} onChange={(e) => setReceipt(e.target.files?.[0] ?? null)} />
                                 <p className="text-xs text-slate-500">The receipt or bank slip for this money, as an image (JPG, PNG, WEBP) or a PDF, up to 10 MB.</p></div>
@@ -234,7 +297,7 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                         <p className="text-xs text-slate-500">Part-payments are fine. The payment is shared across the invoice&apos;s funds and categories in proportion.</p>
                         {payDateLocked && <LockedNotice text={`That date is in a locked period. ${lock.message}`} />}
                         <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={() => { setMode("view"); setReceipt(null) }} disabled={busy}>Cancel</Button>
+                            <Button variant="outline" onClick={() => { setMode("view"); setReceipt(null); setSlipUsed(null) }} disabled={busy}>Cancel</Button>
                             <Button disabled={busy || payDateLocked || (!payable && !receipt)} className="bg-indigo-600 hover:bg-indigo-700 text-white"
                                 onClick={() => run(savePayment, "Payment recorded")}>
                                 {busy && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Save payment
@@ -294,6 +357,15 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                                 <Button variant={canPay ? "outline" : "default"} className={canPay ? "" : "bg-indigo-600 hover:bg-indigo-700 text-white"} onClick={() => setMode("markPaid")} data-testid="mark-paid">
                                     <Wallet className="h-4 w-4 mr-1" />Mark as paid
                                 </Button>
+                            )}
+                            {canPay && (
+                                <label className={`inline-flex h-9 items-center rounded-md border border-slate-200 dark:border-slate-700 px-3 text-sm font-medium ${readingSlip || busy ? "opacity-60" : "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"}`}
+                                    title="The AI reads the slip and fills in Record payment" data-testid="upload-slip">
+                                    {readingSlip ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ScanLine className="h-4 w-4 mr-1" />}
+                                    {readingSlip ? "Reading the slip…" : "Upload payment slip"}
+                                    <input type="file" accept={RECEIPT_ACCEPT} className="sr-only" disabled={readingSlip || busy}
+                                        onChange={(e) => { uploadSlip(e.target.files?.[0]); e.target.value = "" }} />
+                                </label>
                             )}
                             {canPay && (
                                 <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setMode("pay")}>

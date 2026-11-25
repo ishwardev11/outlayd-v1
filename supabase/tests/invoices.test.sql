@@ -352,6 +352,30 @@ BEGIN
 END $$;
 RESET ROLE;
 
+-- A bill's payment may keep the payment slip it was recorded from as its receipt (step 7)
+DO $$
+DECLARE c i_ctx; v_bill uuid; v_tx uuid;
+BEGIN
+  SELECT * INTO c FROM i_ctx;
+  PERFORM pg_temp.sign_in(c.u_editor, 'iv-editor@example.com');
+  SET LOCAL ROLE authenticated;
+  v_bill := save_invoice(jsonb_build_object('direction', 'payable', 'payee_id', c.payee, 'issue_date', current_date,
+    'lines', jsonb_build_array(jsonb_build_object('amount', 400, 'category_id', c.cat_rent))));
+  PERFORM pg_temp.commit_checks();
+  v_tx := record_invoice_payment(jsonb_build_object('invoice_id', v_bill, 'amount', 150, 'tx_date', current_date,
+    'attachment_path', c.org || '/transactions/slip.png'));
+  PERFORM pg_temp.commit_checks();
+  ASSERT (SELECT attachment_url FROM transactions WHERE id = v_tx) = c.org || '/transactions/slip.png', 'the slip is the bill payment''s receipt';
+  PERFORM pg_temp.expect_error(format($q$SELECT record_invoice_payment('{"invoice_id":"%s","amount":1,"tx_date":"%s","attachment_path":"%s/transactions/x.png"}')$q$, v_bill, current_date, c.org_other),
+    'could not be attached', 'a bill receipt from another organisation''s folder');
+  v_tx := record_invoice_payment(jsonb_build_object('invoice_id', v_bill, 'amount', 50, 'tx_date', current_date));
+  PERFORM pg_temp.commit_checks();
+  ASSERT (SELECT attachment_url FROM transactions WHERE id = v_tx) IS NULL, 'a bill can still be paid without a receipt';
+  RESET ROLE;
+  RAISE NOTICE 'PASS a bill payment may keep its payment slip as the receipt; it does not need one';
+END $$;
+RESET ROLE;
+
 -- A payment can never be turned into plain income or expense (that would count it twice)
 DO $$
 DECLARE c i_ctx; n int;
