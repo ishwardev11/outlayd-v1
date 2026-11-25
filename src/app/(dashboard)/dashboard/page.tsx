@@ -1,4 +1,5 @@
-import { getDashboardSummary, getActionQueue, getRecentDocuments, getExtractingCount, getCashThisMonth, getOverdueInvoices, getFundBalances, getOnboardingProgress } from "@/app/actions/aggregates";
+import { getDashboardSummary, getBillsToPay, getExtractingCount, getCashThisMonth, getOverdueInvoices, getFundBalances, getOnboardingProgress } from "@/app/actions/aggregates";
+import { getInboxCounts } from "@/app/actions/inbox";
 import { GettingStarted } from "@/components/dashboard/GettingStarted";
 import { gettingStartedSteps } from "@/utils/getting-started";
 import { createClient } from "@/utils/supabase/server";
@@ -8,12 +9,10 @@ import { getOrganizationId, getOrganizationCurrency } from "@/app/actions/docume
 import { getCurrencyDetails } from "@/utils/currency";
 import { redirect } from "next/navigation";
 import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
-import { ActionQueueClient } from "@/components/dashboard/ActionQueueClient";
 import { QuickUpload } from "@/components/dashboard/QuickUpload";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { ExtractionPoller } from "@/components/ExtractionPoller";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, FileText, ArrowDownLeft, ArrowUpRight, Info, Clock } from "lucide-react";
+import { Receipt, Inbox, ArrowDownLeft, ArrowUpRight, Info, Clock } from "lucide-react";
 
 const money = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -44,13 +43,15 @@ export default async function Home() {
   const orgCurrency = await getOrganizationCurrency();
   const { symbol } = getCurrencyDetails(orgCurrency);
 
-  // Totals, the 14-day cash flow and the lists are computed in the database, so the page stays
-  // fast however many documents there are.
+  // Totals and the 14-day cash flow are computed in the database, so the page stays fast however
+  // many documents there are. Step 7 of the simplification trimmed the page to four cards: what is
+  // waiting in the Inbox, the bills to pay, and money in and out this month. The action queue and the
+  // recent activity list went; the Inbox and Bills & Invoices show the same things in full.
   const supabase = await createClient();
-  const [summary, actionQueueItems, recentDocuments, extractingCount, cash, canRecordIncome, overdue, { data: orgRow }, fundBalances, progress] = await Promise.all([
+  const [summary, inbox, bills, extractingCount, cash, canRecordIncome, overdue, { data: orgRow }, fundBalances, progress] = await Promise.all([
     getDashboardSummary(),
-    getActionQueue(),
-    getRecentDocuments(),
+    getInboxCounts(),
+    getBillsToPay(),
     getExtractingCount(),
     getCashThisMonth(),
     featureAllowed(supabase, orgId, "income", "use"),
@@ -63,11 +64,16 @@ export default async function Home() {
   const needsOpening = canRecordIncome && !orgRow?.opening_position_completed_at;
 
   const {
-    awaitingTotal: awaitingPaymentTotal,
     needsReviewCount,
     needsReviewTotal: needsReviewAmountTotal,
     cashFlow: last14Days,
   } = summary;
+  // The small line under "To review": what kind of uploads are waiting, only the kinds there are
+  const inboxParts = [
+    inbox.needs_review > 0 ? `${inbox.needs_review} to check` : "",
+    inbox.extracting > 0 ? `${inbox.extracting} being read` : "",
+    inbox.duplicate > 0 ? `${inbox.duplicate} possible ${inbox.duplicate === 1 ? "duplicate" : "duplicates"}` : "",
+  ].filter(Boolean);
   // Money in is a paid feature; a free organisation still sees it if it has any (refunds, credit notes)
   const showMoneyIn = canRecordIncome || cash.moneyIn > 0;
 
@@ -75,60 +81,80 @@ export default async function Home() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Dashboard</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">Morning briefing and action queue.</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">What needs doing, and where the money stands.</p>
       </div>
 
       <ExtractionPoller count={extractingCount} />
 
       <GettingStarted steps={gettingStartedSteps(progress, canRecordIncome)} orgId={orgId} paid={canRecordIncome} needsOpening={needsOpening} />
 
-      {/* Overdue bills and invoices (spec 5.5), only when something is overdue */}
-      {(overdue.payable.count > 0 || overdue.receivable.count > 0) && (
+      {/* Invoices owed to you that are overdue (spec 5.5). Overdue bills you owe are on the Bills to pay
+          card below, in red. */}
+      {overdue.receivable.count > 0 && (
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm" data-testid="overdue-strip">
           <span className="flex items-center gap-2 font-semibold text-red-800 dark:text-red-300"><Clock className="h-4 w-4" />Overdue</span>
-          {overdue.payable.count > 0 && (
-            <Link href="/invoices?status=overdue" className="text-red-800 dark:text-red-300 hover:underline" data-testid="overdue-bills">
-              {overdue.payable.count} {overdue.payable.count === 1 ? "bill" : "bills"} to pay: <span className="font-semibold tabular-nums">{symbol}{money(overdue.payable.total)}</span>
-            </Link>
-          )}
-          {overdue.receivable.count > 0 && (
-            <Link href="/invoices?tab=receivable&status=overdue" className="text-red-800 dark:text-red-300 hover:underline" data-testid="overdue-invoices">
-              {overdue.receivable.count} {overdue.receivable.count === 1 ? "invoice" : "invoices"} owed to you: <span className="font-semibold tabular-nums">{symbol}{money(overdue.receivable.total)}</span>
-            </Link>
-          )}
+          <Link href="/invoices?tab=receivable&status=overdue" className="text-red-800 dark:text-red-300 hover:underline" data-testid="overdue-invoices">
+            {overdue.receivable.count} {overdue.receivable.count === 1 ? "invoice" : "invoices"} owed to you: <span className="font-semibold tabular-nums">{symbol}{money(overdue.receivable.total)}</span>
+          </Link>
         </div>
       )}
 
       {/* Top Row: KPI Cards */}
+      {/* One row of four cards (step 7); a free organisation without money in sees three */}
       <div className={`grid gap-6 md:grid-cols-2 ${showMoneyIn ? "xl:grid-cols-4" : "lg:grid-cols-3"}`}>
         <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
             <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
-              Awaiting Payment
-              <CardNote text="Approved documents that have not been paid yet. Documents still waiting for review are not included." />
+              To Review
+              <CardNote text="Uploads in the Inbox: being read, waiting for someone to check and approve them, or possible duplicates." />
             </CardTitle>
-            <AlertCircle className="h-4 w-4 text-amber-500" />
+            <Inbox className="h-4 w-4 text-indigo-500" />
           </CardHeader>
           <CardContent>
-            <Link href="/invoices?status=unpaid" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="awaiting-payment">
-              {symbol}{money(awaitingPaymentTotal)}
+            <Link href="/inbox" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="to-review">
+              {inbox.all}
             </Link>
+            <p className="text-xs text-slate-400 mt-1 font-medium">{inboxParts.length > 0 ? inboxParts.join(" · ") : "Nothing waiting"}</p>
           </CardContent>
         </Card>
         <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
             <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
-              Needs Review
-              <CardNote text="Uploaded documents waiting for someone to check the details and approve them." />
+              Bills To Pay
+              <CardNote text="Bills you have not fully paid yet, with what is still owed on them: the same total as Bills & Invoices. Overdue ones are in red." />
             </CardTitle>
-            <FileText className="h-4 w-4 text-indigo-500" />
+            <Receipt className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <Link href="/inbox" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="needs-review">
-              {needsReviewCount}
+            <Link href="/invoices?status=unpaid" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="bills-to-pay">
+              {symbol}{money(bills.total)}
             </Link>
+            <p className="text-xs text-slate-400 mt-1 font-medium">
+              {bills.count === 0 ? "Nothing to pay" : `${bills.count} ${bills.count === 1 ? "bill" : "bills"}`}
+              {bills.overdueCount > 0 && (
+                <Link href="/invoices?status=overdue" className="text-red-600 dark:text-red-400 hover:underline" data-testid="bills-overdue">
+                  {" · "}{symbol}{money(bills.overdueTotal)} overdue
+                </Link>
+              )}
+            </p>
           </CardContent>
         </Card>
+        {showMoneyIn && (
+          <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
+              <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
+                Money In This Month
+                <CardNote text="Donations, grants and other income received this month, by date received. Refunds you received also count as money in." />
+              </CardTitle>
+              <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
+            </CardHeader>
+            <CardContent>
+              <Link href={`/transactions?type=money_in&from=${cash.from}&to=${cash.to}`} className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 hover:underline" data-testid="money-in-month">
+                {symbol}{money(cash.moneyIn)}
+              </Link>
+            </CardContent>
+          </Card>
+        )}
         <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
             <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
@@ -148,22 +174,6 @@ export default async function Home() {
             )}
           </CardContent>
         </Card>
-        {showMoneyIn && (
-          <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
-              <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
-                Money In This Month
-                <CardNote text="Donations, grants and other income received this month, by date received. Refunds you received also count as money in." />
-              </CardTitle>
-              <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
-            </CardHeader>
-            <CardContent>
-              <Link href={`/transactions?type=money_in&from=${cash.from}&to=${cash.to}`} className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 hover:underline" data-testid="money-in-month">
-                {symbol}{money(cash.moneyIn)}
-              </Link>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Main Content Split */}
@@ -172,19 +182,9 @@ export default async function Home() {
         {/* Left Column (70%) */}
         <div className="lg:col-span-2 space-y-8 min-w-0">
           <CashFlowChart data={last14Days} hasPendingDocuments={needsReviewCount > 0} />
-
-          <div className="pt-2">
-            <h2 className="text-xl font-bold tracking-tight mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-              Action Queue
-              <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs font-medium border border-slate-200 dark:border-slate-700">{actionQueueItems.length}</span>
-            </h2>
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
-              <ActionQueueClient initialQueue={actionQueueItems} />
-            </div>
-          </div>
         </div>
 
-        {/* Right Column (30%): The Action Hub */}
+        {/* Right Column (30%): upload, and what each fund holds */}
         <div className="lg:col-span-1 space-y-6 flex flex-col">
           <div className="h-52 shrink-0">
             <QuickUpload />
@@ -219,9 +219,6 @@ export default async function Home() {
               </CardContent>
             </Card>
           )}
-          <div className="flex-1">
-            <RecentActivity documents={recentDocuments} />
-          </div>
         </div>
 
       </div>

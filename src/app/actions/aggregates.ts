@@ -16,6 +16,7 @@ import {
 } from "@/utils/aggregate-types"
 import type { DocumentRow, IdName } from "@/utils/row-types"
 import type { OnboardingProgress } from "@/utils/getting-started"
+import { billsToPay, type BillAgeing, type BillsToPay } from "@/utils/dashboard"
 
 // A JSON object returned by a database function; every field is checked before use
 type JsonObject = Record<string, unknown>
@@ -86,6 +87,22 @@ export async function getCashThisMonth(): Promise<{ moneyIn: number; moneyOut: n
     const raw = (data ?? {}) as JsonObject
     const { start, end } = monthBounds(today)
     return { moneyIn: num(raw.money_in), moneyOut: num(raw.money_out), from: start, to: end }
+}
+
+/**
+ * The dashboard's "Bills to pay" card (simplification step 7): the open bills and what is still owed
+ * on them, the same rows and total as "Total you owe" on Bills & Invoices, with the overdue part.
+ */
+export async function getBillsToPay(): Promise<BillsToPay> {
+    const supabase = await createClient()
+    const orgId = await requireOrg()
+    const { data, error } = await supabase.from("invoice_summary").select("balance, ageing_bucket")
+        .eq("organization_id", orgId).eq("direction", "payable").not("ageing_bucket", "is", null).limit(10000)
+    if (error) {
+        console.error("Error loading bills to pay:", error)
+        return billsToPay([])
+    }
+    return billsToPay((data ?? []) as { balance: number | string; ageing_bucket: BillAgeing | null }[])
 }
 
 /**
