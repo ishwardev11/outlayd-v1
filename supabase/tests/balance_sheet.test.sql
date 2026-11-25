@@ -157,7 +157,7 @@ BEGIN
   PERFORM pg_temp.commit_checks();
   UPDATE b_ctx SET inv_pay = v;
   PERFORM record_invoice_payment(jsonb_build_object('invoice_id', v, 'amount', 200, 'tx_date', '2026-03-20'));
-  PERFORM record_invoice_payment(jsonb_build_object('invoice_id', c.inv_rec, 'amount', 800, 'tx_date', '2026-03-15'));
+  PERFORM record_invoice_payment(jsonb_build_object('invoice_id', c.inv_rec, 'amount', 800, 'tx_date', '2026-03-15', 'attachment_path', c.org || '/transactions/test-receipt.pdf'));
 
   PERFORM pg_temp.expect_error(format($q$SELECT record_item_transaction('{"item_id":"%s","action":"repay","amount":1000,"tx_date":"2025-12-15"}')$q$, c.loan),
     'before your tracking start date', 'an item entry before the start date');

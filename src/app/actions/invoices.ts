@@ -137,7 +137,7 @@ export async function getInvoicesPage(f: InvoiceFilters): Promise<InvoicesPage> 
 export interface InvoiceDetail {
     invoice: InvoiceRow
     lines: { description: string | null; amount: number; fund_id: string; fund_name: string; category_id: string; category_name: string }[]
-    payments: { transaction_id: string; date: string; amount: number; reference: string | null; remarks: string | null; from_bill: boolean }[]
+    payments: { transaction_id: string; date: string; amount: number; reference: string | null; remarks: string | null; from_bill: boolean; has_receipt: boolean }[]
     document: { id: string; status: string; vendor_name: string } | null
 }
 
@@ -151,13 +151,13 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
     const invoice = toRow(inv as Record<string, unknown>)
     const [lines, pays, doc] = await Promise.all([
         supabase.from("invoice_lines").select("line_no, description, amount, fund_id, category_id, funds(name), categories(name)").eq("invoice_id", id).order("line_no"),
-        supabase.from("transaction_lines").select("amount, transaction_id, transactions(tx_date, reference, remarks, document_id)").eq("invoice_id", id),
+        supabase.from("transaction_lines").select("amount, transaction_id, transactions(tx_date, reference, remarks, document_id, attachment_url)").eq("invoice_id", id),
         invoice.document_id
             ? supabase.from("documents").select("id, status, vendor_name").eq("id", invoice.document_id).maybeSingle()
             : Promise.resolve({ data: null }),
     ])
     type LineRow = { description: string | null; amount: number | string; fund_id: string; category_id: string; funds: { name: string } | null; categories: { name: string } | null }
-    type PayRow = { amount: number | string; transaction_id: string; transactions: { tx_date: string; reference: string | null; remarks: string | null; document_id: string | null } | null }
+    type PayRow = { amount: number | string; transaction_id: string; transactions: { tx_date: string; reference: string | null; remarks: string | null; document_id: string | null; attachment_url: string | null } | null }
     // One payment can cover several lines of the invoice: show it once, with its total
     const byTx = new Map<string, InvoiceDetail["payments"][number]>()
     for (const p of (pays.data ?? []) as unknown as PayRow[]) {
@@ -166,6 +166,7 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
         byTx.set(p.transaction_id, {
             transaction_id: p.transaction_id, date: p.transactions?.tx_date ?? "", amount: Number(p.amount),
             reference: p.transactions?.reference ?? null, remarks: p.transactions?.remarks ?? null, from_bill: !!p.transactions?.document_id,
+            has_receipt: !!p.transactions?.attachment_url,
         })
     }
     return {
@@ -321,14 +322,92 @@ export async function deleteInvoice(id: string): Promise<ActionResult> {
     return { success: true }
 }
 
-export async function recordInvoicePayment(raw: unknown): Promise<ActionResult<{ id: string }>> {
+async function uploadReceipt(organizationId: string, prefix: string, file: File): Promise<string | null> {
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_").replace(/^[./\\]+/, "").slice(-80)
+    const path = `${organizationId}/transactions/${prefix}-${Date.now()}-${safeName}`
+    const { error } = await createAdminClient().storage.from(BUCKET).upload(path, file, { contentType: file.type })
+    if (error) {
+        console.error("Receipt upload failed:", error.message)
+        return null
+    }
+    return path
+}
+
+function formFile(formData: FormData, name = "file"): File | null {
+    const f = formData.get(name)
+    return f instanceof File && f.size > 0 ? f : null
+}
+
+// formData: "payload" (JSON: invoice_id, amount, tx_date, account_id?, reference?, remarks?) and "file"
+// (the receipt). Money received for an invoice you issued needs its receipt: the file is uploaded first
+// and the database function saves the payment and the receipt together (it refuses one without the
+// other), so a payment never exists without its receipt. Bills are paid exactly as before.
+export async function recordInvoicePayment(formData: FormData): Promise<ActionResult<{ id: string }>> {
+    try {
+        await checkWriteAccess()
+    } catch {
+        return { success: false, error: "Only Admins and Editors can record payments." }
+    }
+    let raw: unknown
+    try {
+        raw = JSON.parse(String(formData.get("payload") ?? ""))
+    } catch {
+        return { success: false, error: "The form could not be read. Please try again." }
+    }
     const parsed = parsePaymentInput(raw)
     if (!parsed.ok) return { success: false, error: parsed.error }
+    const file = formFile(formData)
+    const fileProblem = checkFile(file)
+    if (fileProblem) return { success: false, error: fileProblem }
+
     const supabase = await createClient()
-    const { data, error } = await supabase.rpc("record_invoice_payment", { payload: parsed.value })
-    if (error || typeof data !== "string") return { success: false, error: dbMessage(error, "Could not record the payment. Please try again.") }
+    const organizationId = await getOrganizationId()
+    if (!organizationId) return { success: false, error: "No active organization" }
+    const { data: inv } = await supabase.from("invoices").select("direction").eq("id", parsed.value.invoice_id).eq("organization_id", organizationId).maybeSingle()
+    if (!inv) return { success: false, error: "That invoice was not found" }
+    const receivable = inv.direction === "receivable"
+    if (receivable && !file) return { success: false, error: "Attach the receipt for this payment (an image or a PDF)." }
+
+    let path: string | null = null
+    if (receivable && file) {
+        path = await uploadReceipt(organizationId, "receipt", file)
+        if (!path) return { success: false, error: "The receipt could not be uploaded, so the payment was not recorded. Please try again." }
+    }
+    const { data, error } = await supabase.rpc("record_invoice_payment", { payload: { ...parsed.value, attachment_path: path } })
+    if (error || typeof data !== "string") {
+        await removeFile(path)
+        return { success: false, error: dbMessage(error, "Could not record the payment. Please try again.") }
+    }
     revalidateInvoices()
     return { success: true, data: { id: data } }
+}
+
+// formData: "transaction_id" and "file". Adds the receipt to an older payment received that has none.
+export async function addInvoicePaymentReceipt(formData: FormData): Promise<ActionResult> {
+    try {
+        await checkWriteAccess()
+    } catch {
+        return { success: false, error: "Only Admins and Editors can add receipts." }
+    }
+    const txId = String(formData.get("transaction_id") ?? "")
+    if (!UUID_RE.test(txId)) return { success: false, error: "That payment was not found" }
+    const file = formFile(formData)
+    if (!file) return { success: false, error: "Choose the receipt (an image or a PDF)." }
+    const fileProblem = checkFile(file)
+    if (fileProblem) return { success: false, error: fileProblem }
+    const organizationId = await getOrganizationId()
+    if (!organizationId) return { success: false, error: "No active organization" }
+
+    const path = await uploadReceipt(organizationId, txId, file)
+    if (!path) return { success: false, error: "The receipt could not be uploaded. Please try again." }
+    const supabase = await createClient()
+    const { error } = await supabase.rpc("set_invoice_payment_receipt", { p_tx: txId, p_path: path })
+    if (error) {
+        await removeFile(path)
+        return { success: false, error: dbMessage(error, "Could not add the receipt. Please try again.") }
+    }
+    revalidateInvoices()
+    return { success: true }
 }
 
 export async function deleteInvoicePayment(transactionId: string): Promise<ActionResult> {

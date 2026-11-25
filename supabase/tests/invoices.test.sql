@@ -215,12 +215,65 @@ BEGIN
   ASSERT (SELECT balance FROM invoice_summary WHERE id = c.inv_pay) = 300, 'deleting a payment reopens the balance';
 
   -- Receivable: paid with money in, income categories
-  v_rec_pay := record_invoice_payment(jsonb_build_object('invoice_id', c.inv_rec, 'amount', 500, 'tx_date', current_date, 'reference', 'FPX-1'));
+  v_rec_pay := record_invoice_payment(jsonb_build_object('invoice_id', c.inv_rec, 'amount', 500, 'tx_date', current_date, 'reference', 'FPX-1', 'attachment_path', c.org || '/transactions/test-receipt.pdf'));
   PERFORM pg_temp.commit_checks();
   ASSERT (SELECT tx_type || '/' || reference FROM transactions WHERE id = v_rec_pay) = 'money_in/FPX-1', 'paying an invoice you issued is money in';
 
   UPDATE i_ctx SET pay1 = v_pay1, rec_pay = v_rec_pay;
   RAISE NOTICE 'PASS payments split in proportion, part-paid and paid are derived, overpaying and voiding with payments are refused';
+END $$;
+RESET ROLE;
+
+-- Money received for an invoice you issued needs its receipt (invoices and AI plan, step 1)
+DO $$
+DECLARE c i_ctx; v_path text;
+BEGIN
+  SELECT * INTO c FROM i_ctx;
+  v_path := c.org || '/transactions/test-receipt.pdf';
+  ASSERT (SELECT attachment_url FROM transactions WHERE id = c.rec_pay) = v_path, 'the receipt is saved with the payment';
+
+  PERFORM pg_temp.sign_in(c.u_editor, 'iv-editor@example.com');
+  SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.expect_error(format($q$SELECT record_invoice_payment('{"invoice_id":"%s","amount":1,"tx_date":"%s"}')$q$, c.inv_rec, current_date),
+    'Attach the receipt', 'a payment received without a receipt');
+  PERFORM pg_temp.expect_error(format($q$SELECT record_invoice_payment('{"invoice_id":"%s","amount":1,"tx_date":"%s","attachment_path":"%s/transactions/x.pdf"}')$q$, c.inv_rec, current_date, c.org_other),
+    'could not be attached', 'a receipt from another organisation''s folder');
+  PERFORM pg_temp.expect_error(format($q$SELECT record_invoice_payment('{"invoice_id":"%s","amount":1,"tx_date":"%s","attachment_path":"%s/../x.pdf"}')$q$, c.inv_rec, current_date, c.org),
+    'could not be attached', 'a receipt path leaving the folder');
+  PERFORM pg_temp.expect_error(format($q$SELECT set_invoice_payment_receipt('%s', '%s')$q$, c.rec_pay, v_path), 'already has a receipt', 'replacing a receipt');
+  PERFORM pg_temp.expect_error(format($q$SELECT set_invoice_payment_receipt('%s', '%s')$q$, c.pay1, v_path), 'not found', 'a receipt on a bill payment');
+  RESET ROLE;
+
+  -- An older payment without a receipt (from before this rule) can get one
+  UPDATE transactions SET attachment_url = NULL WHERE id = c.rec_pay;
+  PERFORM pg_temp.sign_in(c.u_viewer, 'iv-viewer@example.com');
+  SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.expect_error(format($q$SELECT set_invoice_payment_receipt('%s', '%s')$q$, c.rec_pay, v_path), 'Only Admins and Editors', 'a Viewer adding a receipt');
+  RESET ROLE;
+  PERFORM pg_temp.sign_in(c.u_editor, 'iv-editor@example.com');
+  SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.expect_error(format($q$SELECT set_invoice_payment_receipt('%s', '%s/transactions/x.pdf')$q$, c.rec_pay, c.org_other), 'could not be attached', 'adding a receipt from another folder');
+  RESET ROLE;
+
+  -- ... but not in a locked period
+  PERFORM set_config('app.lock_change', 'on', true);
+  UPDATE organizations SET lock_date = current_date WHERE id = c.org;
+  PERFORM set_config('app.lock_change', 'off', true);
+  PERFORM pg_temp.sign_in(c.u_editor, 'iv-editor@example.com');
+  SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.expect_error(format($q$SELECT set_invoice_payment_receipt('%s', '%s')$q$, c.rec_pay, v_path), 'locked period', 'adding a receipt in a locked period');
+  RESET ROLE;
+  PERFORM set_config('app.lock_change', 'on', true);
+  UPDATE organizations SET lock_date = NULL WHERE id = c.org;
+  PERFORM set_config('app.lock_change', 'off', true);
+
+  PERFORM pg_temp.sign_in(c.u_editor, 'iv-editor@example.com');
+  SET LOCAL ROLE authenticated;
+  PERFORM set_invoice_payment_receipt(c.rec_pay, v_path);
+  RESET ROLE;
+  ASSERT (SELECT attachment_url FROM transactions WHERE id = c.rec_pay) = v_path, 'the receipt is added to the older payment';
+  ASSERT (SELECT attachment_url FROM transactions WHERE id = c.pay1) IS NULL, 'bills are paid without a receipt, as before';
+  RAISE NOTICE 'PASS a payment received needs its receipt; older payments can get one, not in a locked period';
 END $$;
 RESET ROLE;
 
@@ -374,7 +427,7 @@ BEGIN
   PERFORM void_invoice(v_void, 'Duplicate');
   v_don := save_money_in(jsonb_build_object('tx_date', '2025-03-20', 'lines', jsonb_build_array(jsonb_build_object('amount', 100, 'category_id', c.cat_don))));
   PERFORM record_invoice_payment(jsonb_build_object('invoice_id', v_bill, 'amount', 200, 'tx_date', '2025-04-05'));
-  PERFORM record_invoice_payment(jsonb_build_object('invoice_id', v_rec, 'amount', 800, 'tx_date', '2025-04-06'));
+  PERFORM record_invoice_payment(jsonb_build_object('invoice_id', v_rec, 'amount', 800, 'tx_date', '2025-04-06', 'attachment_path', c.org || '/transactions/test-receipt.pdf'));
   PERFORM record_invoice_payment(jsonb_build_object('invoice_id', v_ob, 'amount', 1000 - 500, 'tx_date', '2025-04-07'));
   PERFORM pg_temp.commit_checks();
 

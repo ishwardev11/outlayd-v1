@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useCurrency } from "@/components/CurrencyProvider"
-import { deleteInvoice, deleteInvoicePayment, getInvoiceForPdf, recordInvoicePayment, voidInvoice, type InvoiceDetail } from "@/app/actions/invoices"
+import { addInvoicePaymentReceipt, deleteInvoice, deleteInvoicePayment, getInvoiceForPdf, recordInvoicePayment, voidInvoice, type InvoiceDetail } from "@/app/actions/invoices"
 import { buildInvoiceContent } from "@/utils/invoice-document"
 import { buildInvoicePdf } from "@/utils/invoice-pdf"
 import type { EntryOptions } from "@/app/actions/transactions"
@@ -23,6 +23,8 @@ import { markUploadedBillPaid } from "@/app/actions/ledger"
 import { DocumentOpener } from "@/components/ledger/DocumentOpener"
 
 const selectClass = "h-9 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white"
+
+const RECEIPT_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf"
 
 function todayLocal(): string {
     const d = new Date()
@@ -49,6 +51,7 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
     const [busy, setBusy] = useState(false)
     const [pay, setPay] = useState({ amount: inv.balance.toFixed(2), date: todayLocal(), account: options.accounts.find((a) => a.is_default)?.id ?? "", reference: "", remarks: "" })
     const [reason, setReason] = useState("")
+    const [receipt, setReceipt] = useState<File | null>(null)
 
     const lock = useLock()
     // An invoice dated in a locked period cannot change; it can still be paid after the lock date
@@ -65,6 +68,20 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
     const paidOnLocked = lock.isLocked(paidOn)
     const accountChoices = options.accounts.filter((a) => !a.archived)
 
+    const savePayment = () => {
+        const fd = new FormData()
+        fd.set("payload", JSON.stringify({ invoice_id: inv.id, amount: pay.amount, tx_date: pay.date, account_id: pay.account || null, reference: pay.reference, remarks: pay.remarks }))
+        if (!payable && receipt) fd.set("file", receipt)
+        return recordInvoicePayment(fd)
+    }
+    const addReceipt = (transactionId: string, file: File | undefined) => {
+        if (!file) return
+        const fd = new FormData()
+        fd.set("transaction_id", transactionId)
+        fd.set("file", file)
+        run(() => addInvoicePaymentReceipt(fd), "Receipt added")
+    }
+
     const run = async (fn: () => Promise<{ success: boolean; error?: string }>, done: string) => {
         setBusy(true)
         try {
@@ -72,6 +89,7 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
             if (!res.success) return toast.error(res.error ?? "Something went wrong")
             toast.success(done)
             setMode("view")
+            setReceipt(null)
             onChanged()
             router.refresh()
         } finally {
@@ -153,7 +171,22 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                                         <td className="py-1.5">{p.date}</td>
                                         <td className="py-1.5">{p.reference ?? ""}{p.from_bill ? <span className="ml-1 text-xs text-slate-500">(bill marked paid)</span> : null}</td>
                                         <td className="py-1.5 text-right tabular-nums">{money(p.amount)}</td>
-                                        <td className="py-1.5 text-right w-24">
+                                        <td className="py-1.5 text-right whitespace-nowrap">
+                                            {p.has_receipt ? (
+                                                <a href={`/api/files/transaction/${p.transaction_id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline">
+                                                    <Paperclip className="h-3 w-3" />View receipt
+                                                </a>
+                                            ) : !payable && !p.from_bill ? (
+                                                canWrite && !lock.isLocked(p.date) ? (
+                                                    <label className={`inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 ${busy ? "opacity-50" : "cursor-pointer hover:underline"}`}>
+                                                        <Paperclip className="h-3 w-3" />Add receipt
+                                                        <input type="file" accept={RECEIPT_ACCEPT} className="sr-only" disabled={busy}
+                                                            onChange={(e) => { addReceipt(p.transaction_id, e.target.files?.[0]); e.target.value = "" }} />
+                                                    </label>
+                                                ) : <span className="text-xs text-amber-700 dark:text-amber-400">No receipt</span>
+                                            ) : null}
+                                        </td>
+                                        <td className="py-1.5 text-right w-16">
                                             {canWrite && !p.from_bill && !lock.isLocked(p.date) && (
                                                 <button type="button" className="text-xs text-red-600 hover:underline" disabled={busy}
                                                     onClick={() => { if (window.confirm("Delete this payment? The balance reopens.")) run(() => deleteInvoicePayment(p.transaction_id), "Payment deleted") }}>
@@ -192,13 +225,18 @@ export function InvoiceDetailDialog({ detail, options, canWrite, onClose, onEdit
                             <div className="space-y-1.5"><Label htmlFor="pay-ref">Reference (cheque or bank ref.)</Label>
                                 <Input id="pay-ref" value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} maxLength={100} /></div>
                         </div>
+                        {!payable && (
+                            <div className="space-y-1.5"><Label htmlFor="pay-receipt">Receipt (required)</Label>
+                                <Input id="pay-receipt" type="file" accept={RECEIPT_ACCEPT} onChange={(e) => setReceipt(e.target.files?.[0] ?? null)} />
+                                <p className="text-xs text-slate-500">The receipt or bank slip for this money, as an image (JPG, PNG, WEBP) or a PDF, up to 10 MB.</p></div>
+                        )}
                         <Textarea aria-label="Payment remarks" placeholder="Remarks (optional)" value={pay.remarks} onChange={(e) => setPay({ ...pay, remarks: e.target.value })} maxLength={500} rows={2} />
                         <p className="text-xs text-slate-500">Part-payments are fine. The payment is shared across the invoice&apos;s funds and categories in proportion.</p>
                         {payDateLocked && <LockedNotice text={`That date is in a locked period. ${lock.message}`} />}
                         <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={() => setMode("view")} disabled={busy}>Cancel</Button>
-                            <Button disabled={busy || payDateLocked} className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                                onClick={() => run(() => recordInvoicePayment({ invoice_id: inv.id, amount: pay.amount, tx_date: pay.date, account_id: pay.account || null, reference: pay.reference, remarks: pay.remarks }), "Payment recorded")}>
+                            <Button variant="outline" onClick={() => { setMode("view"); setReceipt(null) }} disabled={busy}>Cancel</Button>
+                            <Button disabled={busy || payDateLocked || (!payable && !receipt)} className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                onClick={() => run(savePayment, "Payment recorded")}>
                                 {busy && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Save payment
                             </Button>
                         </div>

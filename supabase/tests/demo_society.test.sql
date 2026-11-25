@@ -158,8 +158,8 @@ BEGIN
     'lines', jsonb_build_array(jsonb_build_object('description', 'Hall rental, April', 'amount', 1500, 'category_id', c.c_rental))));
   PERFORM pg_temp.commit_checks();
   UPDATE d_ctx SET inv_rental = v;
-  PERFORM record_invoice_payment(jsonb_build_object('invoice_id', c.inv_open_rec, 'amount', 1200, 'tx_date', '2026-04-20'));
-  PERFORM record_invoice_payment(jsonb_build_object('invoice_id', v, 'amount', 1500, 'tx_date', '2026-05-20'));
+  PERFORM record_invoice_payment(jsonb_build_object('invoice_id', c.inv_open_rec, 'amount', 1200, 'tx_date', '2026-04-20', 'attachment_path', c.org || '/transactions/test-receipt.pdf'));
+  PERFORM record_invoice_payment(jsonb_build_object('invoice_id', v, 'amount', 1500, 'tx_date', '2026-05-20', 'attachment_path', c.org || '/transactions/test-receipt.pdf'));
   PERFORM pg_temp.commit_checks();
   RESET ROLE;
 
