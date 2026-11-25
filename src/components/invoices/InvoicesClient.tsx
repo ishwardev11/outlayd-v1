@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ChevronLeft, ChevronRight, Download, Loader2, Lock, Paperclip, Plus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, Loader2, Lock, Paperclip, Plus, Sparkles, UploadCloud } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useRole } from "@/components/RoleProvider"
@@ -16,6 +16,9 @@ import { StatusBadge } from "./StatusBadge"
 import { InvoiceDialog } from "./InvoiceDialog"
 import { InvoiceDetailDialog } from "./InvoiceDetailDialog"
 import { UpgradeNotice, usePaywall } from "@/components/ui/UpgradeNotice"
+import { UpgradePaywallModal } from "@/components/ui/UpgradePaywallModal"
+import { processUpload } from "@/app/actions/ledger"
+import { errorMessage } from "@/utils/row-types"
 
 const selectClass = "h-9 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white"
 
@@ -26,7 +29,11 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
     const { symbol } = useCurrency()
     const [draft, setDraft] = useState({ status: filters.status, q: filters.q })
     const [detail, setDetail] = useState<InvoiceDetail | null>(null)
-    const [form, setForm] = useState<{ edit: InvoiceDetail | null; key: number } | null>(null)
+    const [form, setForm] = useState<{ edit: InvoiceDetail | null; key: number; autoFillFile?: File } | null>(null)
+    // "Upload a bill" (Bills tab) and "Upload an invoice" (Receivable tab)
+    const uploadRef = useRef<HTMLInputElement>(null)
+    const [uploading, setUploading] = useState(false)
+    const [uploadLimit, setUploadLimit] = useState(false)
     const [loading, setLoading] = useState<string | null>(null)
     const [exporting, setExporting] = useState(false)
 
@@ -93,6 +100,28 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
         }
     }
 
+    // A bill goes through the same upload as the Inbox: the AI reads it, it waits in the Inbox to be
+    // checked and approved, then appears here. An invoice you issued opens the New invoice form and is
+    // read straight into it (nothing is saved until Save).
+    const onUploadPicked = async (file: File | undefined) => {
+        if (!file) return
+        if (!payable) return setForm({ edit: null, key: Date.now(), autoFillFile: file })
+        setUploading(true)
+        try {
+            const fd = new FormData()
+            fd.append("file", file)
+            const res = await processUpload(fd) as { status?: string; code?: string } | null
+            if (res && res.status === "error" && res.code === "LIMIT_REACHED") return setUploadLimit(true)
+            toast.success("Bill uploaded. The AI is reading it: check and approve it in the Inbox, and it will appear here.", {
+                duration: 8000, action: { label: "Open Inbox", onClick: () => router.push("/inbox") },
+            })
+        } catch (e) {
+            toast.error(errorMessage(e) || "The bill could not be uploaded. Please try again.")
+        } finally {
+            setUploading(false)
+        }
+    }
+
     const fromStatement = !!(filters.from || filters.to || filters.category || filters.fund)
     const categoryName = options.categories.find((c) => c.id === filters.category)?.name
     const fundName = options.funds.find((f) => f.id === filters.fund)?.name
@@ -116,17 +145,33 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
                     <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Bills &amp; Invoices</h1>
                     <p className="text-gray-500 mt-2 dark:text-slate-400">Bills you owe and invoices you issued, with what is still outstanding.</p>
                 </div>
+                <div className="flex flex-wrap gap-2">
+                <input ref={uploadRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="hidden"
+                    onChange={(e) => { onUploadPicked(e.target.files?.[0]); e.target.value = "" }} />
+                {payable ? (
+                    <Button variant="outline" disabled={isViewer || uploading} onClick={() => uploadRef.current?.click()}
+                        title={isViewer ? "Viewers cannot upload documents" : "The AI reads the bill; you check and approve it in the Inbox"} data-testid="upload-bill">
+                        {uploading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-1.5" />}Upload a bill
+                    </Button>
+                ) : (
+                    <Button variant="outline" disabled={isViewer} onClick={() => (options.paid ? uploadRef.current?.click() : paywall.open())}
+                        title={isViewer ? "Viewers cannot create invoices" : !options.paid ? "Creating invoices is part of the Growth and Nonprofit plans" : "The AI fills in a new invoice from one you already issued"} data-testid="upload-invoice">
+                        {options.paid ? <Sparkles className="h-4 w-4 mr-1.5" /> : <Lock className="h-4 w-4 mr-1.5" />}Upload an invoice
+                    </Button>
+                )}
                 <Button onClick={() => (options.paid ? setForm({ edit: null, key: Date.now() }) : paywall.open())} disabled={isViewer}
                     title={isViewer ? "Viewers cannot create invoices" : !options.paid ? "Creating invoices is part of the Growth and Nonprofit plans" : ""}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white">
                     {options.paid ? <Plus className="h-4 w-4 mr-1.5" /> : <Lock className="h-4 w-4 mr-1.5" />}{payable ? "New bill" : "New invoice"}
                 </Button>
+                </div>
                 {paywall.modal}
+                <UpgradePaywallModal isOpen={uploadLimit} onClose={() => setUploadLimit(false)} />
             </div>
 
             {!options.paid && (
                 <UpgradeNotice context="invoices">
-                    Bills you approve in the Inbox appear here automatically. Open one and choose Mark as paid when you pay it.
+                    Upload a bill and approve it in the Inbox, and it appears here. Open one and choose Mark as paid when you pay it.
                     Creating bills and invoices, invoicing others and recording part-payments are part of the Growth and Nonprofit plans.
                 </UpgradeNotice>
             )}
@@ -238,7 +283,7 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
                     onChanged={refreshDetail} />
             )}
             {form && (
-                <InvoiceDialog key={form.key} open direction={form.edit?.invoice.direction ?? filters.tab} options={options} edit={form.edit}
+                <InvoiceDialog key={form.key} open direction={form.edit?.invoice.direction ?? filters.tab} options={options} edit={form.edit} autoFillFile={form.autoFillFile}
                     onOpenChange={(o) => { if (!o) setForm(null) }}
                     onSaved={async (id) => { const d = await getInvoiceDetail(id); setDetail(d) }} />
             )}

@@ -7,6 +7,8 @@ import { parseInvoiceFilters } from "@/utils/invoices";
 export const metadata: Metadata = { title: "Bills & Invoices" };
 
 export const dynamic = "force-dynamic";
+// "Upload invoice to auto-fill" reads the document with the AI from this page (up to 30s per try)
+export const maxDuration = 60;
 
 // Invoices (spec 5.4). Everyone in the organisation can read them (free plans see the bills from their
 // uploads); creating and changing invoices needs Admin or Editor on a paid plan, checked again in the database.

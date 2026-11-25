@@ -1,9 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Loader2, Paperclip, Plus, Trash2 } from "lucide-react"
+import { AlertTriangle, Loader2, Paperclip, Plus, Sparkles, Trash2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useCurrency } from "@/components/CurrencyProvider"
 import { recordInvoicePayment, saveInvoice, type InvoiceDetail } from "@/app/actions/invoices"
+import { extractIssuedInvoice, type IssuedInvoiceFill } from "@/app/actions/invoice-ai"
+import { linesMatchTotal } from "@/utils/issued-invoice-extract"
 import { createPayee } from "@/app/actions/ledger"
 import type { EntryOptions } from "@/app/actions/transactions"
 import { linesTotal, parseAmount } from "@/utils/transaction-input"
@@ -32,13 +34,15 @@ function todayLocal(): string {
 
 // Create or edit a manual invoice (spec 3.8, 5.4): a bill to pay, or an invoice you issue. The
 // database checks everything again; a receivable invoice gets its number when it is first opened.
-export function InvoiceDialog({ open, onOpenChange, direction, options, edit, onSaved }: {
+export function InvoiceDialog({ open, onOpenChange, direction, options, edit, onSaved, autoFillFile }: {
     open: boolean
     onOpenChange: (open: boolean) => void
     direction: InvoiceDirection
     options: EntryOptions
     edit?: InvoiceDetail | null
     onSaved?: (id: string) => void
+    // "Upload an invoice" on the Receivable tab: read this file into the form as soon as it opens
+    autoFillFile?: File
 }) {
     const router = useRouter()
     const { symbol } = useCurrency()
@@ -64,6 +68,10 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
     const accountChoices = options.accounts.filter((a) => !a.archived)
     const [deposit, setDeposit] = useState({ on: false, amount: "", date: todayLocal(), account: accountChoices.find((a) => a.is_default)?.id ?? accountChoices[0]?.id ?? "", reference: "" })
     const [depositReceipt, setDepositReceipt] = useState<File | null>(null)
+    // Upload invoice to auto-fill (new invoices you issue): what the AI read, for review before saving
+    const [aiBusy, setAiBusy] = useState(false)
+    const [aiFill, setAiFill] = useState<(IssuedInvoiceFill & { fileName: string }) | null>(null)
+    const [printedNo, setPrintedNo] = useState("")
     const lock = useLock()
     const dateLocked = lock.isLocked(issueDate) || lock.isLocked(inv?.issue_date)
 
@@ -86,10 +94,59 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
     const addLine = () => setLines((ls) => [...ls, { key: Math.max(...ls.map((l) => l.key)) + 1, description: "", amount: "", fundId: defaultFund, categoryId: "" }])
     const removeLine = (key: number) => setLines((ls) => ls.filter((l) => l.key !== key))
 
+    // Reads the uploaded invoice and fills the form. Nothing is saved until the person presses Save.
+    const autoFill = async (picked: File | undefined) => {
+        if (!picked) return
+        setAiBusy(true)
+        try {
+            const fd = new FormData()
+            fd.set("file", picked)
+            const res = await extractIssuedInvoice(fd)
+            if (!res.success) return toast.error(res.error, { duration: 8000 })
+            const d = res.data
+            setAiFill({ ...d, fileName: picked.name })
+            if (d.payeeId) { setPayeeId(d.payeeId); setNewPayee("") }
+            else if (d.newPayeeName) { setPayeeId(NEW_PAYEE); setNewPayee(d.newPayeeName) }
+            else { setPayeeId(""); setNewPayee("") }
+            if (d.draft.issueDate) setIssueDate(d.draft.issueDate)
+            setDueDate(d.draft.dueDate ?? "")
+            setReference(d.draft.reference ?? "")
+            setPrintedNo(d.draft.invoiceNumber ?? "")
+            const fundId = d.suggestedFundId && options.funds.some((f) => f.id === d.suggestedFundId && !f.archived) ? d.suggestedFundId : defaultFund
+            const categoryId = d.suggestedCategoryId && options.categories.some((c) => c.id === d.suggestedCategoryId && !c.archived) ? d.suggestedCategoryId : ""
+            setLines(d.lines.length > 0
+                ? d.lines.map((l, i) => ({ key: i, description: l.description, amount: l.amount.toFixed(2), fundId, categoryId }))
+                : [{ key: 0, description: "", amount: "", fundId, categoryId }])
+            // The uploaded file becomes the invoice's attachment
+            setFile(picked)
+            if (d.deposit) setDeposit((dep) => ({ ...dep, on: true, amount: d.deposit!.amount.toFixed(2), date: d.deposit!.date ?? dep.date }))
+            if (d.draft.customerIsOwnOrg) toast.warning("This looks like a bill you received. Upload it in the ledger instead.", { duration: 10000 })
+            else toast.success("Filled in from the invoice. Check every field before saving.")
+        } catch (e) {
+            toast.error(errorMessage(e) || "The invoice could not be read. Please enter it by hand.")
+        } finally {
+            setAiBusy(false)
+        }
+    }
+
+    const autoFillStarted = useRef(false)
+    useEffect(() => {
+        if (!autoFillFile || autoFillStarted.current || payable || inv) return
+        autoFillStarted.current = true
+        autoFill(autoFillFile)
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once, for the file the form was opened with
+    }, [autoFillFile])
+
     const submit = async (status: "draft" | "open") => {
         if (lines.some((l) => parseAmount(l.amount) === null)) return toast.error("Enter an amount above zero on every line")
         if (lines.some((l) => !l.categoryId)) return toast.error("Choose a category for every line")
         if (paid > 0 && total < paid) return toast.error(`The total cannot be less than what has been paid (${symbol}${paid.toFixed(2)})`)
+        if (aiFill && aiFill.total !== null && !linesMatchTotal(lines.map((l) => parseAmount(l.amount) ?? 0), aiFill.total)) {
+            return toast.error(`The lines add up to ${symbol}${total.toFixed(2)}, but the invoice total is ${symbol}${aiFill.total.toFixed(2)}. Correct the lines so they match.`)
+        }
+        if (aiFill?.duplicateNumber && printedNo.trim() && printedNo.trim().toLowerCase() === (aiFill.draft.invoiceNumber ?? "").toLowerCase()) {
+            return toast.error(`Invoice number ${printedNo.trim()} is already used. Change it, or clear it to use the next Outlayd number.`)
+        }
         const withDeposit = takingDeposit && status === "open"
         if (withDeposit) {
             const problem = depositProblem({ total, amount: deposit.amount, date: deposit.date, hasReceipt: !!depositReceipt, dateLocked: depositDateLocked })
@@ -110,6 +167,8 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
                 id: inv?.id ?? null, direction, status, payee_id: chosen, invoice_no: payable ? invoiceNo : null,
                 issue_date: issueDate, due_date: dueDate || null, reference, remarks, is_opening_balance: opening,
                 lines: lines.map((l) => ({ description: l.description, amount: l.amount, fund_id: l.fundId || null, category_id: l.categoryId })),
+                printed_invoice_no: aiFill && printedNo.trim() ? printedNo.trim() : null,
+                ai_extracted: aiFill ? aiFill.extracted : null,
             }))
             if (file) fd.set("file", file)
             if (removeAttachment) fd.set("removeAttachment", "1")
@@ -153,7 +212,30 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
                     </DialogDescription>
                 </DialogHeader>
 
-                <fieldset disabled={saving} className="space-y-4">
+                <fieldset disabled={saving || aiBusy} className="space-y-4">
+                    {/* Only when the form was opened with "Upload an invoice" on the Receivable tab: what the AI read */}
+                    {canDeposit && (aiBusy || aiFill) && (
+                        <div className="rounded-lg border border-dashed border-indigo-300 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20 p-3 space-y-2" data-testid="ai-autofill">
+                            <p className="flex items-center gap-2 text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                                {aiBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                {aiBusy ? "Reading the invoice…" : "Filled in by the AI"}
+                            </p>
+                            {aiFill && (
+                                <div className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+                                    <p>Filled in from <span className="font-medium">{aiFill.fileName}</span>, which is attached to the invoice. Check every field before saving.</p>
+                                    {aiFill.draft.dueDateFrom === "terms" && <p>Due date worked out from the terms &ldquo;{aiFill.draft.paymentTerms}&rdquo;.</p>}
+                                    {aiFill.conversion && <p>Converted from {aiFill.conversion.from} at {aiFill.conversion.rate} (ECB rate for {aiFill.conversion.rateDate}).</p>}
+                                    {aiFill.rateMissing && <p className="text-amber-700 dark:text-amber-400">The invoice is in {aiFill.draft.currency} and no exchange rate was found. Enter the amounts in {symbol.trim() || "your currency"}.</p>}
+                                    {aiFill.duplicateNumber && <p className="text-red-600">Invoice number {aiFill.draft.invoiceNumber} is already used by another invoice.</p>}
+                                    {aiFill.draft.flags.filter((f) => f.code !== "CURRENCY_CONVERTED").map((f) => (
+                                        <p key={f.code} className={`flex items-start gap-1 ${f.code === "CUSTOMER_IS_ORG" ? "text-red-600 font-medium" : "text-amber-700 dark:text-amber-400"}`}>
+                                            <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0" />{f.message}
+                                        </p>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-1.5 sm:col-span-2">
                             <Label htmlFor="inv-payee">{payable ? "Supplier" : "Bill to"}</Label>
@@ -166,6 +248,13 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
                                 <Input aria-label="New contact name" placeholder="Name" value={newPayee} onChange={(e) => setNewPayee(e.target.value)} maxLength={255} />
                             )}
                         </div>
+                        {aiFill && (
+                            <div className="space-y-1.5">
+                                <Label htmlFor="inv-printed-no">Invoice number (as printed)</Label>
+                                <Input id="inv-printed-no" value={printedNo} onChange={(e) => setPrintedNo(e.target.value)} maxLength={100} />
+                                <p className="text-xs text-slate-500">Kept as printed. Clear it to use the next Outlayd number.</p>
+                            </div>
+                        )}
                         {payable && (
                             <div className="space-y-1.5">
                                 <Label htmlFor="inv-no">Supplier&apos;s invoice number</Label>
@@ -259,7 +348,7 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
                                     </p>
                                     {remaining < 0 && <p className="text-sm text-red-600">The deposit cannot be more than the invoice total.</p>}
                                     {depositDateLocked && <LockedNotice text={`The deposit date is in a locked period. ${lock.message}`} />}
-                                    <p className="text-xs text-slate-500">The deposit is recorded when you press Save and number. Drafts cannot take a deposit.</p>
+                                    <p className="text-xs text-slate-500">The deposit is recorded when you save the invoice. Drafts cannot take a deposit.</p>
                                 </>
                             )}
                         </div>
@@ -282,7 +371,7 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
                     <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
                     {canDraft && <Button type="button" variant="outline" onClick={() => submit("draft")} disabled={saving || dateLocked || takingDeposit} title={takingDeposit ? "A draft cannot take a deposit" : undefined}>Save as draft</Button>}
                     <Button type="button" onClick={() => submit("open")} disabled={saving || dateLocked || depositDateLocked} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                        {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}{inv && inv.status !== "draft" ? "Save" : payable ? "Save bill" : "Save and number"}
+                        {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}{inv && inv.status !== "draft" ? "Save" : payable ? "Save bill" : aiFill && printedNo.trim() ? "Save invoice" : "Save and number"}
                     </Button>
                 </div>
             </DialogContent>

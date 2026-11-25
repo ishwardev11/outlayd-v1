@@ -311,6 +311,47 @@ BEGIN
 END $$;
 RESET ROLE;
 
+-- An invoice read by the AI keeps its printed number and what the AI read (step 6)
+DO $$
+DECLARE c i_ctx; v_a uuid; v_b uuid; v_next int; v_prefix text; r record;
+BEGIN
+  SELECT * INTO c FROM i_ctx;
+  SELECT invoice_next_number, invoice_prefix INTO v_next, v_prefix FROM organizations WHERE id = c.org;
+  PERFORM pg_temp.sign_in(c.u_editor, 'iv-editor@example.com');
+  SET LOCAL ROLE authenticated;
+  v_a := save_invoice(jsonb_build_object('direction', 'receivable', 'payee_id', c.payee, 'issue_date', current_date,
+    'printed_invoice_no', 'HC-2026-007', 'ai_extracted', jsonb_build_object('total', 300, 'invoice_number', 'HC-2026-007'),
+    'lines', jsonb_build_array(jsonb_build_object('amount', 300, 'category_id', c.cat_fees))));
+  PERFORM pg_temp.commit_checks();
+  SELECT * INTO r FROM invoices WHERE id = v_a;
+  ASSERT r.invoice_no = 'HC-2026-007' AND r.seq IS NULL, 'the printed number is kept, no Outlayd number used';
+  ASSERT r.entry_method = 'ai_extraction' AND (r.ai_extracted ->> 'total')::numeric = 300, 'marked as read by the AI, with what it read';
+  ASSERT (SELECT invoice_next_number FROM organizations WHERE id = c.org) = v_next, 'the Outlayd sequence did not move';
+  ASSERT EXISTS (SELECT 1 FROM audit_events WHERE entity_id = v_a AND action = 'insert' AND after -> 'ai_extracted' ->> 'invoice_number' = 'HC-2026-007'),
+    'the change history keeps what the AI read';
+
+  PERFORM pg_temp.expect_error(format($q$SELECT save_invoice('{"direction":"receivable","payee_id":"%s","issue_date":"%s","printed_invoice_no":"hc-2026-007","lines":[{"amount":1,"category_id":"%s"}]}')$q$, c.payee, current_date, c.cat_fees),
+    'already used', 'a duplicate printed number (any case)');
+
+  -- a printed number that matches the next Outlayd number is skipped by the sequence
+  PERFORM save_invoice(jsonb_build_object('direction', 'receivable', 'payee_id', c.payee, 'issue_date', current_date,
+    'printed_invoice_no', v_prefix || v_next, 'lines', jsonb_build_array(jsonb_build_object('amount', 10, 'category_id', c.cat_fees))));
+  v_b := save_invoice(jsonb_build_object('direction', 'receivable', 'payee_id', c.payee, 'issue_date', current_date,
+    'lines', jsonb_build_array(jsonb_build_object('amount', 10, 'category_id', c.cat_fees))));
+  PERFORM pg_temp.commit_checks();
+  ASSERT (SELECT invoice_no FROM invoices WHERE id = v_b) = v_prefix || (v_next + 1), 'the sequence skips a number already printed';
+  ASSERT (SELECT entry_method FROM invoices WHERE id = v_b) = 'manual' AND (SELECT ai_extracted FROM invoices WHERE id = v_b) IS NULL, 'a typed invoice stays manual';
+
+  -- editing keeps the printed number; a bill ignores printed numbers
+  PERFORM save_invoice(jsonb_build_object('id', v_a, 'direction', 'receivable', 'payee_id', c.payee, 'issue_date', current_date,
+    'printed_invoice_no', 'CHANGED', 'lines', jsonb_build_array(jsonb_build_object('amount', 350, 'category_id', c.cat_fees))));
+  PERFORM pg_temp.commit_checks();
+  ASSERT (SELECT invoice_no FROM invoices WHERE id = v_a) = 'HC-2026-007', 'editing keeps the printed number';
+  RESET ROLE;
+  RAISE NOTICE 'PASS an AI-read invoice keeps its printed number (never a duplicate) and what the AI read';
+END $$;
+RESET ROLE;
+
 -- A payment can never be turned into plain income or expense (that would count it twice)
 DO $$
 DECLARE c i_ctx; n int;

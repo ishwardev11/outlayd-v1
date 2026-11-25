@@ -40,6 +40,13 @@ test("invoice input: cleaned, checked, bills keep the supplier number", () => {
     assert.equal(r.value.lines[1].fund_id, null)
     const rec = parseInvoiceInput({ ...good, direction: "receivable", status: "draft" })
     assert.ok(rec.ok && rec.value.invoice_no === null && rec.value.status === "draft", "an issued invoice gets its number from the database")
+    // Step 6: a new invoice you issued, read by the AI, keeps its printed number and what the AI read
+    const ai = parseInvoiceInput({ ...good, direction: "receivable", printed_invoice_no: " INV-0042 ", ai_extracted: { total: 5000 } })
+    assert.ok(ai.ok && ai.value.printed_invoice_no === "INV-0042" && ai.value.ai_extracted?.total === 5000)
+    const bill = parseInvoiceInput({ ...good, printed_invoice_no: "X-1", ai_extracted: { total: 1 } })
+    assert.ok(bill.ok && bill.value.printed_invoice_no === null && bill.value.ai_extracted === null, "bills ignore both")
+    const edit = parseInvoiceInput({ ...good, id: P, direction: "receivable", printed_invoice_no: "X-1" })
+    assert.ok(edit.ok && edit.value.printed_invoice_no === null, "only new invoices take a printed number")
 })
 
 test("invoice input: refusals", () => {

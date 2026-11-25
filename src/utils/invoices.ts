@@ -144,6 +144,10 @@ export interface InvoiceInput {
     remarks: string | null
     is_opening_balance: boolean
     lines: InvoiceLineInput[]
+    // A new invoice you issue, read by the AI: keeps the number printed on it (step 6)
+    printed_invoice_no: string | null
+    // What the AI read, stored with the invoice for the change history
+    ai_extracted: Record<string, unknown> | null
 }
 export interface PaymentInput {
     invoice_id: string
@@ -192,6 +196,11 @@ export function parseInvoiceInput(raw: unknown): Result<InvoiceInput> {
     if (reference === undefined) return { ok: false, error: "The reference can be at most 100 characters" }
     const remarks = text(r.remarks, 500)
     if (remarks === undefined) return { ok: false, error: "Remarks can be at most 500 characters" }
+    const printed = text(r.printed_invoice_no, 100)
+    if (printed === undefined) return { ok: false, error: "The invoice number can be at most 100 characters" }
+    const aiRaw = r.ai_extracted
+    const ai_extracted = aiRaw && typeof aiRaw === "object" && !Array.isArray(aiRaw) ? (aiRaw as Record<string, unknown>) : null
+    if (ai_extracted && JSON.stringify(ai_extracted).length > 20000) return { ok: false, error: "The extracted details are too long" }
     if (!Array.isArray(r.lines) || r.lines.length === 0) return { ok: false, error: "Add at least one line" }
     if (r.lines.length > INVOICE_MAX_LINES) return { ok: false, error: `An invoice can have at most ${INVOICE_MAX_LINES} lines` }
     const lines: InvoiceLineInput[] = []
@@ -212,6 +221,8 @@ export function parseInvoiceInput(raw: unknown): Result<InvoiceInput> {
             id, direction: r.direction, status, payee_id,
             invoice_no: r.direction === "payable" ? invoice_no : null,
             issue_date, due_date, reference, remarks, is_opening_balance: r.is_opening_balance === true, lines,
+            printed_invoice_no: r.direction === "receivable" && !id ? printed : null,
+            ai_extracted: r.direction === "receivable" && !id ? ai_extracted : null,
         },
     }
 }
