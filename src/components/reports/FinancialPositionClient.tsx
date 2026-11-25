@@ -16,7 +16,7 @@ function lineLink(l: BSLine): string | null {
         case "receivables": return "/invoices?tab=receivable";
         case "payables": return "/invoices";
         case "funds": return "/reports/changes-in-funds";
-        default: return "/assets";
+        default: return "/settings?tab=assets";
     }
 }
 
@@ -112,7 +112,7 @@ export function FinancialPositionClient({ statement: s, filters, heading, orgNam
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400">
-                Fixed assets at cost less depreciation. Money owed is unpaid invoices and bills; other assets and loans come from the Assets &amp; Liabilities page.
+                Fixed assets at cost less depreciation. Money owed is unpaid invoices and bills; other assets and loans come from Settings, Assets &amp; Loans.
                 Each fund&apos;s balance is its opening balance plus income, less expenditure, plus or minus transfers. Net assets always equal the total of the funds.
                 Click a line to see what is behind it.
             </p>

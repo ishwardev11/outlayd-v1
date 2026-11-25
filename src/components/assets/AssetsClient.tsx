@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Lock, Plus } from "lucide-react"
@@ -48,7 +49,7 @@ export function AssetsClient({ data, options }: { data: AssetsPage; options: Ent
         <div className="space-y-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Assets &amp; Liabilities</h1>
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Assets &amp; Loans</h2>
                     <p className="text-gray-500 mt-2 dark:text-slate-400">Equipment, deposits and loans: what you own and owe besides cash, invoices and bills.</p>
                 </div>
                 <Button onClick={() => (options.paid ? setForm({ edit: null, key: Date.now() }) : paywall.open())} disabled={isViewer}
@@ -64,7 +65,7 @@ export function AssetsClient({ data, options }: { data: AssetsPage; options: Ent
             )}
             {data.startDate === null && (
                 <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300">
-                    Tip: set your tracking start date in Settings, Accounts &amp; Transfers, Opening position, so you can enter what you already owned and owed on that date.
+                    Tip: set your tracking start date on the <Link href="/settings/opening-position" className="text-indigo-600 hover:underline">Opening position</Link> page, so you can enter what you already owned and owed on that date.
                 </div>
             )}
 

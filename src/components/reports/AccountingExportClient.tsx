@@ -128,7 +128,7 @@ export function AccountingExportClient({ defaultFrom, defaultTo }: { defaultFrom
                                     <p>
                                         {preview.linesWithoutAccountCode} line{preview.linesWithoutAccountCode === 1 ? " has" : "s have"} no accounting code ({preview.categoriesWithoutAccountCode.join(", ")}).
                                         {" Your accountant will need to assign these. "}
-                                        You can add codes under <Link href="/settings" className="underline font-medium">Settings, Expense Categories</Link>.
+                                        You can add codes under <Link href="/settings?tab=financial" className="underline font-medium">Settings, Funds &amp; Categories</Link>.
                                     </p>
                                 </div>
                             )}

@@ -11,53 +11,41 @@ import { useRole } from "@/components/RoleProvider"
 import { usePlan } from "@/components/PlanProvider"
 import { useCurrency } from "@/components/CurrencyProvider"
 import {
-    deleteFundTransfer, getAccounts, getFundTransfers, getOpeningPosition, saveAccount, saveFundTransfer,
-    type AccountRow, type FundTransferRow,
+    getAccounts, getOpeningPosition, saveAccount,
+    type AccountRow,
 } from "@/app/actions/balance"
 import { ACCOUNT_TYPES, type AccountType } from "@/utils/balance-input"
 import { LockedNotice, useLock } from "@/components/LockProvider"
-import { UpgradeNotice, usePaywall } from "@/components/ui/UpgradeNotice"
+import { usePaywall } from "@/components/ui/UpgradeNotice"
 
 const selectClass = "h-9 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white disabled:opacity-60"
 
-function todayLocal(): string {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-}
-
-// Settings > Accounts & Transfers: where the cash sits (spec 3.5), moving money between funds (3.2),
-// and the way into the Opening Position wizard (5.6).
-export function AccountsTab({ funds }: { funds: { id: string; name: string; archived_at?: string | null }[] }) {
+// Settings > Accounts: where the cash sits (spec 3.5), and the way to the Opening Position page (5.6).
+// Fund transfers moved to Transactions > New > Fund transfer (simplification step 6).
+export function AccountsTab() {
     const router = useRouter()
-    const { isAdmin, isViewer } = useRole()
+    const { isAdmin } = useRole()
     const { paid } = usePlan()
     const { symbol } = useCurrency()
     const money = (n: number) => `${symbol}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     const [accounts, setAccounts] = useState<AccountRow[] | null>(null)
-    const [transfers, setTransfers] = useState<FundTransferRow[]>([])
     const [opening, setOpening] = useState<{ startDate: string | null; completedAt: string | null } | null>(null)
     const [edit, setEdit] = useState<{ id: string | null; name: string; account_type: AccountType; opening_balance: string; archived: boolean } | null>(null)
-    const [tr, setTr] = useState({ from: "", to: "", amount: "", date: todayLocal(), remarks: "" })
     const [busy, setBusy] = useState(false)
     const canAccounts = isAdmin && paid
-    const canTransfer = !isViewer && paid
-    const activeFunds = funds.filter((f) => !f.archived_at)
     const lock = useLock()
     const paywall = usePaywall("accounts")
-    const transferLocked = lock.isLocked(tr.date)
 
     const load = async () => {
-        const [a, t, o] = await Promise.all([getAccounts(), getFundTransfers(), getOpeningPosition()])
+        const [a, o] = await Promise.all([getAccounts(), getOpeningPosition()])
         setAccounts(a)
-        setTransfers(t)
         setOpening(o ? { startDate: o.startDate, completedAt: o.completedAt } : null)
     }
     useEffect(() => {
         let cancelled = false
-        Promise.all([getAccounts(), getFundTransfers(), getOpeningPosition()]).then(([a, t, o]) => {
+        Promise.all([getAccounts(), getOpeningPosition()]).then(([a, o]) => {
             if (cancelled) return
             setAccounts(a)
-            setTransfers(t)
             setOpening(o ? { startDate: o.startDate, completedAt: o.completedAt } : null)
         })
         return () => { cancelled = true }
@@ -143,52 +131,6 @@ export function AccountsTab({ funds }: { funds: { id: string; name: string; arch
                 )}
             </section>
 
-            {/* Fund transfers */}
-            <section className="space-y-3">
-                <div>
-                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Fund transfers</h2>
-                    <p className="text-sm text-slate-500">Move money between funds, for example to cover a restricted fund from the General Fund. No cash moves.</p>
-                </div>
-                <form className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3" onSubmit={(e) => {
-                    e.preventDefault()
-                    run(() => saveFundTransfer({ from_fund_id: tr.from, to_fund_id: tr.to, amount: tr.amount, tx_date: tr.date, remarks: tr.remarks }), "Transfer recorded",
-                        () => setTr({ ...tr, amount: "", remarks: "" }))
-                }}>
-                    <fieldset disabled={!canTransfer || busy} className="contents">
-                        <label className="text-xs text-slate-500">From<br />
-                            <select aria-label="From fund" className={selectClass} value={tr.from} onChange={(e) => setTr({ ...tr, from: e.target.value })}>
-                                <option value="">Choose…</option>{activeFunds.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                            </select></label>
-                        <label className="text-xs text-slate-500">To<br />
-                            <select aria-label="To fund" className={selectClass} value={tr.to} onChange={(e) => setTr({ ...tr, to: e.target.value })}>
-                                <option value="">Choose…</option>{activeFunds.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                            </select></label>
-                        <label className="text-xs text-slate-500">Amount ({symbol})<br /><Input aria-label="Transfer amount" className="h-9 w-32" inputMode="decimal" value={tr.amount} onChange={(e) => setTr({ ...tr, amount: e.target.value })} /></label>
-                        <label className="text-xs text-slate-500">Date<br /><Input aria-label="Transfer date" type="date" className="h-9 w-40" value={tr.date} onChange={(e) => setTr({ ...tr, date: e.target.value })} /></label>
-                        <label className="text-xs text-slate-500">Reason<br /><Input aria-label="Transfer reason" className="h-9 w-56" value={tr.remarks} onChange={(e) => setTr({ ...tr, remarks: e.target.value })} maxLength={500} /></label>
-                        <Button type="submit" size="sm" className="h-9" disabled={transferLocked}>Transfer</Button>
-                    </fieldset>
-                    {canTransfer && transferLocked && <LockedNotice className="w-full" text={`That date is in a locked period. ${lock.message}`} />}
-                    {!paid && <UpgradeNotice context="accounts" className="w-full">Accounts, fund transfers and the opening position are part of the Growth and Nonprofit plans.</UpgradeNotice>}
-                </form>
-                {transfers.length > 0 && (
-                    <table className="w-full text-sm">
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {transfers.map((t) => (
-                                <tr key={t.id}>
-                                    <td className="py-2">{t.tx_date}</td>
-                                    <td className="py-2">{t.from_name} → {t.to_name}{t.remarks ? <span className="text-slate-500"> · {t.remarks}</span> : null}</td>
-                                    <td className="py-2 text-right tabular-nums">{money(t.amount)}</td>
-                                    <td className="py-2 text-right w-20">
-                                        {canTransfer && !lock.isLocked(t.tx_date) && <button type="button" className="text-xs text-red-600 hover:underline" disabled={busy}
-                                            onClick={() => { if (window.confirm("Delete this transfer?")) run(() => deleteFundTransfer(t.id), "Transfer deleted") }}>Delete</button>}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </section>
         </div>
     )
 }

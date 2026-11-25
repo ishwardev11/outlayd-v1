@@ -242,7 +242,7 @@ export function DonorMemoClient({ funds, fiscalYearStart, today }: { funds: Memo
                             <Info className="h-4 w-4 mt-0.5 shrink-0" />
                             <span>
                                 No donor, grant reference or award amount is recorded for this fund, so the memo shows less than it could. Add them in{" "}
-                                <Link href="/settings" className="underline font-medium">Settings, Financial Customization</Link>.
+                                <Link href="/settings?tab=financial" className="underline font-medium">Settings, Funds &amp; Categories</Link>.
                             </span>
                         </div>
                     )}

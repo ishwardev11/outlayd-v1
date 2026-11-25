@@ -589,7 +589,7 @@ export function ProcessingDrawer({ isOpen, onClose, document, funds, categories,
                                 {/* Spec 5b: equipment is an asset, not an expense */}
                                 <p className="text-xs text-slate-500 dark:text-slate-400" data-testid="asset-hint">
                                     Buying equipment, a vehicle or furniture that lasts more than a year? Record it under{" "}
-                                    <a href="/assets" className="text-indigo-600 hover:underline">Assets &amp; Loans</a> instead, so it is depreciated rather than counted as an expense all at once.
+                                    <a href="/settings?tab=assets" className="text-indigo-600 hover:underline">Settings, Assets &amp; Loans</a> instead, so it is depreciated rather than counted as an expense all at once.
                                 </p>
                             </div>
 

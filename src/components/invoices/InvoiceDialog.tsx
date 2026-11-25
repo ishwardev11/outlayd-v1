@@ -185,7 +185,7 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
                         <p className="text-right text-sm font-medium tabular-nums text-slate-900 dark:text-white">Total {symbol}{total.toFixed(2)}</p>
                         {paid > 0 && <p className="text-right text-xs text-slate-500">{symbol}{paid.toFixed(2)} has already been paid, so the total cannot go below that.</p>}
                         {categoryChoices.length === 0 && (
-                            <p className="text-sm text-amber-700">No {payable ? "expense" : "income"} categories yet. Add them under Settings, Financial Customization.</p>
+                            <p className="text-sm text-amber-700">No {payable ? "expense" : "income"} categories yet. Add them under Settings, Funds &amp; Categories.</p>
                         )}
                     </div>
 

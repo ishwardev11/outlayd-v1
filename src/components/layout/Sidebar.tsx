@@ -12,7 +12,6 @@ import {
     BarChart3,
     FileCheck,
     Settings,
-    LogOut,
     HelpCircle,
     X,
     ChevronDown,
@@ -22,10 +21,10 @@ import {
     ReceiptText,
     Package,
 } from "lucide-react";
-import { signOutAction } from "@/app/actions/auth";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
+import { ProfileMenu } from "@/components/layout/ProfileMenu";
 
 interface SidebarProps {
     className?: string;
@@ -137,7 +136,7 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
                     <ReceiptText size={20} />
                     <span>Bills &amp; Invoices</span>
                 </Link>
-                <Link id="sidebar-link-assets" href="/assets" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/assets' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
+                <Link id="sidebar-link-assets" href="/settings?tab=assets" prefetch onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${false ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <Package size={20} />
                     <span>Assets &amp; Loans</span>
                 </Link>
@@ -171,24 +170,12 @@ export function Sidebar({ className = "", onNavigate, hideLogo = false }: Sideba
             </nav>
 
             <div className="mt-auto flex flex-col gap-2">
-                <button
-                    id="sidebar-link-help"
-                    onClick={() => setIsHelpOpen(true)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white w-full text-left"
-                >
-                    <HelpCircle size={20} />
-                    <span>Help &amp; Support</span>
-                </button>
                 <Link id="sidebar-link-settings" href="/settings" onClick={() => onNavigate?.()} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer ${pathname === '/settings' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-cyan-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'}`}>
                     <Settings size={20} />
                     <span>Settings</span>
                 </Link>
-                <form action={signOutAction} className="w-full">
-                    <button id="sidebar-link-signout" type="submit" className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.97] cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white w-full text-left">
-                        <LogOut size={20} />
-                        <span>Sign Out</span>
-                    </button>
-                </form>
+                {/* The signed-in person's own things: account, theme, text size, help, sign out (step 6) */}
+                <ProfileMenu onHelp={() => setIsHelpOpen(true)} onNavigate={onNavigate} />
             </div>
 
             {/* Help & Support Drawer */}

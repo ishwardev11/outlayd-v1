@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
       { source: "/ledger", destination: "/inbox", permanent: true },
       // Step 5: the lock, lock history and statement line moved from Settings > Year end to the Year end hub
       { source: "/settings", has: [{ type: "query", key: "tab", value: "year-end" }], destination: "/reports/year-end", permanent: true },
+      // Step 6: Assets & Loans is a Settings tab; the General tab is gone (its login email is in the
+      // profile menu, which opens its Account window for ?account=1). The destination must replace
+      // tab=general, or the passed-on query would match this rule again and loop forever.
+      { source: "/assets", destination: "/settings?tab=assets", permanent: true },
+      { source: "/settings", has: [{ type: "query", key: "tab", value: "general" }], destination: "/settings?tab=organization&account=1", permanent: true },
     ];
   },
 };

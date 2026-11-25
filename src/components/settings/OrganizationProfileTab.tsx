@@ -23,9 +23,10 @@ import {
 } from "@/components/ui/dialog"
 
 import { OrgSettings } from "./SettingsLayout"
-import { ReceiptSettingsForm, type ReceiptSettingsData } from "./ReceiptSettingsForm"
+import type { ReceiptSettingsData } from "./ReceiptSettingsForm"
 
-export function OrganizationProfileTab({ orgSettings, receiptSettings = null }: { orgSettings: OrgSettings | null; receiptSettings?: ReceiptSettingsData | null }) {
+// receiptSettings is accepted for compatibility; the letterhead form is now on its own tab
+export function OrganizationProfileTab({ orgSettings }: { orgSettings: OrgSettings | null; receiptSettings?: ReceiptSettingsData | null }) {
     const router = useRouter()
     const { isViewer, isAdmin } = useRole()
     const [isSaving, setIsSaving] = useState(false)
@@ -84,7 +85,7 @@ export function OrganizationProfileTab({ orgSettings, receiptSettings = null }: 
     return (
         <div className="max-w-2xl space-y-12">
             <div>
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-6">Organization Profile</h2>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-6">Organisation</h2>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
@@ -183,7 +184,7 @@ export function OrganizationProfileTab({ orgSettings, receiptSettings = null }: 
                 </form>
             </div>
 
-            {receiptSettings && <ReceiptSettingsForm initial={receiptSettings} />}
+            {/* Letterhead, signatories and numbering moved to their own tab (simplification step 6) */}
 
             {/* Danger Zone */}
             {isAdmin && (

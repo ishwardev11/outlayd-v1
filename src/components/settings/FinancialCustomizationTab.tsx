@@ -65,6 +65,20 @@ export function FinancialCustomizationTab({ initialFunds, fundSpend = [], initia
     return (
         <div className="space-y-12">
 
+            {/* Fund or category? (spec section 2). Every entry has both. */}
+            <div className="grid gap-3 sm:grid-cols-2" data-testid="fund-category-help">
+                <div className="rounded-xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 p-4">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Fund</p>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Which pot of money is this? Most organisations just use General Fund.</p>
+                    <p className="mt-1 text-xs text-slate-500">For example: General Fund, Building Fund, a specific grant.</p>
+                </div>
+                <div className="rounded-xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 p-4">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Category</p>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">What kind of income or expense is this?</p>
+                    <p className="mt-1 text-xs text-slate-500">For example: Rent, Printing, Donations.</p>
+                </div>
+            </div>
+
             {/* Funds Section */}
             <div>
                 <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">Active Funds</h2>

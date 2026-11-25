@@ -89,7 +89,7 @@ export async function getReceiptForPdf(receiptId: string): Promise<ActionResult<
     }
 }
 
-// Receipt settings (Settings > Organization Profile). Admins only, like the other organisation settings.
+// Receipt settings (Settings > Letterhead & numbering). Admins only, like the other organisation settings.
 export async function getReceiptSettings() {
     const supabase = await createClient()
     const organizationId = await getOrganizationId()

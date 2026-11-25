@@ -94,7 +94,9 @@ export function MobileNav() {
                         {/* Navigation inside drawer */}
                         <div className="flex-1 overflow-y-auto">
                             <Sidebar
-                                className="w-full h-full border-r-0 bg-transparent dark:bg-transparent shadow-none"
+                                // h-full! beats the sidebar's own h-screen: below the drawer header a full screen height
+                                // pushed Settings and the profile menu off the bottom of a phone
+                                className="w-full h-full! border-r-0 bg-transparent dark:bg-transparent shadow-none"
                                 onNavigate={() => setIsOpen(false)}
                                 hideLogo={true}
                             />

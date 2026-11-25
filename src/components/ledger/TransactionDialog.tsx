@@ -291,7 +291,7 @@ export function TransactionDialog({ open, onOpenChange, mode, options, edit, rea
                             </p>
                         )}
                         {categoryChoices.length === 0 && (
-                            <p className="text-sm text-amber-700">No categories of this kind yet. Add them under Settings, Financial Customization.</p>
+                            <p className="text-sm text-amber-700">No categories of this kind yet. Add them under Settings, Funds &amp; Categories.</p>
                         )}
                     </div>
 

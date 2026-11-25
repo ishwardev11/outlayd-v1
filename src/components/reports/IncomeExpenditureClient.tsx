@@ -111,7 +111,7 @@ export function IncomeExpenditureClient({ statement: s, filters, priorRange, hea
                 Everything else counts on the date the money moved. Refunds reduce the expense they refund.
                 Negative figures are shown in brackets. Click a figure to see the cash book entries for it (dated by payment), or the
                 <ReceiptText className="inline mx-1 h-3 w-3" />icon for the bills and invoices behind it.
-                Expense categories without a group are shown under &quot;Other expenses&quot;; set groups in Settings, Financial Customization.
+                Expense categories without a group are shown under &quot;Other expenses&quot;; set groups in Settings, Funds &amp; Categories.
             </p>
         </div>
     );

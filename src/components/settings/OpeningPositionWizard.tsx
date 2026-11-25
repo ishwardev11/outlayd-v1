@@ -137,7 +137,7 @@ export function OpeningPositionWizard({ data }: { data: OpeningPosition }) {
 
             {step(4, "Assets and liabilities", (
                 <>
-                    <p>Equipment you already owned (with its cost and depreciation so far), deposits and loans, on the <Link href="/assets" className="text-indigo-600 hover:underline">Assets &amp; Liabilities page</Link>.</p>
+                    <p>Equipment you already owned (with its cost and depreciation so far), deposits and loans, in <Link href="/settings?tab=assets" className="text-indigo-600 hover:underline">Settings, Assets &amp; Loans</Link>.</p>
                     {data.items.length === 0 ? <p className="text-slate-500">None entered.</p> : (
                         <ul className="max-w-xl space-y-1">
                             {data.items.map((i) => <li key={i.id} className="flex justify-between"><span>{i.name} <span className="text-xs text-slate-500">{itemKindLabel(i.kind)}</span></span><span className="tabular-nums">{i.kind === "liability" ? `-${money(i.value)}` : money(i.value)}</span></li>)}

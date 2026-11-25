@@ -35,7 +35,7 @@ export interface CashBookRow {
     receipt: { id: string; number: string; voided: boolean } | null
     // The invoice this entry pays, if any (payments of invoices are changed on the Invoices page)
     invoice: { id: string; direction: "payable" | "receivable"; label: string } | null
-    // The asset or liability this entry is for, if any (changed on the Assets & Liabilities page)
+    // The asset or liability this entry is for, if any (changed in Settings, Assets & Loans)
     item?: { id: string; name: string; kind: "fixed_asset" | "other_asset" | "liability" } | null
     // A fund transfer: the two funds
     transfer?: { from: string; to: string } | null

@@ -8,6 +8,8 @@ import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronDown, ChevronLeft, 
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DocumentOpener } from "./DocumentOpener"
+import { FundTransferDialog } from "./FundTransferDialog"
+import { deleteFundTransfer } from "@/app/actions/balance"
 import { Input } from "@/components/ui/input"
 import { useRole } from "@/components/RoleProvider"
 import { useCurrency } from "@/components/CurrencyProvider"
@@ -49,6 +51,22 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
     const totals = cashBookTotals(rows)
     const canMoneyIn = !isViewer && options.paid
     const paywall = usePaywall("income")
+    // Fund transfers are part of the paid plans (feature "funds"/"accounts"), checked again in the database
+    const transferPaywall = usePaywall("accounts")
+    const [transferOpen, setTransferOpen] = useState(false)
+    const [deletingTransfer, setDeletingTransfer] = useState<string | null>(null)
+    const removeTransfer = async (id: string) => {
+        if (!window.confirm("Delete this fund transfer?")) return
+        setDeletingTransfer(id)
+        try {
+            const res = await deleteFundTransfer(id)
+            if (!res.success) return toast.error(res.error ?? "Could not delete the transfer")
+            toast.success("Transfer deleted")
+            router.refresh()
+        } finally {
+            setDeletingTransfer(null)
+        }
+    }
 
     const go = (f: CashBookFilters) => {
         const p = new URLSearchParams()
@@ -100,6 +118,7 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-2">
                     {paywall.modal}
+                    {transferPaywall.modal}
                     {/* One "New" button: money in, money out, or a transfer between funds */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -117,9 +136,10 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                                 <ArrowUpRight className="h-4 w-4" />
                                 <span>Money out<span className="block text-xs text-slate-500">A payment without a receipt to upload</span></span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => router.push("/settings?tab=accounts")}>
-                                <ArrowLeftRight className="h-4 w-4" />
-                                <span>Fund transfer<span className="block text-xs text-slate-500">Move money between funds (in Settings for now)</span></span>
+                            <DropdownMenuItem onSelect={() => (options.paid ? setTransferOpen(true) : transferPaywall.open())}
+                                title={!options.paid ? "Fund transfers are part of the Growth and Nonprofit plans" : ""}>
+                                {options.paid ? <ArrowLeftRight className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                                <span>Fund transfer<span className="block text-xs text-slate-500">Move money between funds; no cash moves</span></span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -216,13 +236,17 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                                                     </Link>
                                                 )}
                                                 {r.item && (
-                                                    <Link href="/assets" className="text-indigo-600 hover:underline text-xs" title="This entry is for an asset or liability. Change it on the Assets & Liabilities page.">
+                                                    <Link href="/settings?tab=assets" className="text-indigo-600 hover:underline text-xs" title="This entry is for an asset or loan. Change it in Settings, Assets & Loans.">
                                                         {r.item.name}
                                                     </Link>
                                                 )}
                                                 {(r.invoice || r.item) && r.source === "manual" ? null : r.source === "manual" && r.type === "money_in" ? (
                                                     <button type="button" onClick={() => openEdit(r.id)} disabled={loadingEdit === r.id} className="inline-flex items-center gap-1 text-indigo-600 hover:underline text-xs">
                                                         {loadingEdit === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}{isViewer ? "View" : "Edit"}
+                                                    </button>
+                                                ) : r.transfer && canMoneyIn && !lock.isLocked(r.date) ? (
+                                                    <button type="button" onClick={() => removeTransfer(r.id)} disabled={deletingTransfer === r.id} className="inline-flex items-center gap-1 text-red-600 hover:underline text-xs">
+                                                        {deletingTransfer === r.id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Delete
                                                     </button>
                                                 ) : r.documentId ? (
                                                     <DocumentOpener documentId={r.documentId} title="This entry comes from an upload. Open it to see the document and its history, or change it there." />
@@ -269,6 +293,7 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                 </div>
             )}
 
+            {transferOpen && <FundTransferDialog open onOpenChange={setTransferOpen} options={options} />}
             {dialog && (
                 <TransactionDialog key={dialog.key} open onOpenChange={(o) => { if (!o) setDialog(null) }} mode={dialog.mode} options={options} edit={dialog.edit} readOnly={isViewer || (dialog.mode === "in" && !options.paid)} />
             )}
