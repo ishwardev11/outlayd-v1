@@ -29,3 +29,9 @@ test("old Ledger addresses go to the Inbox, Transactions or Bills & Invoices", a
         { when: "(any)", to: "/inbox", permanent: true },
     ])
 })
+
+test("the old Settings > Year end tab goes to the Year end hub", async () => {
+    const r = (await nextConfig.redirects!()).find((x) => x.source === "/settings")!
+    assert.deepEqual([r.has, r.destination, "permanent" in r ? r.permanent : false],
+        [[{ type: "query", key: "tab", value: "year-end" }], "/reports/year-end", true])
+})

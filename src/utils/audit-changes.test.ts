@@ -111,3 +111,18 @@ test("reconciliations and removed references", () => {
         lines_before: [{ amount: 5, category_id: "c-x", fund_id: "f-x" }], lines_after: [] }, look, "RM")
     assert.deepEqual(gone.details, ["Lines: RM5.00 a removed category · a removed fund → none"])
 })
+
+test("an uploaded document in the one timeline: payee, number, amount and the status change", () => {
+    const d = describeChange({
+        ...base, root_entity: "documents", root_id: "d1", kind: "documents", action: "approved",
+        before: { status: "needs_review" }, after: { status: "awaiting_payment" },
+        snapshot: { vendor_name: "Cetak Jaya", invoice_number: "CJ-310", amount: 2000, notes: "AI Extraction Error: secret" },
+    }, look, "RM")
+    assert.equal(d.record, "Document: Cetak Jaya (CJ-310)")
+    assert.equal(d.action, "Approved")
+    assert.deepEqual(d.details, ["Amount: RM2,000.00", "Status: Needs review → Awaiting payment"])
+    assert.ok(!JSON.stringify(d).includes("AI Extraction Error"), "the AI error notes never show")
+    const deleted = describeChange({ ...base, root_entity: "documents", kind: "documents", action: "deleted", before: { status: "paid" }, after: { status: null }, snapshot: { vendor_name: null } }, look, "RM")
+    assert.equal(deleted.record, "Document: Unknown payee")
+    assert.deepEqual(deleted.details, ["Status: Paid → Deleted"])
+})

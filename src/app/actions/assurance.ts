@@ -15,6 +15,10 @@ import { loadLetterhead } from "@/utils/letterhead-server"
 import { parseMoney } from "@/utils/balance-input"
 import { AUDIT_KINDS, describeChange, type AuditChange, type AuditKind, type AuditLookups, type DescribedChange } from "@/utils/audit-changes"
 import { getCurrencyDetails } from "@/utils/currency"
+import {
+    checksStatus, defaultFinancialYear, financialYears, lockStatus, openingStatus, reconciliationStatus,
+    type AccountStatus, type FinancialYearOption, type StepStatus,
+} from "@/utils/year-end"
 
 type ActionResult<T = undefined> = { success: true; data?: T } | { success: false; error: string }
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -339,6 +343,21 @@ export interface ChangeQuery {
     page?: number
     limit?: number
     settingsOnlyLock?: boolean
+    // Only changes by this person (their email), or "System" for changes made by no one signed in
+    actor?: string | null
+}
+
+// The people who appear in the change history, for the Audit log's user filter
+export async function getAuditActors(): Promise<string[]> {
+    const organizationId = await getOrganizationId()
+    if (!organizationId) return []
+    const supabase = await createClient()
+    const { data, error } = await supabase.rpc("audit_actors", { p_org: organizationId })
+    if (error) {
+        console.error("getAuditActors failed:", error)
+        return []
+    }
+    return ((data ?? []) as { actor_email: string }[]).map((r) => r.actor_email).filter(Boolean)
 }
 
 export async function getChanges(q: ChangeQuery): Promise<{ rows: HistoryRow[]; total: number }> {
@@ -350,12 +369,15 @@ export async function getChanges(q: ChangeQuery): Promise<{ rows: HistoryRow[]; 
     const page = Number.isInteger(q.page) && (q.page as number) > 0 ? (q.page as number) : 1
     const record = q.record && UUID_RE.test(q.record) ? q.record : null
     if (q.record && !record) return { rows: [], total: 0 }
+    const actorRaw = typeof q.actor === "string" ? q.actor.trim().slice(0, 254) : ""
+    const actor = actorRaw === "System" ? "System" : /^[^\s@]+@[^\s@]+$/.test(actorRaw) ? actorRaw.toLowerCase() : null
     const supabase = await createClient()
     const [{ data, error }, look, currency, timeZone] = await Promise.all([
         supabase.rpc("audit_changes", {
             p_org: organizationId, p_kinds: kinds.length ? kinds : null,
             p_from: isIsoDay(q.from) ? q.from : null, p_to: isIsoDay(q.to) ? q.to : null,
             p_record: record, p_limit: limit, p_offset: (page - 1) * limit,
+            p_actor: actor,
         }),
         lookups(organizationId),
         getOrganizationCurrency(),
@@ -379,4 +401,54 @@ export async function getChanges(q: ChangeQuery): Promise<{ rows: HistoryRow[]; 
 export async function getRecordHistory(id: string): Promise<HistoryRow[]> {
     if (!UUID_RE.test(id ?? "")) return []
     return (await getChanges({ record: id, limit: 100 })).rows
+}
+
+// ------------------------------------------------------------------ the Year end hub (simplification step 5)
+
+export interface YearEndHub {
+    years: FinancialYearOption[]
+    year: FinancialYearOption
+    // the period of the year so far (the statements stop at today)
+    checkTo: string
+    today: string
+    opening: { status: StepStatus; startDate: string | null; completedAt: string | null }
+    reconciliation: { status: StepStatus; accounts: AccountStatus[]; monthEnd: string; canOpen: boolean }
+    checks: { status: StepStatus; available: boolean }
+    lock: { status: StepStatus; lockDate: string | null }
+}
+
+// Everything the Year end hub shows for one financial year: the opening position, the reconciliation of
+// each account at the year end, the integrity checks, and the lock. Read through the user's own session.
+export async function getYearEndHub(requestedYear: string | null): Promise<YearEndHub | null> {
+    const organizationId = await getOrganizationId()
+    if (!organizationId) return null
+    const supabase = await createClient()
+    const [{ data: org }, today] = await Promise.all([
+        supabase.from("organizations").select("fiscal_year_start, tracking_start_date, opening_position_completed_at, lock_date").eq("id", organizationId).maybeSingle(),
+        getOrganizationTimezone().then(todayInTimezone),
+    ])
+    if (!org) return null
+    const startDate = (org.tracking_start_date as string | null) ?? null
+    const years = financialYears(startDate, Number(org.fiscal_year_start) || 1, today)
+    const year = years.find((y) => y.key === requestedYear) ?? defaultFinancialYear(years)
+    const checkTo = year.to > today ? today : year.to
+
+    const [{ data: recon }, assurance] = await Promise.all([
+        supabase.rpc("reconciliation_status", { p_org: organizationId, p_period_end: year.ended ? year.to : checkTo }),
+        getStatementAssurance(year.from, checkTo),
+    ])
+    const rec = reconciliationStatus(((recon ?? []) as Record<string, unknown>[]).map((r) => ({
+        account_id: String(r.account_id), account_name: String(r.account_name), archived: r.archived === true,
+        outlayd_balance: Number(r.outlayd_balance), reconciliation_id: (r.reconciliation_id as string | null) ?? null,
+        difference: r.difference === null || r.difference === undefined ? null : Number(r.difference), note: (r.note as string | null) ?? null,
+    })), year.ended)
+    const lockDate = (org.lock_date as string | null) ?? null
+    return {
+        years, year, checkTo, today,
+        opening: { status: openingStatus(startDate, (org.opening_position_completed_at as string | null) ?? null), startDate, completedAt: (org.opening_position_completed_at as string | null) ?? null },
+        // The reconciliation page offers month-ends before today, so a year that has not ended yet has nothing to open
+        reconciliation: { ...rec, monthEnd: year.to, canOpen: year.ended },
+        checks: { status: checksStatus(assurance?.checks ?? null), available: assurance !== null },
+        lock: { status: lockStatus(lockDate, year.to, year.ended), lockDate },
+    }
 }

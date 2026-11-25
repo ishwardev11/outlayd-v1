@@ -2,8 +2,9 @@
 // plain sentences for the Audit log page and the History panels: what record, what happened, and which
 // values changed from what to what. Pure, so it is unit-tested.
 import { formatDay } from "./lock"
+import { auditActionLabel } from "./audit"
 
-export type AuditKind = "money" | "transfers" | "invoices" | "assets" | "reconciliations" | "settings"
+export type AuditKind = "money" | "transfers" | "invoices" | "assets" | "reconciliations" | "settings" | "documents"
 export const AUDIT_KINDS: { value: AuditKind; label: string }[] = [
     { value: "money", label: "Money in and out" },
     { value: "invoices", label: "Invoices and bills" },
@@ -11,6 +12,7 @@ export const AUDIT_KINDS: { value: AuditKind; label: string }[] = [
     { value: "transfers", label: "Transfers" },
     { value: "reconciliations", label: "Reconciliations" },
     { value: "settings", label: "Year end and opening balances" },
+    { value: "documents", label: "Uploaded documents" },
 ]
 
 type Row = Record<string, unknown>
@@ -21,7 +23,8 @@ export interface AuditChange {
     kind: AuditKind
     changed_at: string
     actor_email: string | null
-    action: "insert" | "update" | "delete"
+    // insert / update / delete; for uploaded documents the document log action (approved, paid, ...)
+    action: string
     reason: string | null
     before: Row | null
     after: Row | null
@@ -182,6 +185,7 @@ function sameLines(a: Row[] | null, b: Row[] | null): boolean {
 }
 
 export function describeChange(c: AuditChange, look: AuditLookups, symbol: string): DescribedChange {
+    if (c.root_entity === "documents") return describeDocument(c, symbol)
     const fields = FIELDS[c.root_entity] ?? []
     const details: string[] = []
     if (c.action === "update" && c.before && c.after) {
@@ -214,4 +218,25 @@ export function describeChange(c: AuditChange, look: AuditLookups, symbol: strin
     }
     if (details.length === 0 && c.action === "update") details.push("Saved with no change to the figures")
     return { record: recordLabel(c, look), action: actionLabel(c), details, reason: c.reason }
+}
+
+// Uploaded documents (document_audit_log, step 5): approved, paid, sent back, deleted. The snapshot holds
+// only the payee, invoice number, type, date and amount, never the AI extraction notes.
+const DOC_STATUS: Record<string, string> = {
+    extracting: "Being read", needs_review: "Needs review", DUPLICATE_WARNING: "Possible duplicate",
+    awaiting_payment: "Awaiting payment", paid: "Paid",
+}
+function describeDocument(c: AuditChange, symbol: string): DescribedChange {
+    const snap = c.snapshot ?? {}
+    const vendor = str(snap.vendor_name) ?? "Unknown payee"
+    const number = str(snap.invoice_number)
+    const details: string[] = []
+    const amount = snap.amount
+    if (amount !== null && amount !== undefined && amount !== "" && Number.isFinite(Number(amount))) {
+        details.push(`Amount: ${symbol}${Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
+    }
+    const from = str(c.before?.status)
+    const to = str(c.after?.status)
+    if (from || to) details.push(`Status: ${from ? DOC_STATUS[from] ?? from : "—"} → ${to ? DOC_STATUS[to] ?? to : "Deleted"}`)
+    return { record: `Document: ${vendor}${number ? ` (${number})` : ""}`, action: auditActionLabel(c.action), details, reason: c.reason }
 }

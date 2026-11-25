@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowRight, CheckCircle2, Loader2, Lock, Plus } from "lucide-react"
+import { ArrowRight, Loader2, Lock, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useRole } from "@/components/RoleProvider"
@@ -79,26 +79,12 @@ export function AccountsTab({ funds }: { funds: { id: string; name: string; arch
 
     return (
         <div className="space-y-10">
-            {/* Opening position */}
-            <section className="rounded-xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 p-5">
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Opening position</h2>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    Where things stood on the day you started tracking in Outlayd: cash, money owed, assets, loans and fund balances.
-                    The balance sheet and fund balances start from here.
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                    {opening?.completedAt ? (
-                        <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400"><CheckCircle2 className="h-4 w-4" />Complete, from {opening.startDate}</span>
-                    ) : opening?.startDate ? (
-                        <span className="text-amber-700">Started: tracking from {opening.startDate}, not yet complete</span>
-                    ) : (
-                        <span className="text-slate-500">Not set up yet</span>
-                    )}
-                    <Link href="/settings/opening-position" className="inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline">
-                        {opening?.completedAt ? "Review" : "Set up"} the opening position <ArrowRight className="h-4 w-4" />
-                    </Link>
-                </div>
-            </section>
+            {/* The opening position has its own page (and its status is on the Year end hub) */}
+            <p className="text-sm">
+                <Link href="/settings/opening-position" className="inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline" data-testid="opening-position-link">
+                    Opening position: where things stood on your start date <ArrowRight className="h-4 w-4" />
+                </Link>
+            </p>
 
             {/* Accounts */}
             <section className="space-y-3">

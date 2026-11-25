@@ -77,7 +77,7 @@ export function documentLockState(
 }
 
 export function lockedMessage(lockDate: string): string {
-    return `The books are locked up to ${formatDay(lockDate)}. An Admin can unlock the period in Settings, Year end.`
+    return `The books are locked up to ${formatDay(lockDate)}. An Admin can unlock the period on the Year end page (Reports, Year end).`
 }
 
 // Last day of the month of an ISO day
@@ -104,7 +104,7 @@ export function pastMonthEnds(today: string, count: number): string[] {
 
 export type LockInput = { date: string | null; reason: string | null }
 
-// What an Admin entered on the Year end tab. Moving the lock back, or removing it, needs a reason.
+// What an Admin entered on the Year end page. Moving the lock back, or removing it, needs a reason.
 export function parseLockInput(
     raw: unknown, current: string | null, today: string,
 ): { ok: true; value: LockInput } | { ok: false; error: string } {

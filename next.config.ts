@@ -23,6 +23,8 @@ const nextConfig: NextConfig = {
       { source: "/ledger", has: [{ type: "query", key: "status", value: "awaiting_payment" }], destination: "/invoices?status=unpaid", permanent: true },
       { source: "/ledger", has: [{ type: "query", key: "status", value: "paid" }], destination: "/transactions?type=money_out", permanent: true },
       { source: "/ledger", destination: "/inbox", permanent: true },
+      // Step 5: the lock, lock history and statement line moved from Settings > Year end to the Year end hub
+      { source: "/settings", has: [{ type: "query", key: "tab", value: "year-end" }], destination: "/reports/year-end", permanent: true },
     ];
   },
 };

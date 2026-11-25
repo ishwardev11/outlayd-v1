@@ -125,13 +125,11 @@ export function reportSections(orgType: string | null | undefined, access: Repor
                 {
                     key: "year_end",
                     title: "Year end",
-                    description: "The steps to close a financial year: opening position, reconcile your accounts, lock the books. Usually done by the treasurer.",
-                    href: "/bank?tab=reconciliation",
+                    description: "The steps to close a financial year and where each one stands, from the opening position to the lock. Usually done by the treasurer.",
+                    href: "/reports/year-end",
                     lock: null,
                     links: [
-                        { label: "Opening position", href: "/settings/opening-position" },
-                        { label: "Reconcile accounts", href: "/bank?tab=reconciliation" },
-                        { label: "Lock the books", href: "/settings?tab=year-end" },
+                        { label: "Open the Year end steps", href: "/reports/year-end" },
                         { label: "Audit log", href: "/audit-log" },
                     ],
                 },
