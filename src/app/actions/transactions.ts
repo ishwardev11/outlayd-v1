@@ -106,6 +106,12 @@ async function queryCashBook(supabase: Supabase, organizationId: string, filters
     if (filters.to) q = q.lte("tx_date", filters.to)
     if (filters.payee) q = q.eq("payee_id", filters.payee)
     if (filters.account) q = q.eq("account_id", filters.account)
+    if (filters.check) {
+        // Only the entries the integrity check found (Reports, Fix)
+        const { data: ids } = await supabase.rpc("integrity_check_records", { p_org: organizationId, p_from: filters.from || null, p_to: filters.to || null, p_code: filters.check })
+        const list = ((ids ?? []) as { record_id: string }[]).map((r) => r.record_id)
+        q = q.in("id", list.length ? list : ["00000000-0000-0000-0000-000000000000"])
+    }
     if (filters.q) {
         const like = `%${filters.q.replace(/[\\%_,()]/g, (c) => "\\" + c)}%`
         q = q.or(`payee_name.ilike.${like},remarks.ilike.${like},reference.ilike.${like}`)

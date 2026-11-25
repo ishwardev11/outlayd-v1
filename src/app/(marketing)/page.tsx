@@ -198,7 +198,7 @@ function BenefitsSection() {
                     <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn} className={box}>
                         {icon("bg-violet-500/10 text-violet-400", <CreditCard className="w-6 h-6" />)}
                         <h3 className="text-xl font-bold mb-2">Bills and invoices</h3>
-                        <p className="text-slate-400 text-sm">Bills you approve become money you owe; invoices you issue carry your letterhead. Part-payments, and a list of what is overdue.</p>
+                        <p className="text-slate-400 text-sm">Bills you approve become money you owe; invoices you issue carry your letterhead. Take a deposit with its receipt, see what is still to come in, let AI match payment slips to invoices, and keep a list of what is overdue.</p>
                     </motion.div>
 
                     <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn} className={`md:col-span-2 ${box}`}>
@@ -382,6 +382,7 @@ function FAQSection() {
     const faqs = [
         { q: "What statements can Outlayd produce?", a: "On the Growth and Nonprofit plans: the Statement of Income and Expenditure (Profit and Loss for a business), Receipts and Payments, the Statement of Financial Position, the Statement of Changes in Funds, and schedules for fixed assets, money owed and donations. Each comes with checks that it adds up, and as a PDF with your letterhead and signatures. Free plans can look at a sample." },
         { q: "How accurate is the AI reading?", a: "It reads most printed receipts and invoices well, including foreign currencies and multi-page invoices with line items. Nothing counts until someone in your team has checked and approved it." },
+        { q: "What does the AI do on each plan?", a: "On every plan it reads the receipts and bills you upload: 5 a month on Free, unlimited on Growth and Nonprofit. Growth and Nonprofit also get AI help up to 300 times a month: it fills in an invoice from one you already issued, matches a payment slip to the invoice it pays, and suggests categories for new contacts. The AI only suggests; nothing is saved until you check it. Documents are processed by Google's Gemini API, as our Privacy Policy explains." },
         { q: "Can I keep grants and restricted funds separate?", a: "Yes. Every receipt, donation and invoice line belongs to a fund, each fund has its own balance, and the statements show restricted and unrestricted funds separately. Creating funds is part of the Growth and Nonprofit plans." },
         { q: "Do I still need an accountant or auditor?", a: "Outlayd keeps your books and prepares the statements; if your constitution or a funder needs them audited, your auditor still signs them off. It gives them a clean ledger, an audit log of every change, and an export for their own software." },
         { q: "What happens if I stop paying?", a: "Nothing is deleted. Paid features become read-only, and you can still view and export everything you recorded. You can cancel any time; there are no contracts." },

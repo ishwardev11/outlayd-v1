@@ -20,7 +20,7 @@ const FEATURES = [
 
 const STEPS = [
     { title: "Set your starting point", text: "Your bank balances, what is owed and what you own on the first day of your financial year. Fund balances follow from it." },
-    { title: "Record the year as it happens", text: "Upload receipts and bills, record donations and other income, and issue invoices. AI reads the paperwork; you check and approve." },
+    { title: "Record the year as it happens", text: "Upload receipts and bills, record donations and other income, and issue invoices, with a deposit and a receipt for every payment received. AI reads the paperwork and matches payment slips to invoices; you check and approve." },
     { title: "Reconcile each month", text: "Type in the closing balance from the bank statement and see that it agrees, with a note for anything not yet entered." },
     { title: "Present and lock", text: "When the checks pass, download the signed statements for your AGM and lock the year." },
 ];

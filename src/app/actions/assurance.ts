@@ -15,6 +15,7 @@ import { loadLetterhead } from "@/utils/letterhead-server"
 import { parseMoney } from "@/utils/balance-input"
 import { AUDIT_KINDS, describeChange, type AuditChange, type AuditKind, type AuditLookups, type DescribedChange } from "@/utils/audit-changes"
 import { getCurrencyDetails } from "@/utils/currency"
+import { integrityFixHref, integrityMessage } from "@/utils/integrity-messages"
 import {
     checksStatus, defaultFinancialYear, financialYears, lockStatus, openingStatus, reconciliationStatus,
     type AccountStatus, type FinancialYearOption, type StepStatus,
@@ -215,6 +216,9 @@ export interface IntegrityCheck {
     // null when the check does not apply yet (for example before the opening position)
     passed: boolean | null
     detail: string | null
+    // What is wrong in plain words, with how many records (step 9); null when it passes
+    message: string | null
+    affected: number | null
     fixHref: string | null
     fixLabel: string | null
 }
@@ -226,21 +230,6 @@ export interface StatementAssurance {
     lockDate: string | null
     // an Admin on a paid plan, for a period that ends after the lock date and not after today
     canLockPeriod: boolean
-}
-
-function fixFor(code: string, from: string, to: string, monthEnd: string | null): { href: string; label: string } | null {
-    const range = `from=${from}&to=${to}`
-    switch (code) {
-        case "uncategorised": return { href: `/transactions?${range}`, label: "Open the cash book" }
-        case "lines_balanced": return { href: `/transactions?${range}`, label: "Open the cash book" }
-        case "opening_complete": return { href: "/settings/opening-position", label: "Complete the opening position" }
-        case "balance_check": return { href: "/reports/financial-position", label: "Open the Statement of Financial Position" }
-        case "prior_year": return { href: "/reports/changes-in-funds", label: "Open Changes in Funds" }
-        case "invoices": return { href: "/invoices", label: "Open Invoices" }
-        case "reconciled": return { href: `/bank?tab=reconciliation${monthEnd ? `&month=${monthEnd}` : ""}`, label: "Open month-end reconciliation" }
-        case "restricted_negative": return { href: "/reports/changes-in-funds", label: "Open Changes in Funds" }
-        default: return null
-    }
 }
 
 export async function getStatementAssurance(from: string, to: string): Promise<StatementAssurance | null> {
@@ -256,21 +245,25 @@ export async function getStatementAssurance(from: string, to: string): Promise<S
         featureAllowed(supabase, organizationId, "period_lock", "use"),
         getOrganizationTimezone().then(todayInTimezone),
     ])
+    const { symbol } = getCurrencyDetails(await getOrganizationCurrency())
+    const money = (n: number) => `${symbol}${n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     if (error) {
         console.error("getStatementAssurance failed:", error)
         return null
     }
-    const checks = ((data ?? []) as { code: string; title: string; severity: "block" | "warning"; passed: boolean | null; detail: string | null }[]).map((c) => {
+    const checks = ((data ?? []) as { code: string; title: string; severity: "block" | "warning"; passed: boolean | null; detail: string | null; affected: number | null; amount: number | string | null }[]).map((c) => {
         // The reconciliation check names its month-end in its title ("... at 2026-10-31")
         const monthEnd = c.code === "reconciled" ? (c.title.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? null) : null
-        const fix = c.passed === false || c.passed === null ? fixFor(c.code, from, to, monthEnd) : null
+        const fixHref = c.passed === false || c.passed === null ? integrityFixHref(c.code, from, to, monthEnd) : null
+        const affected = c.affected === null || c.affected === undefined ? null : Number(c.affected)
+        const message = integrityMessage({ code: c.code, passed: c.passed, affected, amount: c.amount === null || c.amount === undefined ? null : Number(c.amount), monthEnd }, from, to, money)
         const detail = c.code === "prior_year" && c.detail === "The period starts at the opening position"
             ? "Does not apply: the period starts on or before your tracking start date, so there is no earlier period in Outlayd"
             : c.detail
         return {
-            code: c.code, severity: c.severity, passed: c.passed, detail,
+            code: c.code, severity: c.severity, passed: c.passed, detail, message, affected,
             title: monthEnd ? c.title.replace(monthEnd, formatDay(monthEnd)) : c.title,
-            fixHref: fix?.href ?? null, fixLabel: fix?.label ?? null,
+            fixHref, fixLabel: fixHref ? "Fix" : null,
         }
     })
     const lockDate = (org?.lock_date as string | null) ?? null

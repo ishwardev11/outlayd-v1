@@ -355,7 +355,7 @@ BEGIN
   SELECT * INTO c FROM a_ctx;
   PERFORM pg_temp.sign_in(c.u_viewer, 'as-viewer@example.com');
   SET LOCAL ROLE authenticated;
-  ASSERT (SELECT count(*) FROM integrity_checks(c.org, '2026-02-01', '2026-02-28')) = 8, 'eight checks';
+  ASSERT (SELECT count(*) FROM integrity_checks(c.org, '2026-02-01', '2026-02-28')) = 9, 'nine checks (the ninth, receipts missing, from the invoices and AI plan step 9)';
   ASSERT pg_temp.check_passed(c.org, '2026-02-01', '2026-02-28', 'uncategorised'), 'nothing Uncategorised';
   ASSERT pg_temp.check_passed(c.org, '2026-02-01', '2026-02-28', 'lines_balanced'), 'lines add up';
   ASSERT pg_temp.check_passed(c.org, '2026-02-01', '2026-02-28', 'opening_complete'), 'opening complete';

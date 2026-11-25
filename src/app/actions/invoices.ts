@@ -73,6 +73,12 @@ function toRow(r: Record<string, unknown>): InvoiceRow {
 
 // Invoices with at least one line in the category / fund (from a statement line), or null for no line filter
 async function invoicesWithLines(supabase: Supabase, organizationId: string, f: InvoiceFilters): Promise<string[] | null> {
+    if (f.check) {
+        // Only the invoices the integrity check found (Reports, Fix)
+        const { data, error } = await supabase.rpc("integrity_check_records", { p_org: organizationId, p_from: null, p_to: null, p_code: f.check })
+        if (error) throw error
+        return ((data ?? []) as { record_id: string }[]).map((r) => r.record_id)
+    }
     if (!f.category && !f.fund) return null
     let q = supabase.from("invoice_lines").select("invoice_id").eq("organization_id", organizationId)
     if (f.category) q = q.eq("category_id", f.category)
@@ -84,7 +90,9 @@ async function invoicesWithLines(supabase: Supabase, organizationId: string, f: 
 
 function listQuery(supabase: Supabase, organizationId: string, f: InvoiceFilters, onlyIds: string[] | null) {
     let q = supabase.from("invoice_summary").select(SUMMARY_COLUMNS, { count: "exact" })
-        .eq("organization_id", organizationId).eq("direction", f.tab)
+        .eq("organization_id", organizationId)
+    // The integrity check's list covers bills and invoices you issued together
+    if (!f.check) q = q.eq("direction", f.tab)
     if (onlyIds) q = q.in("id", onlyIds.length ? onlyIds : ["00000000-0000-0000-0000-000000000000"])
     if (f.from) q = q.gte("issue_date", f.from)
     if (f.to) q = q.lte("issue_date", f.to)

@@ -17,6 +17,7 @@ import { useLock } from "@/components/LockProvider"
 import { usePaywall } from "@/components/ui/UpgradeNotice"
 import { exportCashBookCsv, getMoneyIn, type EntryOptions } from "@/app/actions/transactions"
 import { cashBookTotals, sourceLabel, summarise, typeLabel, type CashBookFilters, type CashBookRow } from "@/utils/cash-book"
+import { CHECK_FILTER_LABELS } from "@/utils/integrity-messages"
 import { TransactionDialog, type MoneyInEdit } from "./TransactionDialog"
 import { ReceiptActions } from "./ReceiptActions"
 
@@ -149,6 +150,12 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                 </Button>
             </div>
 
+            {filters.check && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 px-4 py-2 text-sm text-amber-800 dark:text-amber-300" data-testid="check-filter">
+                    <span>From the Reports checks: {CHECK_FILTER_LABELS[filters.check]}.</span>
+                    <button type="button" className="font-medium hover:underline" onClick={() => go({ ...filters, check: "", page: 1 })}>Show all entries</button>
+                </div>
+            )}
             <form className="flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3"
                 onSubmit={(e) => { e.preventDefault(); go({ ...draft, page: 1 }) }}>
                 <label className="text-xs text-slate-500 space-y-1"><span className="block">From</span>
@@ -166,7 +173,7 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                 {showAccount && filterSelect("account", "Account", "accounts", options.accounts)}
                 <Input aria-label="Search" placeholder="Search contact, remarks, reference" className="h-9 w-56" value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })} />
                 <Button type="submit" size="sm" className="h-9">Apply</Button>
-                <Button type="button" size="sm" variant="ghost" className="h-9" onClick={() => go({ from: "", to: "", type: "all", fund: "", category: "", payee: "", account: "", q: "", page: 1 })}>Clear</Button>
+                <Button type="button" size="sm" variant="ghost" className="h-9" onClick={() => go({ from: "", to: "", type: "all", fund: "", category: "", payee: "", account: "", q: "", page: 1, check: "" })}>Clear</Button>
             </form>
 
             <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">

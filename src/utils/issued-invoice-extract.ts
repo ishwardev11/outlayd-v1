@@ -138,7 +138,7 @@ export function normaliseIssuedInvoice(raw: RawIssuedInvoice, ctx: { orgNames: (
     })
     // The shared checks speak of a vendor; on an invoice you issued that is the customer
     const flags = assessment.flags.map((f) => f.code === "VENDOR_MISSING" ? { ...f, message: "No customer name was found. Choose who the invoice is for." } : f)
-    if (customerIsOwnOrg) flags.unshift({ code: "CUSTOMER_IS_ORG", message: "This looks like a bill you received. Upload it in the ledger instead." })
+    if (customerIsOwnOrg) flags.unshift({ code: "CUSTOMER_IS_ORG", message: "This looks like a bill you received. Upload it in the Inbox instead." })
 
     return {
         customer: {

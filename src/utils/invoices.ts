@@ -47,6 +47,8 @@ export interface InvoiceFilters {
     to: string
     category: string
     fund: string
+    // From a Reports integrity check's Fix link: only the invoices that fail it (both tabs)
+    check: "" | "invoices"
 }
 
 export const INVOICE_PAGE_SIZE = 50
@@ -101,6 +103,7 @@ export function parseInvoiceFilters(sp: SearchParams): InvoiceFilters {
         to: date(first(sp.to)),
         category: id(first(sp.category)),
         fund: id(first(sp.fund)),
+        check: first(sp.check) === "invoices" ? "invoices" : "",
     }
 }
 

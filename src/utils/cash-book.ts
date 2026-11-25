@@ -51,6 +51,8 @@ export interface CashBookFilters {
     account: string
     q: string
     page: number
+    // From a Reports integrity check's Fix link: only the entries that fail it
+    check: "" | "lines_balanced"
 }
 
 export const CASH_BOOK_PAGE_SIZE = 50
@@ -76,6 +78,7 @@ export function parseCashBookFilters(sp: SearchParams): CashBookFilters {
         account: id(first(sp.account)),
         q: first(sp.q).trim().slice(0, 60),
         page: Number.isFinite(page) && page > 0 ? page : 1,
+        check: first(sp.check) === "lines_balanced" ? "lines_balanced" : "",
     }
 }
 

@@ -12,6 +12,7 @@ import { useCurrency } from "@/components/CurrencyProvider"
 import { exportInvoicesCsv, getInvoiceDetail, type InvoiceDetail, type InvoicesPage } from "@/app/actions/invoices"
 import type { EntryOptions } from "@/app/actions/transactions"
 import { AGEING_LABELS, statusOptionsFor, type AgeingBucket, type InvoiceFilters } from "@/utils/invoices"
+import { CHECK_FILTER_LABELS } from "@/utils/integrity-messages"
 import { StatusBadge } from "./StatusBadge"
 import { InvoiceDialog } from "./InvoiceDialog"
 import { InvoiceDetailDialog, type SlipPayment } from "./InvoiceDetailDialog"
@@ -58,7 +59,7 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
         if (f.q) p.set("q", f.q)
         if (f.page > 1) p.set("page", String(f.page))
         if (f.open) p.set("open", f.open)
-        for (const k of ["from", "to", "category", "fund"] as const) if (f[k]) p.set(k, f[k])
+        for (const k of ["from", "to", "category", "fund", "check"] as const) if (f[k]) p.set(k, f[k])
         const s = p.toString()
         return `/invoices${s ? `?${s}` : ""}`
     }
@@ -218,6 +219,12 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
                 </UpgradeNotice>
             )}
 
+            {filters.check && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 px-4 py-2 text-sm text-amber-800 dark:text-amber-300" data-testid="check-filter">
+                    <span>From the Reports checks: {CHECK_FILTER_LABELS[filters.check]} (bills and invoices you issued).</span>
+                    <Link href={href({ check: "", page: 1 })} className="font-medium hover:underline">Show all</Link>
+                </div>
+            )}
             <nav className="flex gap-1 border-b border-slate-200 dark:border-slate-800 pb-2" aria-label="Invoice types">
                 {tab("payable", "Bills to pay")}
                 {tab("receivable", "Invoices issued")}

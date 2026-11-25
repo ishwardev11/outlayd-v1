@@ -57,9 +57,15 @@ export function ReadyToSubmit({ from, to }: { from: string; to: string }) {
                             <div className="flex-1 min-w-[12rem]">
                                 <span>{c.title}</span>
                                 {c.severity === "warning" && <span className="ml-2 text-xs text-slate-500">(warning)</span>}
-                                {c.detail && <span className="block text-xs text-slate-500">{c.detail}</span>}
+                                {c.message
+                                    ? <span className={`block text-xs font-medium ${c.severity === "block" ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"}`} data-testid={`check-message-${c.code}`}>{c.message}</span>
+                                    : c.detail && <span className="block text-xs text-slate-500">{c.detail}</span>}
                             </div>
-                            {c.fixHref && c.passed === false && <Link href={c.fixHref} className="text-xs font-medium text-indigo-600 hover:underline">{c.fixLabel}</Link>}
+                            {c.fixHref && c.passed === false && (
+                                <Link href={c.fixHref} className="text-xs font-semibold text-indigo-600 hover:underline" data-testid={`check-fix-${c.code}`} title={c.message ?? c.title}>
+                                    {c.fixLabel} →
+                                </Link>
+                            )}
                         </li>
                     ))}
                 </ul>

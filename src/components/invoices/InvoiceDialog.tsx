@@ -120,7 +120,7 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
             // The uploaded file becomes the invoice's attachment
             setFile(picked)
             if (d.deposit) setDeposit((dep) => ({ ...dep, on: true, amount: d.deposit!.amount.toFixed(2), date: d.deposit!.date ?? dep.date }))
-            if (d.draft.customerIsOwnOrg) toast.warning("This looks like a bill you received. Upload it in the ledger instead.", { duration: 10000 })
+            if (d.draft.customerIsOwnOrg) toast.warning("This looks like a bill you received. Upload it in the Inbox instead.", { duration: 10000 })
             else toast.success("Filled in from the invoice. Check every field before saving.")
         } catch (e) {
             toast.error(errorMessage(e) || "The invoice could not be read. Please enter it by hand.")
