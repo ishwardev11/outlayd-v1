@@ -110,7 +110,7 @@ const money = (n: number) => n.toFixed(2)
 // CSV: one row per line, so a split entry shows each fund and category with its own amount.
 export function buildCashBookCsv(rows: CashBookRow[], currency: string): string {
     const header = [
-        "Date", "Type", "Payee", "Category", "Fund", "Account", `Money in (${currency})`, `Money out (${currency})`,
+        "Date", "Type", "Contact", "Category", "Fund", "Account", `Money in (${currency})`, `Money out (${currency})`,
         "Reference", "Remarks", "Source", "Date estimated", "Line", "Entry ID",
     ]
     const body: string[] = []

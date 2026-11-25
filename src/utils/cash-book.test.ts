@@ -42,7 +42,7 @@ test("CSV: one row per line, money in and out in separate columns", () => {
     ], "MYR")
     assert.ok(csv.startsWith("﻿"))
     const rows = parseCsv(csv)
-    assert.deepEqual(rows[0].slice(0, 8), ["Date", "Type", "Payee", "Category", "Fund", "Account", "Money in (MYR)", "Money out (MYR)"])
+    assert.deepEqual(rows[0].slice(0, 8), ["Date", "Type", "Contact", "Category", "Fund", "Account", "Money in (MYR)", "Money out (MYR)"])
     assert.equal(rows.length, 4)
     assert.deepEqual([rows[1][6], rows[1][7], rows[1][3]], ["100.00", "", "General donations"])
     assert.deepEqual([rows[2][6], rows[2][4]], ["50.00", "Building Fund"])

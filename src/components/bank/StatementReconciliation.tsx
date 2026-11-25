@@ -376,13 +376,13 @@ function TargetPicker({ line, baseCurrency, onClose, onSelect }: {
                 </DialogHeader>
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by payee, invoice number or reference" className="pl-9" />
+                    <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by contact, invoice number or reference" className="pl-9" />
                 </div>
                 <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 rounded-md border border-slate-200 dark:border-slate-800">
                     {loading && <p className="p-4 text-sm text-slate-500 dark:text-slate-400">Searching…</p>}
                     {!loading && results.length === 0 && (
                         <p className="p-4 text-sm text-slate-500 dark:text-slate-400">
-                            {query ? "Nothing unmatched fits that search." : "Nothing unmatched has this exact amount. Search by payee, invoice number or reference."}
+                            {query ? "Nothing unmatched fits that search." : "Nothing unmatched has this exact amount. Search by contact, invoice number or reference."}
                         </p>
                     )}
                     {!loading && results.map((d) => (

@@ -168,7 +168,7 @@ export function InvoicesClient({ data, filters, options }: { data: InvoicesPage;
                     <select aria-label="Status" className={selectClass} value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as InvoiceFilters["status"] })}>
                         {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
-                    <Input aria-label="Search" placeholder="Search payee, number, reference" className="h-9 w-64" value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })} />
+                    <Input aria-label="Search" placeholder="Search contact, number, reference" className="h-9 w-64" value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })} />
                     <Button type="submit" size="sm" className="h-9">Apply</Button>
                     {(filters.status !== "all" || filters.q) && <Link href={href({ status: "all", q: "", page: 1 })} className="text-sm text-slate-500 hover:underline self-center">Clear</Link>}
                 </form>

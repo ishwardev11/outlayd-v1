@@ -138,7 +138,7 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
                                 {payeeChoices.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
                             {payeeId === NEW_PAYEE && (
-                                <Input aria-label="New payee name" placeholder="Name" value={newPayee} onChange={(e) => setNewPayee(e.target.value)} maxLength={255} />
+                                <Input aria-label="New contact name" placeholder="Name" value={newPayee} onChange={(e) => setNewPayee(e.target.value)} maxLength={255} />
                             )}
                         </div>
                         {payable && (

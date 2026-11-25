@@ -112,7 +112,7 @@ export async function updateOrganizationSettings(updates: OrganizationSettingsUp
     revalidatePath("/dashboard")
     revalidatePath("/inbox")
     revalidatePath("/transactions")
-    revalidatePath("/payees")
+    revalidatePath("/contacts")
     revalidatePath("/reports")
     return { success: true, data }
 }

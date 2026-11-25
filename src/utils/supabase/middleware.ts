@@ -49,6 +49,7 @@ export async function updateSession(request: NextRequest) {
         pathname.startsWith('/audit-log') ||
         pathname.startsWith('/bank-statements') ||
         pathname.startsWith('/bank') ||
+        pathname.startsWith('/contacts') ||
         pathname.startsWith('/payees') ||
         pathname.startsWith('/vendors') ||
         pathname.startsWith('/settings') ||

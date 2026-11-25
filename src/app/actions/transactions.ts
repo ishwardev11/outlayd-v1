@@ -36,7 +36,7 @@ function revalidateMoney() {
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     revalidatePath("/dashboard")
-    revalidatePath("/payees")
+    revalidatePath("/contacts")
 }
 
 // ------------------------------------------------------------------ options for the forms
@@ -400,7 +400,7 @@ export async function recordMoneyOut(raw: unknown): Promise<ActionResult<{ docum
         let payeeName = input.payee_name
         if (input.payee_id) {
             const { data: p } = await supabase.from("vendors").select("name").eq("id", input.payee_id).eq("organization_id", organizationId).maybeSingle()
-            if (!p) return { success: false, error: "That payee was not found" }
+            if (!p) return { success: false, error: "That contact was not found" }
             payeeName = String(p.name)
         }
 

@@ -16,7 +16,7 @@ export function PlanCards({ highlight = "growth" }: { highlight?: "growth" | "no
                 <div className="mb-6"><span className="text-4xl font-bold">RM{PRICES.free}</span><span className="text-slate-400">/month</span></div>
                 <p className="text-sm text-slate-400 mb-8 border-b border-white/10 pb-8">Get your receipts and expenses in order.</p>
                 <ul className="space-y-4 mb-8 flex-1">
-                    {["1 user", "5 AI document readings a month", "Expenses, payees and categories", "Cash book CSV and change history", "Sample financial statements"].map((t) => item(t))}
+                    {["1 user", "5 AI document readings a month", "Expenses, contacts and categories", "Cash book CSV and change history", "Sample financial statements"].map((t) => item(t))}
                 </ul>
                 <Link href="/signup" id="pricing-starter-btn" className="w-full py-3 px-4 rounded-xl border border-white/20 font-medium text-center hover:bg-white/5 transition-all active:scale-95 cursor-pointer">Start free</Link>
             </div>

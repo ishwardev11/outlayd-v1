@@ -10,9 +10,11 @@ test("moved pages redirect permanently to their new place", async () => {
     assert.deepEqual(map["/bank-statements"], { destination: "/bank", permanent: true })
     assert.deepEqual(map["/bank-statements/:id"], { destination: "/bank/:id", permanent: true })
     assert.deepEqual(map["/reconciliations"], { destination: "/bank?tab=reconciliation", permanent: true })
-    // Step 8: Payees lives at /payees
-    assert.deepEqual(map["/vendors"], { destination: "/payees", permanent: true })
-    assert.deepEqual(map["/vendors/:path*"], { destination: "/payees/:path*", permanent: true })
+    // Step 8: Contacts lives at /contacts (it was /vendors, then briefly /payees)
+    assert.deepEqual(map["/vendors"], { destination: "/contacts", permanent: true })
+    assert.deepEqual(map["/vendors/:path*"], { destination: "/contacts/:path*", permanent: true })
+    assert.deepEqual(map["/payees"], { destination: "/contacts", permanent: true })
+    assert.deepEqual(map["/payees/:path*"], { destination: "/contacts/:path*", permanent: true })
 })
 
 // The navigation points only at pages that exist under their current address, never at one that redirects

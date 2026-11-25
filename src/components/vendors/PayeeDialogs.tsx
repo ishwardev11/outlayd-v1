@@ -43,7 +43,7 @@ export function AddPayeeDialog({ open, onOpenChange }: { open: boolean; onOpenCh
             setType("vendor");
             onOpenChange(false);
         } catch (e) {
-            toast.error(errorMessage(e) || "Failed to add payee");
+            toast.error(errorMessage(e) || "Failed to add contact");
         } finally {
             setSaving(false);
         }
@@ -53,8 +53,8 @@ export function AddPayeeDialog({ open, onOpenChange }: { open: boolean; onOpenCh
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Add payee</DialogTitle>
-                    <DialogDescription>A payee is anyone you pay money to or receive money from: a supplier, donor, member or grantor.</DialogDescription>
+                    <DialogTitle>Add contact</DialogTitle>
+                    <DialogDescription>A contact is anyone money comes from or goes to: a supplier, donor, member, grantor or anyone else.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                     <div className="space-y-2">
@@ -70,7 +70,7 @@ export function AddPayeeDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
                     <Button onClick={save} disabled={saving || !name.trim()} className="bg-indigo-600 hover:bg-indigo-700">
                         {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        Add payee
+                        Add contact
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -109,11 +109,11 @@ function DetailsForm({ payee, onClose, disabled }: { payee: PayeeListItem; onClo
                 updates.payee_type = type;
             }
             await updateVendor(payee.id, updates);
-            toast.success("Payee saved");
+            toast.success("Contact saved");
             onClose();
         } catch (e) {
             // A duplicate name comes back from the database as a generic failure
-            toast.error("Could not save. Check that no other payee already has this name.");
+            toast.error("Could not save. Check that no other contact already has this name.");
         } finally {
             setSaving(false);
         }
@@ -124,10 +124,10 @@ function DetailsForm({ payee, onClose, disabled }: { payee: PayeeListItem; onClo
     return (
         <>
             <DialogHeader>
-                <DialogTitle>{payee.is_system ? payee.name : "Payee details"}</DialogTitle>
+                <DialogTitle>{payee.is_system ? payee.name : "Contact details"}</DialogTitle>
                 <DialogDescription>
                     {payee.is_system
-                        ? "A built-in payee so a donation never needs a donor record. Its name and type are fixed."
+                        ? "A built-in contact so a donation never needs a donor record. Its name and type are fixed."
                         : "Contact details are optional. Do not enter bank account numbers here."}
                 </DialogDescription>
             </DialogHeader>

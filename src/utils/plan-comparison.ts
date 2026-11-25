@@ -19,7 +19,7 @@ export interface ComparisonRow {
 export const PLAN_COMPARISON: ComparisonRow[] = [
     { feature: "AI receipt and invoice reading", detail: "Photos and PDFs read for payee, date, amount and lines", free: "5 a month", paid: "Unlimited", freeLevel: "partial", gates: [] },
     { feature: "Users", free: "1", paid: "Up to 5 (Admin, Editor, Viewer)", freeLevel: "partial", gates: [] },
-    { feature: "Expenses and receipts", detail: "Receipts, payees, categories, remarks, duplicate check", free: "Yes", paid: "Yes", freeLevel: "full", gates: [] },
+    { feature: "Expenses and receipts", detail: "Receipts, contacts, categories, remarks, duplicate check", free: "Yes", paid: "Yes", freeLevel: "full", gates: [] },
     { feature: "Cash book CSV export", detail: "Every payment in and out, with your own filters", free: "Yes", paid: "Yes", freeLevel: "full", gates: [] },
     { feature: "Change history (audit log)", free: "Yes", paid: "Yes", freeLevel: "full", gates: ["audit_log"] },
     { feature: "Money in and donor receipts", detail: "Donations, grants and fees, split across funds; numbered receipts, tax-exempt when approved", free: "Preview", paid: "Yes", freeLevel: "partial", gates: ["income"] },

@@ -162,9 +162,9 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                 </select>
                 {filterSelect("fund", "Fund", "funds", options.funds)}
                 {filterSelect("category", "Category", "categories", options.categories)}
-                {filterSelect("payee", "Payee", "payees", options.payees)}
+                {filterSelect("payee", "Contact", "contacts", options.payees)}
                 {showAccount && filterSelect("account", "Account", "accounts", options.accounts)}
-                <Input aria-label="Search" placeholder="Search payee, remarks, reference" className="h-9 w-56" value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })} />
+                <Input aria-label="Search" placeholder="Search contact, remarks, reference" className="h-9 w-56" value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })} />
                 <Button type="submit" size="sm" className="h-9">Apply</Button>
                 <Button type="button" size="sm" variant="ghost" className="h-9" onClick={() => go({ from: "", to: "", type: "all", fund: "", category: "", payee: "", account: "", q: "", page: 1 })}>Clear</Button>
             </form>
@@ -175,7 +175,7 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
                         <tr>
                             <th className="px-3 py-2.5 font-medium w-8" />
                             <th className="px-3 py-2.5 font-medium">Date</th>
-                            <th className="px-3 py-2.5 font-medium">Payee</th>
+                            <th className="px-3 py-2.5 font-medium">Contact</th>
                             <th className="px-3 py-2.5 font-medium">Type</th>
                             <th className="px-3 py-2.5 font-medium">Category</th>
                             <th className="px-3 py-2.5 font-medium">Fund</th>

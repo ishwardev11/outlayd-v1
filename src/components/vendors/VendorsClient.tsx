@@ -114,7 +114,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
             setSelectedVendors([]);
             setMergeModalOpen(false);
         } catch (e) {
-            toast.error("Failed to merge payees");
+            toast.error("Failed to merge contacts");
         } finally {
             setIsMerging(false);
         }
@@ -139,7 +139,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
             setVendorToDelete(null);
             setSelectedVendors(prev => prev.filter(v => v !== vendorToDelete.id));
         } catch (e) {
-            toast.error("Failed to remove payee");
+            toast.error("Failed to remove contact");
         } finally {
             setIsDeleting(false);
         }
@@ -152,12 +152,12 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
             <div className="grid gap-6 md:grid-cols-3">
                 <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">Total Payees</CardTitle>
+                        <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">Total Contacts</CardTitle>
                         <Building2 className="h-4 w-4 text-muted-foreground dark:text-slate-400" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalVendors}</div>
-                        <p className="text-xs text-muted-foreground dark:text-slate-400">Active payees</p>
+                        <p className="text-xs text-muted-foreground dark:text-slate-400">Active contacts</p>
                     </CardContent>
                 </Card>
 
@@ -188,7 +188,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 " />
                     <Input
-                        placeholder="Search payees or categories..."
+                        placeholder="Search contacts or categories..."
                         className="pl-8 bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -212,9 +212,9 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
                             {showArchived ? "Hide archived" : `Show archived (${archivedCount})`}
                         </Button>
                     )}
-                    <Button size="sm" onClick={() => setAddOpen(true)} disabled={isViewer} title={isViewer ? "Viewers cannot add payees" : ""} className="bg-indigo-600 hover:bg-indigo-700">
+                    <Button size="sm" onClick={() => setAddOpen(true)} disabled={isViewer} title={isViewer ? "Viewers cannot add contacts" : ""} className="bg-indigo-600 hover:bg-indigo-700">
                         <Plus className="w-4 h-4 mr-1" />
-                        Add payee
+                        Add contact
                     </Button>
                 </div>
 
@@ -226,7 +226,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
                                 onClick={handleMergeClick}
                                 size="sm"
                                 disabled={isViewer}
-                                title={isViewer ? "Viewers cannot merge vendors" : ""}
+                                title={isViewer ? "Viewers cannot merge contacts" : ""}
                                 className="bg-indigo-600 hover:bg-indigo-700 animate-in fade-in zoom-in duration-200"
                             >
                                 <Merge className="w-4 h-4 mr-2" />
@@ -246,7 +246,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
                 <Card className="border-gray-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
                     <CardContent className="flex flex-col items-center justify-center py-16 text-gray-500 dark:text-slate-400">
                         <Users className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-4" />
-                        <p>{searchQuery || typeFilter !== "all" ? "No payees match your filters." : "No payees yet. Process documents or add one to build your directory."}</p>
+                        <p>{searchQuery || typeFilter !== "all" ? "No contacts match your filters." : "No contacts yet. Process documents or add one to build your list."}</p>
                     </CardContent>
                 </Card>
             ) : (
@@ -256,7 +256,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
                         <TableHeader className="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700">
                             <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="w-12 text-center"></TableHead>
-                                <TableHead className="font-semibold text-gray-900 dark:text-slate-300">Payee</TableHead>
+                                <TableHead className="font-semibold text-gray-900 dark:text-slate-300">Contact</TableHead>
                                 <TableHead className="font-semibold text-gray-900 dark:text-slate-300">Default Category</TableHead>
                                 <TableHead className="font-semibold text-gray-900 dark:text-slate-300 text-center">Documents</TableHead>
                                 <TableHead className="text-right font-semibold text-gray-900 dark:text-slate-300">Total Paid</TableHead>
@@ -370,7 +370,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
                                             size="icon"
                                             className="h-8 w-8 text-gray-500 hover:text-indigo-600"
                                             onClick={() => setDetailsPayee(vendor)}
-                                            title="Payee details"
+                                            title="Contact details"
                                         >
                                             <Pencil className="h-4 w-4" />
                                         </Button>
@@ -381,10 +381,10 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
                                                 className="h-8 w-8 text-gray-500 hover:text-indigo-600"
                                                 onClick={async () => {
                                                     try { await restorePayee(vendor.id); toast.success(`${vendor.name} restored`) }
-                                                    catch { toast.error("Failed to restore payee") }
+                                                    catch { toast.error("Failed to restore contact") }
                                                 }}
                                                 disabled={isViewer}
-                                                title="Restore payee"
+                                                title="Restore contact"
                                             >
                                                 <ArchiveRestore className="h-4 w-4" />
                                             </Button>
@@ -395,7 +395,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
                                                 className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50/20 transition-colors"
                                                 onClick={(e) => handleDeleteClick(e, vendor.id, vendor.name)}
                                                 disabled={isViewer}
-                                                title={isViewer ? "Viewers cannot remove payees" : "Remove payee"}
+                                                title={isViewer ? "Viewers cannot remove contacts" : "Remove contact"}
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
@@ -417,10 +417,10 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Merge className="w-5 h-5 text-indigo-500" />
-                            Merge Selected Payees
+                            Merge Selected Contacts
                         </DialogTitle>
                         <DialogDescription>
-                            Select which vendor profile should be kept. All historical documents from the secondary vendor will be reassigned to the primary vendor, and the secondary vendor will be permanently deleted.
+                            Select which contact should be kept. All past documents from the other contact move to the one you keep, and the other contact is permanently deleted.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -458,12 +458,12 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-red-600">
                             <AlertCircle className="w-5 h-5" />
-                            Remove Payee
+                            Remove Contact
                         </DialogTitle>
                         <DialogDescription className="pt-2">
                             Remove <strong>{vendorToDelete?.name}</strong>?
                             <br /><br />
-                            If this payee has documents it is archived, so your reports and old entries keep it, and you can restore it later. A payee with no documents is deleted for good.
+                            If this contact has documents it is archived, so your reports and old entries keep it, and you can restore it later. A contact with no documents is deleted for good.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -471,7 +471,7 @@ export function VendorsClient({ vendorsList, categories = [] }: { vendorsList: P
                         <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
                         <Button onClick={confirmDelete} disabled={isDeleting} variant="destructive">
                             {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            Remove Payee
+                            Remove Contact
                         </Button>
                     </DialogFooter>
                 </DialogContent>

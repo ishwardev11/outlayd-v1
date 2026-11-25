@@ -31,7 +31,7 @@ const ICONS: Record<NavId, LucideIcon> = {
     inbox: Inbox,
     transactions: FileText,
     invoices: ReceiptText,
-    payees: Users,
+    contacts: Users,
     reports: BarChart3,
     bank: Landmark,
     settings: Settings,

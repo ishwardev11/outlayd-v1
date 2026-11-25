@@ -144,7 +144,7 @@ export async function deleteDocument(id: string): Promise<{ success: true } | { 
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     revalidatePath("/")
-    revalidatePath("/payees")
+    revalidatePath("/contacts")
     revalidatePath("/reports")
     return { success: true }
 }
@@ -161,7 +161,7 @@ export async function deleteVendor(id: string): Promise<{ action: "archived" | "
         .eq("vendor_id", id)
     if (countError) {
         console.error("Error checking payee usage:", countError)
-        throw new Error("Failed to remove payee")
+        throw new Error("Failed to remove contact")
     }
 
     let action: "archived" | "deleted"
@@ -172,19 +172,19 @@ export async function deleteVendor(id: string): Promise<{ action: "archived" | "
             .eq("id", id)
         if (error) {
             console.error("Error archiving payee:", error)
-            throw new Error("Failed to archive payee")
+            throw new Error("Failed to archive contact")
         }
         action = "archived"
     } else {
         const { error } = await supabase.from("vendors").delete().eq("id", id)
         if (error) {
             console.error("Error deleting payee:", error)
-            throw new Error("Failed to delete payee")
+            throw new Error("Failed to delete contact")
         }
         action = "deleted"
     }
 
-    revalidatePath("/payees")
+    revalidatePath("/contacts")
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     revalidatePath("/")
@@ -198,9 +198,9 @@ export async function restorePayee(id: string) {
     const { error } = await supabase.from("vendors").update({ archived_at: null }).eq("id", id)
     if (error) {
         console.error("Error restoring payee:", error)
-        throw new Error("Failed to restore payee")
+        throw new Error("Failed to restore contact")
     }
-    revalidatePath("/payees")
+    revalidatePath("/contacts")
     revalidatePath("/inbox")
     revalidatePath("/transactions")
 }
@@ -211,8 +211,8 @@ export async function createPayee(name: string, payeeType: string = "vendor") {
     const organization_id = await getOrganizationId()
 
     const cleanName = (name ?? "").trim().slice(0, 255)
-    if (!cleanName) throw new Error("Enter a name for the payee")
-    if (!PAYEE_TYPE_VALUES.includes(payeeType)) throw new Error("Choose a valid payee type")
+    if (!cleanName) throw new Error("Enter a name for the contact")
+    if (!PAYEE_TYPE_VALUES.includes(payeeType)) throw new Error("Choose a valid contact type")
 
     const { data, error } = await supabase
         .from("vendors")
@@ -221,12 +221,12 @@ export async function createPayee(name: string, payeeType: string = "vendor") {
         .single()
 
     if (error) {
-        if (error.code === "23505") throw new Error("A payee with this name already exists")
+        if (error.code === "23505") throw new Error("A contact with this name already exists")
         console.error("Error creating payee:", error)
-        throw new Error("Failed to create payee")
+        throw new Error("Failed to create contact")
     }
 
-    revalidatePath("/payees")
+    revalidatePath("/contacts")
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     return data
@@ -270,7 +270,7 @@ export async function updateVendor(id: string, rawUpdates: unknown) {
         throw new Error("Failed to update vendor")
     }
 
-    revalidatePath("/payees")
+    revalidatePath("/contacts")
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     revalidatePath("/")
@@ -315,7 +315,7 @@ export async function mergeVendors(primaryId: string, secondaryId: string) {
         throw new Error("Failed to delete secondary vendor")
     }
 
-    revalidatePath("/payees")
+    revalidatePath("/contacts")
     revalidatePath("/inbox")
     revalidatePath("/transactions")
     revalidatePath("/")

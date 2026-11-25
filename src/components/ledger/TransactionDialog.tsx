@@ -242,7 +242,7 @@ export function TransactionDialog({ open, onOpenChange, mode, options, edit, rea
                                 <div className="flex flex-wrap items-center gap-3">
                                     <Input aria-label="Name" placeholder="Name" value={payeeName} onChange={(e) => setPayeeName(e.target.value)} maxLength={255} className="flex-1 min-w-48" />
                                     <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                                        <input type="checkbox" checked={savePayee} onChange={(e) => setSavePayee(e.target.checked)} /> Save as a new payee
+                                        <input type="checkbox" checked={savePayee} onChange={(e) => setSavePayee(e.target.checked)} /> Save as a new contact
                                     </label>
                                 </div>
                             )}

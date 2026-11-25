@@ -6,7 +6,7 @@
 // the Year end hub are under Reports; the audit log is reached from Reports > Year end; Assets & Loans
 // and the opening position are under Settings.
 
-export type NavId = "dashboard" | "inbox" | "transactions" | "invoices" | "payees" | "reports" | "bank" | "settings"
+export type NavId = "dashboard" | "inbox" | "transactions" | "invoices" | "contacts" | "reports" | "bank" | "settings"
 
 export interface NavItem {
     id: NavId
@@ -21,7 +21,7 @@ export const NAV_ITEMS: NavItem[] = [
     { id: "inbox", label: "Inbox", href: "/inbox" },
     { id: "transactions", label: "Transactions", href: "/transactions" },
     { id: "invoices", label: "Bills & Invoices", href: "/invoices" },
-    { id: "payees", label: "Payees", href: "/payees" },
+    { id: "contacts", label: "Contacts", href: "/contacts" },
     { id: "reports", label: "Reports", href: "/reports" },
     { id: "bank", label: "Bank", href: "/bank", paidOnly: true },
     { id: "settings", label: "Settings", href: "/settings" },
