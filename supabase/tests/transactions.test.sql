@@ -155,12 +155,8 @@ BEGIN
   EXCEPTION WHEN check_violation THEN NULL; END;
   RAISE NOTICE 'PASS remarks are limited to 500 characters';
 
-  UPDATE public.documents SET remarks = 'March committee approval' WHERE id = doc;
-  SELECT count(*) INTO n FROM public.ledger_page(o, NULL, NULL, NULL, NULL, 'committee');
-  ASSERT n = 1, format('ledger search should find the remark, found %s', n);
-  SELECT count(*) INTO n FROM public.ledger_page(o, NULL, NULL, NULL, NULL, 'AI Extraction');
-  ASSERT n = 0, 'ledger search must not search the notes column';
-  RAISE NOTICE 'PASS ledger search finds remarks';
+  -- The search check that used the old ledger_page function moved to src/utils/inbox.test.ts when the
+  -- function was dropped (simplification step 9): the Inbox search covers remarks, never notes.
 END $$;
 
 ROLLBACK;

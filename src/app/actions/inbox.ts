@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { getOrganizationId } from "./document-utils"
-import { INBOX_DB_STATUSES, INBOX_PAGE_SIZE, inboxDbStatuses, type InboxCounts, type InboxFilters } from "@/utils/inbox"
+import { INBOX_DB_STATUSES, INBOX_PAGE_SIZE, inboxDbStatuses, inboxSearchFilter, type InboxCounts, type InboxFilters } from "@/utils/inbox"
 import type { DocumentRow, IdName } from "@/utils/row-types"
 
 // The Inbox (simplification step 4): one page of uploads still being read, waiting for review or
@@ -18,10 +18,7 @@ export async function getInboxPage(filters: InboxFilters): Promise<{ documents: 
         let q = supabase.from("documents").select("*", { count: "exact" })
             .eq("organization_id", orgId)
             .in("status", inboxDbStatuses(filters.status))
-        if (filters.q) {
-            const like = `%${filters.q.replace(/[\\%_,()]/g, (c) => "\\" + c)}%`
-            q = q.or(`vendor_name.ilike.${like},invoice_number.ilike.${like},remarks.ilike.${like}`)
-        }
+        if (filters.q) q = q.or(inboxSearchFilter(filters.q))
         return q.order("created_at", { ascending: false }).order("id", { ascending: false })
             .range((page - 1) * INBOX_PAGE_SIZE, page * INBOX_PAGE_SIZE - 1)
     }

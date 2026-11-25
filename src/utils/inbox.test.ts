@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { ALL_INBOX_DB_STATUSES, approvedDestination, inboxDbStatuses, parseInboxFilters } from "./inbox"
+import { ALL_INBOX_DB_STATUSES, approvedDestination, inboxDbStatuses, inboxSearchFilter, parseInboxFilters } from "./inbox"
 
 test("the Inbox filters are Extracting, Needs review and Possible duplicate; anything else means all of them", () => {
     assert.deepEqual(parseInboxFilters({}), { status: "all", q: "", page: 1 })
@@ -33,4 +33,17 @@ test("the approve message says where the document went, with a link", () => {
     })
     assert.equal(approvedDestination("invoice").href, "/invoices?status=unpaid")
     assert.match(approvedDestination(null).message, /Bills & Invoices/)
+})
+
+// Replaces the SQL test on the old ledger_page function (removed in simplification step 9): searching
+// uploads finds the user's remarks and never looks at `notes`, the AI's extraction error messages.
+test("the Inbox search covers payee, invoice number and remarks, never the notes column", () => {
+    const f = inboxSearchFilter("committee")
+    assert.equal(f, "vendor_name.ilike.%committee%,invoice_number.ilike.%committee%,remarks.ilike.%committee%")
+    assert.ok(!/notes/.test(f), "must not search notes")
+})
+
+test("filter characters in a search are matched literally", () => {
+    const f = inboxSearchFilter("50%,a(b)")
+    assert.ok(f.startsWith(String.raw`vendor_name.ilike.%50\%\,a\(b\)%,`), f)
 })

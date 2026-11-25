@@ -53,3 +53,11 @@ export function approvedDestination(documentType: string | null | undefined): { 
         ? { label: "Open Transactions", href: "/transactions?type=money_out", message: "Approved. It is now in Transactions as money out." }
         : { label: "Open Bills to pay", href: "/invoices?status=unpaid", message: "Approved. It is now in Bills & Invoices, under Bills to pay." }
 }
+
+// The Inbox search: the payee, the invoice number and the user's own remarks. Never `notes`, which holds
+// the AI's extraction error messages and is not shown to users. Characters that mean something in a
+// PostgREST filter (\ % _ , ( )) are escaped, so a search for "50%" or "a,b" matches literally.
+export function inboxSearchFilter(q: string): string {
+    const like = `%${q.replace(/[\\%_,()]/g, (c) => "\\" + c)}%`
+    return `vendor_name.ilike.${like},invoice_number.ilike.${like},remarks.ilike.${like}`
+}

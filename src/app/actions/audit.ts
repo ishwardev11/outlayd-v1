@@ -31,26 +31,3 @@ export async function getDocumentAuditLog(documentId: string): Promise<AuditEntr
     }
     return (data ?? []) as AuditEntry[]
 }
-
-// One page of the organisation-wide audit log, newest first.
-export async function getAuditLog(page = 1, pageSize = 50): Promise<{ entries: AuditEntry[]; total: number }> {
-    const supabase = await createClient()
-    const organization_id = await getOrganizationId()
-    if (!organization_id) return { entries: [], total: 0 }
-
-    const safePage = Number.isInteger(page) && page > 0 ? page : 1
-    const from = (safePage - 1) * pageSize
-
-    const { data, count, error } = await supabase
-        .from("document_audit_log")
-        .select(COLUMNS, { count: "exact" })
-        .eq("organization_id", organization_id)
-        .order("created_at", { ascending: false })
-        .range(from, from + pageSize - 1)
-
-    if (error) {
-        console.error("Supabase Error (getAuditLog):", error)
-        return { entries: [], total: 0 }
-    }
-    return { entries: (data ?? []) as AuditEntry[], total: count ?? 0 }
-}

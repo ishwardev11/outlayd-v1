@@ -49,12 +49,6 @@ export function todayInTimezone(timeZone: string = DEFAULT_TIMEZONE, now: Date =
     }).format(now)
 }
 
-/** Add (or subtract) whole days to a YYYY-MM-DD string. Pure calendar maths, no timezone involved. */
-export function addDaysIso(iso: string, days: number): string {
-    const [y, m, d] = iso.split("-").map(Number)
-    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
-}
-
 /** First and last day (YYYY-MM-DD) of the month containing the given date. */
 export function monthBounds(iso: string): { start: string; end: string } {
     const [y, m] = iso.split("-").map(Number)

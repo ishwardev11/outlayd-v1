@@ -36,22 +36,17 @@ export async function updateSession(request: NextRequest) {
 
     const pathname = request.nextUrl.pathname
 
-    // Protected dashboard routes
+    // Protected dashboard routes. Old addresses (/ledger, /vendors, /assets...) are redirected by
+    // next.config.ts before this runs, so only the current ones are listed.
     const isProtectedPath =
         pathname.startsWith('/dashboard') ||
-        pathname.startsWith('/ledger') ||
         pathname.startsWith('/inbox') ||
         pathname.startsWith('/transactions') ||
         pathname.startsWith('/invoices') ||
-        pathname.startsWith('/assets') ||
-        pathname.startsWith('/reconciliations') ||
         pathname.startsWith('/reports') ||
         pathname.startsWith('/audit-log') ||
-        pathname.startsWith('/bank-statements') ||
         pathname.startsWith('/bank') ||
         pathname.startsWith('/contacts') ||
-        pathname.startsWith('/payees') ||
-        pathname.startsWith('/vendors') ||
         pathname.startsWith('/settings') ||
         pathname.startsWith('/onboarding')
 

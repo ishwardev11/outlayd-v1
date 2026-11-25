@@ -208,12 +208,6 @@ export function scoreMatch(txn: MatchTransaction, c: MatchCandidate): MatchSugge
     return { documentId: c.id, score, strong: score >= 90 && (sim >= 0.99 || numberHit) && dateOk, reasons }
 }
 
-// A bank payment against an approved document (kept for callers that only have documents)
-export function scoreCandidate(txn: MatchTransaction, doc: MatchDocument, opts: MatchOptions): MatchSuggestion | null {
-    const s = scoreMatch(txn, documentCandidate(doc, opts))
-    return s ? { ...s, documentId: doc.id } : null
-}
-
 export interface MatchResult {
     transactionId: string
     suggestion: MatchSuggestion | null

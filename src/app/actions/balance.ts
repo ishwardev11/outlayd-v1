@@ -68,24 +68,7 @@ export async function saveAccount(raw: unknown): Promise<ActionResult<{ id: stri
 }
 
 // ------------------------------------------------------------------ fund transfers
-
-export interface FundTransferRow { id: string; tx_date: string; amount: number; from_fund_id: string; to_fund_id: string; from_name: string; to_name: string; remarks: string | null }
-
-export async function getFundTransfers(): Promise<FundTransferRow[]> {
-    const supabase = await createClient()
-    const organizationId = await getOrganizationId()
-    if (!organizationId) return []
-    const [{ data: tx }, { data: funds }] = await Promise.all([
-        supabase.from("transactions").select("id, tx_date, total, from_fund_id, to_fund_id, remarks").eq("organization_id", organizationId)
-            .eq("tx_type", "fund_transfer").order("tx_date", { ascending: false }).limit(200),
-        supabase.from("funds").select("id, name").eq("organization_id", organizationId),
-    ])
-    const names = new Map(((funds ?? []) as { id: string; name: string }[]).map((f) => [f.id, f.name]))
-    return ((tx ?? []) as Record<string, unknown>[]).map((t) => ({
-        id: String(t.id), tx_date: String(t.tx_date), amount: Number(t.total), from_fund_id: String(t.from_fund_id), to_fund_id: String(t.to_fund_id),
-        from_name: names.get(String(t.from_fund_id)) ?? "", to_name: names.get(String(t.to_fund_id)) ?? "", remarks: (t.remarks as string | null) ?? null,
-    }))
-}
+// Transfers are listed in Transactions (the cash book) and created there (simplification step 6)
 
 export async function saveFundTransfer(raw: unknown): Promise<ActionResult<{ id: string }>> {
     const parsed = parseFundTransferInput(raw)

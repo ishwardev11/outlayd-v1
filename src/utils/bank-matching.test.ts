@@ -1,7 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import {
-    documentCandidate, entryCandidate, scoreCandidate, scoreMatch, suggestMatches,
+    documentCandidate, entryCandidate, scoreMatch, suggestMatches,
     type MatchDocument, type MatchEntry, type MatchOptions, type MatchTransaction,
 } from "./bank-matching"
 
@@ -14,8 +14,8 @@ const doc = (over: Partial<MatchDocument>): MatchDocument => ({
 const entry = (over: Partial<MatchEntry>): MatchEntry => ({ id: "t1", direction: "in", payee: "Puan Aminah", reference: null, cents: 50000, date: "2026-01-10", ...over })
 
 test("documents score as before: same amount, payee and date make a strong match", () => {
-    const s = scoreCandidate(line({}), doc({}), opts)!
-    assert.equal(s.documentId, "d1")
+    const s = scoreMatch(line({}), documentCandidate(doc({}), opts))!
+    assert.equal(s.documentId, "document:d1") // candidate ids say what they are, as suggestMatches returns them
     assert.ok(s.strong)
     assert.deepEqual(s.reasons, ["Same amount", "Payee name matches", "Payment date is close"])
 })
