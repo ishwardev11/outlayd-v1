@@ -101,11 +101,51 @@ export function TeamManagementTab({
         }
     }
 
+    // Shared by the phone card list and the desktop table
+    const renderAccess = (member: TeamMember, isCurrentUser: boolean) => {
+        if (isCurrentUser) {
+            return (
+                <span className="text-slate-400 dark:text-slate-500 text-xs font-medium pr-3 select-none">
+                    Current
+                </span>
+            )
+        }
+        if (isAdmin) {
+            return (
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-slate-400 dark:text-slate-400 dark:hover:text-red-400 hover:text-red-600"
+                    onClick={() => setMemberToRevoke(member)}
+                >
+                    Revoke
+                </Button>
+            )
+        }
+        return (
+            <span className="text-slate-400 dark:text-slate-500 text-xs font-medium pr-3 select-none">
+                —
+            </span>
+        )
+    }
+
+    const renderAvatar = (member: TeamMember) => (
+        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold uppercase shrink-0">
+            {member.full_name ? member.full_name.charAt(0) : member.email.charAt(0)}
+        </div>
+    )
+
+    const renderYouBadge = () => (
+        <span className="text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full ml-2 inline-flex items-center font-normal">
+            (You)
+        </span>
+    )
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                         <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Team Members</h2>
                         <div className="flex items-center gap-1.5 text-xs bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700/60 font-medium">
                             <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{usedSeats}</span>
@@ -182,7 +222,46 @@ export function TeamManagementTab({
                 </Dialog>
             </div>
 
-            <div className="border border-slate-200 dark:border-slate-700/50 rounded-lg overflow-hidden bg-white dark:bg-slate-800">
+            {/* Phones: one card per member, so nothing gets cut off */}
+            <div className="sm:hidden border border-slate-200 dark:border-slate-700/50 rounded-lg bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700/50">
+                {initialTeam.map(member => {
+                    const isCurrentUser = member.email.toLowerCase() === currentUserEmail?.toLowerCase();
+                    const showYouBadge = initialTeam.length >= 2 && isCurrentUser;
+
+                    return (
+                        <div key={member.id} className="p-4 space-y-3">
+                            <div className="flex items-start gap-3">
+                                {renderAvatar(member)}
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-medium text-slate-900 dark:text-white flex flex-wrap items-center">
+                                        <span className="break-words">{member.full_name || 'Pending Invite'}</span>
+                                        {showYouBadge && renderYouBadge()}
+                                    </p>
+                                    <p className="text-slate-500 dark:text-slate-400 text-xs break-all">{member.email}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 pl-11">
+                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                    <Badge variant="outline" className={getRoleColor(member.role)}>
+                                        {member.role}
+                                    </Badge>
+                                    <span>Joined {new Date(member.created_at).toLocaleDateString()}</span>
+                                </div>
+                                {renderAccess(member, isCurrentUser)}
+                            </div>
+                        </div>
+                    );
+                })}
+                {initialTeam.length === 0 && (
+                    <div className="px-4 py-12 text-center text-sm text-slate-500">
+                        <ShieldAlert className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+                        No team members found. Invite someone to collaborate!
+                    </div>
+                )}
+            </div>
+
+            {/* Tablet and up: the table */}
+            <div className="hidden sm:block border border-slate-200 dark:border-slate-700/50 rounded-lg overflow-x-auto bg-white dark:bg-slate-800">
                 <table className="w-full text-sm text-left align-middle border-collapse">
                     <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700/50">
                         <tr>
@@ -201,17 +280,11 @@ export function TeamManagementTab({
                                 <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                                     <td className="px-4 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold uppercase shrink-0">
-                                                {member.full_name ? member.full_name.charAt(0) : member.email.charAt(0)}
-                                            </div>
+                                            {renderAvatar(member)}
                                             <div>
                                                 <p className="font-medium text-slate-900 dark:text-white flex items-center">
                                                     {member.full_name || 'Pending Invite'}
-                                                    {showYouBadge && (
-                                                        <span className="text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full ml-2 inline-flex items-center font-normal">
-                                                            (You)
-                                                        </span>
-                                                    )}
+                                                    {showYouBadge && renderYouBadge()}
                                                 </p>
                                                 <p className="text-slate-500 dark:text-slate-400 text-xs">{member.email}</p>
                                             </div>
@@ -226,26 +299,7 @@ export function TeamManagementTab({
                                         {new Date(member.created_at).toLocaleDateString()}
                                     </td>
                                     <td className="px-4 py-4 text-right">
-                                        {isCurrentUser ? (
-                                            <span className="text-slate-400 dark:text-slate-500 text-xs font-medium pr-3 select-none">
-                                                Current
-                                            </span>
-                                        ) : (
-                                            isAdmin ? (
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    className="text-slate-400 dark:text-slate-400 dark:hover:text-red-400 hover:text-red-600"
-                                                    onClick={() => setMemberToRevoke(member)}
-                                                >
-                                                    Revoke
-                                                </Button>
-                                            ) : (
-                                                <span className="text-slate-400 dark:text-slate-500 text-xs font-medium pr-3 select-none">
-                                                    —
-                                                </span>
-                                            )
-                                        )}
+                                        {renderAccess(member, isCurrentUser)}
                                     </td>
                                 </tr>
                             );
