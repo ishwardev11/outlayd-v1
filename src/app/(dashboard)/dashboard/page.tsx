@@ -1,33 +1,17 @@
 import type { Metadata } from "next";
-import { getDashboardSummary, getBillsToPay, getExtractingCount, getCashThisMonth, getOverdueInvoices, getFundBalances, getOnboardingProgress, getPendingIncome } from "@/app/actions/aggregates";
-import { getInboxCounts } from "@/app/actions/inbox";
-import { GettingStarted } from "@/components/dashboard/GettingStarted";
-import { gettingStartedSteps } from "@/utils/getting-started";
+import { redirect } from "next/navigation";
+import { getDashboardOverview, getExtractingCount, getOnboardingProgress } from "@/app/actions/aggregates";
+import { getOrganizationId, getOrganizationCurrency, getOrganizationTimezone } from "@/app/actions/document-utils";
 import { createClient } from "@/utils/supabase/server";
 import { featureAllowed } from "@/utils/plan";
-import Link from "next/link";
-import { getOrganizationId, getOrganizationCurrency } from "@/app/actions/document-utils";
 import { getCurrencyDetails } from "@/utils/currency";
-import { redirect } from "next/navigation";
-import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
-import { QuickUpload } from "@/components/dashboard/QuickUpload";
+import { gettingStartedSteps } from "@/utils/getting-started";
+import { dashboardMode, greeting, hourInTimezone, monthYearLabel, usesFunds } from "@/utils/dashboard";
 import { ExtractionPoller } from "@/components/ExtractionPoller";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Receipt, Inbox, ArrowDownLeft, ArrowUpRight, Info, Clock, HandCoins, Paperclip } from "lucide-react";
-
-const money = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-// A small hover note next to a card title
-function CardNote({ text }: { text: string }) {
-  return (
-    <>
-      <Info className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-500 dark:text-slate-400 transition-colors" />
-      <div className="absolute top-8 left-4 bg-slate-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity w-64 whitespace-normal normal-case tracking-normal font-normal z-50 shadow-md">
-        {text}
-      </div>
-    </>
-  );
-}
+import { GettingStartedCard } from "@/components/dashboard/GettingStartedCard";
+import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
+import { DashboardActions, DashboardDropZone } from "@/components/dashboard/DashboardUpload";
+import { FundBalances, KpiRow, NeedsAttention, RecentActivity } from "@/components/dashboard/DashboardSections";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -37,233 +21,75 @@ export const dynamic = "force-dynamic";
 // allows longer functions and large PDFs still time out.
 export const maxDuration = 60;
 
+// The dashboard: a greeting with Upload receipt / Record money in, a Getting started card for new
+// organisations (or the slim opening-position banner), four KPI cards, cash flow beside what needs
+// attention, then fund balances and recent activity. Every figure is worked out in the database by
+// dashboard_overview, in one call; the other reads run alongside it.
 export default async function Home() {
   const orgId = await getOrganizationId();
   if (!orgId) {
     redirect("/onboarding");
   }
 
-  const orgCurrency = await getOrganizationCurrency();
-  const { symbol } = getCurrencyDetails(orgCurrency);
-
-  // Totals and the 14-day cash flow are computed in the database, so the page stays fast however
-  // many documents there are. Step 7 of the simplification trimmed the page to four cards: what is
-  // waiting in the Inbox, the bills to pay, and money in and out this month. The action queue and the
-  // recent activity list went; the Inbox and Bills & Invoices show the same things in full.
   const supabase = await createClient();
-  const [summary, inbox, bills, extractingCount, cash, canRecordIncome, overdue, { data: orgRow }, fundBalances, progress, pending] = await Promise.all([
-    getDashboardSummary(),
-    getInboxCounts(),
-    getBillsToPay(),
+  const [overview, extractingCount, progress, canRecordIncome, canReconcile, orgCurrency, timezone, { data: org }, { data: auth }] = await Promise.all([
+    getDashboardOverview(),
+    // Also hands over uploads whose reading never finished (see getExtractingCount)
     getExtractingCount(),
-    getCashThisMonth(),
-    featureAllowed(supabase, orgId, "income", "use"),
-    getOverdueInvoices(),
-    supabase.from("organizations").select("opening_position_completed_at").eq("id", orgId).maybeSingle(),
-    getFundBalances(),
     getOnboardingProgress(),
-    getPendingIncome(),
+    featureAllowed(supabase, orgId, "income", "use"),
+    featureAllowed(supabase, orgId, "reconciliation", "use"),
+    getOrganizationCurrency(),
+    getOrganizationTimezone(),
+    supabase.from("organizations").select("name").eq("id", orgId).maybeSingle(),
+    supabase.auth.getUser(),
   ]);
+  const { symbol } = getCurrencyDetails(orgCurrency);
+  const steps = gettingStartedSteps(progress, canRecordIncome);
+  const mode = dashboardMode(steps.filter((s) => s.done).length, overview.cashFlow);
   // Paid organisations are asked once to set up their opening position (spec 5.6)
-  const needsOpening = canRecordIncome && !orgRow?.opening_position_completed_at;
-
-  const {
-    needsReviewCount,
-    needsReviewTotal: needsReviewAmountTotal,
-    cashFlow: last14Days,
-  } = summary;
-  // The small line under "To review": what kind of uploads are waiting, only the kinds there are
-  const inboxParts = [
-    inbox.needs_review > 0 ? `${inbox.needs_review} to check` : "",
-    inbox.extracting > 0 ? `${inbox.extracting} being read` : "",
-    inbox.duplicate > 0 ? `${inbox.duplicate} possible ${inbox.duplicate === 1 ? "duplicate" : "duplicates"}` : "",
-  ].filter(Boolean);
-  // Money in is a paid feature; a free organisation still sees it if it has any (refunds, credit notes)
-  const showMoneyIn = canRecordIncome || cash.moneyIn > 0;
-  // Invoices you issue are a paid feature; a downgraded organisation still sees what is owed to it
-  const showPending = canRecordIncome || pending.count > 0;
-  const cardCount = 3 + (showMoneyIn ? 1 : 0) + (showPending ? 1 : 0);
-  const gridCols = cardCount === 5 ? "lg:grid-cols-3 2xl:grid-cols-5" : cardCount === 4 ? "xl:grid-cols-4" : "lg:grid-cols-3";
+  const needsOpening = canRecordIncome && !overview.openingComplete;
+  const showFunds = usesFunds(overview.funds);
+  const orgName = org?.name?.trim() || "your organisation";
+  const fullName = typeof auth.user?.user_metadata?.full_name === "string" ? auth.user.user_metadata.full_name.trim() : "";
+  const firstName = fullName.split(/\s+/)[0] ?? "";
+  const hello = greeting(hourInTimezone(timezone));
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Dashboard</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">What needs doing, and where the money stands.</p>
-      </div>
-
-      <ExtractionPoller count={extractingCount} />
-
-      <GettingStarted steps={gettingStartedSteps(progress, canRecordIncome)} orgId={orgId} paid={canRecordIncome} needsOpening={needsOpening} />
-
-      {/* Invoices owed to you that are overdue (spec 5.5). Overdue bills you owe are on the Bills to pay
-          card below, in red. */}
-      {overdue.receivable.count > 0 && (
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm" data-testid="overdue-strip">
-          <span className="flex items-center gap-2 font-semibold text-red-800 dark:text-red-300"><Clock className="h-4 w-4" />Overdue</span>
-          <Link href="/invoices?tab=receivable&status=overdue" className="text-red-800 dark:text-red-300 hover:underline" data-testid="overdue-invoices">
-            {overdue.receivable.count} {overdue.receivable.count === 1 ? "invoice" : "invoices"} owed to you: <span className="font-semibold tabular-nums">{symbol}{money(overdue.receivable.total)}</span>
-          </Link>
-        </div>
-      )}
-
-      {/* Invoices you issued that are paid (or part-paid) but have a payment without its receipt */}
-      {pending.receiptsMissing > 0 && (
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm" data-testid="receipts-missing-strip">
-          <span className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-300"><Paperclip className="h-4 w-4" />Receipts missing</span>
-          <Link href="/invoices?tab=receivable&status=receipt_missing" className="text-amber-800 dark:text-amber-300 hover:underline" data-testid="receipts-missing">
-            {pending.receiptsMissing} {pending.receiptsMissing === 1 ? "invoice has a payment" : "invoices have payments"} without a receipt. Add {pending.receiptsMissing === 1 ? "it" : "them"} to close {pending.receiptsMissing === 1 ? "it" : "them"}.
-          </Link>
-        </div>
-      )}
-
-      {/* Top Row: KPI Cards */}
-      {/* One row of four cards (step 7); a free organisation without money in sees three */}
-      <div className={`grid gap-6 md:grid-cols-2 ${gridCols}`}>
-        <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
-            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
-              To Review
-              <CardNote text="Uploads in the Inbox: being read, waiting for someone to check and approve them, or possible duplicates." />
-            </CardTitle>
-            <Inbox className="h-4 w-4 text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <Link href="/inbox" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="to-review">
-              {inbox.all}
-            </Link>
-            <p className="text-xs text-slate-400 mt-1 font-medium">{inboxParts.length > 0 ? inboxParts.join(" · ") : "Nothing waiting"}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
-            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
-              Bills To Pay
-              <CardNote text="Bills you have not fully paid yet, with what is still owed on them: the same total as Bills & Invoices. Overdue ones are in red." />
-            </CardTitle>
-            <Receipt className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <Link href="/invoices?status=unpaid" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="bills-to-pay">
-              {symbol}{money(bills.total)}
-            </Link>
-            <p className="text-xs text-slate-400 mt-1 font-medium">
-              {bills.count === 0 ? "Nothing to pay" : `${bills.count} ${bills.count === 1 ? "bill" : "bills"}`}
-              {bills.overdueCount > 0 && (
-                <Link href="/invoices?status=overdue" className="text-red-600 dark:text-red-400 hover:underline" data-testid="bills-overdue">
-                  {" · "}{symbol}{money(bills.overdueTotal)} overdue
-                </Link>
-              )}
+    <DashboardDropZone>
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white" data-testid="greeting">
+              {firstName ? `${hello}, ${firstName}` : hello}
+            </h1>
+            <p className="mt-1.5 text-slate-500 dark:text-slate-400 truncate">
+              <span className="font-medium text-slate-700 dark:text-slate-300">{org?.name?.trim() || "Dashboard"}</span> · {monthYearLabel(overview.today)}
             </p>
-          </CardContent>
-        </Card>
-        {showPending && (
-          <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
-              <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
-                Pending Income
-                <CardNote text="Invoices you issued that are not fully paid yet, with what is still owed to you after any deposits: the same total as the Receivable tab. Overdue ones are in red." />
-              </CardTitle>
-              <HandCoins className="h-4 w-4 text-emerald-600" />
-            </CardHeader>
-            <CardContent>
-              <Link href="/invoices?tab=receivable&status=unpaid" className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="pending-income">
-                {symbol}{money(pending.total)}
-              </Link>
-              <p className="text-xs text-slate-400 mt-1 font-medium">
-                {pending.count === 0 ? "Nothing owed to you" : `${pending.count} ${pending.count === 1 ? "invoice" : "invoices"}`}
-                {pending.overdueCount > 0 && (
-                  <Link href="/invoices?tab=receivable&status=overdue" className="text-red-600 dark:text-red-400 hover:underline">
-                    {" · "}{symbol}{money(pending.overdueTotal)} overdue
-                  </Link>
-                )}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-        {showMoneyIn && (
-          <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
-              <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
-                Money In This Month
-                <CardNote text="Donations, grants and other income received this month, by date received. Refunds you received also count as money in." />
-              </CardTitle>
-              <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
-            </CardHeader>
-            <CardContent>
-              <Link href={`/transactions?type=money_in&from=${cash.from}&to=${cash.to}`} className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 hover:underline" data-testid="money-in-month">
-                {symbol}{money(cash.moneyIn)}
-              </Link>
-            </CardContent>
-          </Card>
-        )}
-        <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
-            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
-              Money Out This Month
-              <CardNote text="Payments made this month, by payment date, from the cash book. Documents still waiting for review or payment are not included." />
-            </CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <Link href={`/transactions?type=money_out&from=${cash.from}&to=${cash.to}`} className="text-2xl font-bold text-slate-900 dark:text-white hover:underline" data-testid="money-out-month">
-              {symbol}{money(cash.moneyOut)}
-            </Link>
-            {needsReviewAmountTotal > 0 && (
-              <p className="text-xs text-slate-400 mt-1 font-medium">
-                + {symbol}{money(needsReviewAmountTotal)} pending approval
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content Split */}
-      <div className="grid lg:grid-cols-3 gap-8">
-
-        {/* Left Column (70%) */}
-        <div className="lg:col-span-2 space-y-8 min-w-0">
-          <CashFlowChart data={last14Days} hasPendingDocuments={needsReviewCount > 0} />
-        </div>
-
-        {/* Right Column (30%): upload, and what each fund holds */}
-        <div className="lg:col-span-1 space-y-6 flex flex-col">
-          <div className="h-52 shrink-0">
-            <QuickUpload />
           </div>
-          {fundBalances && fundBalances.length > 0 && (
-            <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm" data-testid="fund-balances">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
-                <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group cursor-default">
-                  Fund Balances
-                  <CardNote text="What each fund holds today: its opening balance plus income, less spending, plus or minus transfers." />
-                </CardTitle>
-                <Link href="/reports/changes-in-funds" className="text-xs text-indigo-600 hover:underline">Details</Link>
-              </CardHeader>
-              <CardContent className="space-y-1.5">
-                {fundBalances.map((f) => (
-                  <div key={f.id} className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="text-slate-700 dark:text-slate-300">
-                      {f.name}
-                      {f.restricted && <span className="ml-1 text-xs text-slate-400">restricted</span>}
-                    </span>
-                    <span className={`tabular-nums font-semibold ${f.balance < 0 ? "text-red-600 dark:text-red-400" : "text-slate-900 dark:text-white"}`}>
-                      {f.balance < 0 ? "-" : ""}{symbol}{money(Math.abs(f.balance))}
-                    </span>
-                  </div>
-                ))}
-                {/* Spec 3.2: a soft warning when a restricted fund has spent more than it holds */}
-                {fundBalances.some((f) => f.restricted && f.balance < 0) && (
-                  <p className="pt-1 text-xs text-red-600 dark:text-red-400" data-testid="restricted-overspent">
-                    A restricted fund is below zero: more has been spent from it than it received. Consider a transfer from an unrestricted fund.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          <DashboardActions canRecordIncome={canRecordIncome} />
         </div>
 
+        <ExtractionPoller count={extractingCount} />
+
+        <GettingStartedCard steps={steps} orgId={orgId} orgName={orgName} mode={mode} paid={canRecordIncome} needsOpening={needsOpening} />
+
+        <KpiRow o={overview} symbol={symbol} />
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 min-w-0">
+            <CashFlowChart data={overview.cashFlow} />
+          </div>
+          <div className="min-w-0">
+            <NeedsAttention o={overview} canReconcile={canReconcile} />
+          </div>
+        </div>
+
+        <div className={`grid gap-6 ${showFunds ? "lg:grid-cols-2" : ""}`}>
+          {showFunds && <FundBalances funds={overview.funds} symbol={symbol} />}
+          <RecentActivity entries={overview.recent} symbol={symbol} canRecordIncome={canRecordIncome} />
+        </div>
       </div>
-    </div>
+    </DashboardDropZone>
   );
 }

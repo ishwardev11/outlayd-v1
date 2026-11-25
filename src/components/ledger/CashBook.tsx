@@ -1,8 +1,8 @@
 "use client"
 
-import { Fragment, useState } from "react"
+import { Fragment, useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, ChevronRight as ChevronRightSmall, Download, Loader2, Lock, Paperclip, Pencil, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -41,7 +41,18 @@ export function CashBook({ rows, total, page, pageSize, filters, options }: {
     const { symbol } = useCurrency()
     const [draft, setDraft] = useState(filters)
     const [expanded, setExpanded] = useState<Set<string>>(new Set())
-    const [dialog, setDialog] = useState<{ mode: "in" | "out"; edit: MoneyInEdit | null; key: number } | null>(null)
+    // The dashboard's "Record money in" button links here with ?new=money_in: open the money-in form
+    // straight away (same rules as the New menu: not for Viewers, paid plans only)
+    const searchParams = useSearchParams()
+    const openMoneyIn = searchParams.get("new") === "money_in"
+    const [dialog, setDialog] = useState<{ mode: "in" | "out"; edit: MoneyInEdit | null; key: number } | null>(
+        () => (openMoneyIn && !isViewer && options.paid ? { mode: "in", edit: null, key: 0 } : null))
+    useEffect(() => {
+        if (!openMoneyIn) return
+        const p = new URLSearchParams(searchParams.toString())
+        p.delete("new")
+        router.replace(p.size ? `${pathname}?${p}` : pathname, { scroll: false })
+    }, [openMoneyIn, searchParams, router, pathname])
     const [loadingEdit, setLoadingEdit] = useState<string | null>(null)
     const [exporting, setExporting] = useState(false)
 
