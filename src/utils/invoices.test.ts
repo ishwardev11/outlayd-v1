@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { ageingSummary, buildInvoicesCsv, displayStatusLabel, isPaidReceiptMissing, parseInvoiceFilters, parseInvoiceInput, parsePaymentInput, statusLabel, statusOptionsFor, type InvoiceRow } from "./invoices"
+import { ageingSummary, buildInvoicesCsv, depositProblem, displayStatusLabel, isPaidReceiptMissing, parseInvoiceFilters, parseInvoiceInput, parsePaymentInput, statusLabel, statusOptionsFor, remainingAfterDeposit, type InvoiceRow } from "./invoices"
 import { parseCsv } from "../test/parse-csv"
 
 const P = "00000000-0000-4000-8000-000000000001"
@@ -100,4 +100,19 @@ test("Receipt missing: a paid invoice you issued is not closed until every payme
 
 test("\"Still to pay\" (unpaid) is a status filter: what the old Ledger called Awaiting payment", () => {
     assert.equal(parseInvoiceFilters({ status: "unpaid" }).status, "unpaid")
+})
+
+test("Deposit on a new invoice: above zero, not more than the total, a real date outside the lock, with a receipt", () => {
+    const ok = { total: 5000, amount: "1000", date: "2026-11-25", hasReceipt: true, dateLocked: false }
+    assert.equal(depositProblem(ok), null)
+    assert.equal(depositProblem({ ...ok, amount: "5000" }), null)
+    assert.match(depositProblem({ ...ok, amount: "5000.01" }) ?? "", /more than the invoice total/)
+    assert.match(depositProblem({ ...ok, amount: "0" }) ?? "", /deposit amount/)
+    assert.match(depositProblem({ ...ok, amount: "1.234" }) ?? "", /deposit amount/)
+    assert.match(depositProblem({ ...ok, date: "2026-02-30" }) ?? "", /date/)
+    assert.match(depositProblem({ ...ok, dateLocked: true }) ?? "", /locked period/)
+    assert.match(depositProblem({ ...ok, hasReceipt: false }) ?? "", /receipt/)
+    assert.equal(remainingAfterDeposit(5000, "1000"), 4000)
+    assert.equal(remainingAfterDeposit(100.1, "0.2"), 99.9)
+    assert.equal(remainingAfterDeposit(5000, ""), 5000)
 })

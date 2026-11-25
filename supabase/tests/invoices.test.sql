@@ -283,6 +283,34 @@ BEGIN
 END $$;
 RESET ROLE;
 
+-- A deposit taken when the invoice is created is a first payment with its receipt (step 3)
+DO $$
+DECLARE c i_ctx; v_inv uuid; v_path text; s record;
+BEGIN
+  SELECT * INTO c FROM i_ctx;
+  v_path := c.org || '/transactions/deposit.pdf';
+  PERFORM pg_temp.sign_in(c.u_editor, 'iv-editor@example.com');
+  SET LOCAL ROLE authenticated;
+  v_inv := save_invoice(jsonb_build_object('direction', 'receivable', 'payee_id', c.payee, 'issue_date', current_date,
+    'lines', jsonb_build_array(jsonb_build_object('amount', 5000, 'category_id', c.cat_fees))));
+  PERFORM pg_temp.commit_checks();
+  PERFORM pg_temp.expect_error(format($q$SELECT record_invoice_payment('{"invoice_id":"%s","amount":5000.01,"tx_date":"%s","attachment_path":"%s"}')$q$, v_inv, current_date, v_path),
+    'more than the balance', 'a deposit over the total');
+  PERFORM pg_temp.expect_error(format($q$SELECT record_invoice_payment('{"invoice_id":"%s","amount":1000,"tx_date":"%s"}')$q$, v_inv, current_date),
+    'Attach the receipt', 'a deposit without a receipt');
+  PERFORM record_invoice_payment(jsonb_build_object('invoice_id', v_inv, 'amount', 1000, 'tx_date', current_date, 'remarks', 'Deposit', 'attachment_path', v_path));
+  PERFORM pg_temp.commit_checks();
+  SELECT * INTO s FROM invoice_summary WHERE id = v_inv;
+  ASSERT s.derived_status = 'part_paid' AND s.balance = 4000 AND s.receipts_missing = 0, format('deposit: part-paid, 4000 left, got %s %s', s.derived_status, s.balance);
+  PERFORM record_invoice_payment(jsonb_build_object('invoice_id', v_inv, 'amount', 4000, 'tx_date', current_date, 'attachment_path', v_path));
+  PERFORM pg_temp.commit_checks();
+  SELECT * INTO s FROM invoice_summary WHERE id = v_inv;
+  ASSERT s.derived_status = 'paid' AND s.balance = 0 AND s.receipts_missing = 0, 'the rest with its receipt: paid and closed';
+  RESET ROLE;
+  RAISE NOTICE 'PASS a deposit with its receipt leaves the invoice part-paid; the rest closes it';
+END $$;
+RESET ROLE;
+
 -- A payment can never be turned into plain income or expense (that would count it twice)
 DO $$
 DECLARE c i_ctx; n int;

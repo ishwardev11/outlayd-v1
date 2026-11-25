@@ -233,6 +233,25 @@ export function parsePaymentInput(raw: unknown): Result<PaymentInput> {
     return { ok: true, value: { invoice_id, amount, tx_date, account_id, reference, remarks } }
 }
 
+// A deposit taken when a new invoice you issue is saved and numbered (invoices and AI plan, step 3).
+// Checked here so the form can say what is wrong at once; the database checks it all again when the
+// deposit is recorded as a payment (receipt, balance, lock, role). Returns the problem, or null.
+export function depositProblem(d: { total: number; amount: string; date: string; hasReceipt: boolean; dateLocked: boolean }): string | null {
+    const amount = parseAmount(d.amount)
+    if (amount === null) return "Enter the deposit amount: above zero, with at most two decimals"
+    if (Math.round(amount * 100) > Math.round(d.total * 100)) return "The deposit cannot be more than the invoice total"
+    if (!realDate(d.date)) return "Enter the date the deposit was received"
+    if (d.dateLocked) return "The deposit date is in a locked period"
+    if (!d.hasReceipt) return "Attach the receipt for the deposit"
+    return null
+}
+
+// What is still owed after the deposit, in whole cents so it never drifts
+export function remainingAfterDeposit(total: number, deposit: string): number {
+    const amount = parseAmount(deposit) ?? 0
+    return Math.round(total * 100 - amount * 100) / 100
+}
+
 // ------------------------------------------------------------------ CSV
 
 export function buildInvoicesCsv(rows: InvoiceRow[], currency: string): string {

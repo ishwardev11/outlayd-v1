@@ -10,17 +10,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useCurrency } from "@/components/CurrencyProvider"
-import { saveInvoice, type InvoiceDetail } from "@/app/actions/invoices"
+import { recordInvoicePayment, saveInvoice, type InvoiceDetail } from "@/app/actions/invoices"
 import { createPayee } from "@/app/actions/ledger"
 import type { EntryOptions } from "@/app/actions/transactions"
 import { linesTotal, parseAmount } from "@/utils/transaction-input"
-import { INVOICE_MAX_LINES, type InvoiceDirection } from "@/utils/invoices"
+import { INVOICE_MAX_LINES, depositProblem, remainingAfterDeposit, type InvoiceDirection } from "@/utils/invoices"
 import { errorMessage } from "@/utils/row-types"
 import { LockedNotice, useLock } from "@/components/LockProvider"
 import { formatDay } from "@/utils/lock"
 
 const selectClass = "h-9 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-white disabled:opacity-60"
 const NEW_PAYEE = "__new__"
+const RECEIPT_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf"
 
 interface Line { key: number; description: string; amount: string; fundId: string; categoryId: string }
 
@@ -59,6 +60,10 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
     const [file, setFile] = useState<File | null>(null)
     const [removeAttachment, setRemoveAttachment] = useState(false)
     const [saving, setSaving] = useState(false)
+    // Deposit received when a new invoice you issue is saved (only then)
+    const accountChoices = options.accounts.filter((a) => !a.archived)
+    const [deposit, setDeposit] = useState({ on: false, amount: "", date: todayLocal(), account: accountChoices.find((a) => a.is_default)?.id ?? accountChoices[0]?.id ?? "", reference: "" })
+    const [depositReceipt, setDepositReceipt] = useState<File | null>(null)
     const lock = useLock()
     const dateLocked = lock.isLocked(issueDate) || lock.isLocked(inv?.issue_date)
 
@@ -72,6 +77,10 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
     const fundChoices = options.funds.filter((f) => !f.archived || lines.some((l) => l.fundId === f.id))
     const payeeChoices = options.payees.filter((p) => (!p.archived || p.id === payeeId) && !p.is_system)
     const total = linesTotal(lines.map((l) => ({ amount: parseAmount(l.amount) ?? 0 })))
+    const canDeposit = !payable && !inv
+    const takingDeposit = canDeposit && deposit.on
+    const depositDateLocked = takingDeposit && lock.isLocked(deposit.date)
+    const remaining = remainingAfterDeposit(total, deposit.amount)
 
     const setLine = (key: number, patch: Partial<Line>) => setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)))
     const addLine = () => setLines((ls) => [...ls, { key: Math.max(...ls.map((l) => l.key)) + 1, description: "", amount: "", fundId: defaultFund, categoryId: "" }])
@@ -81,6 +90,11 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
         if (lines.some((l) => parseAmount(l.amount) === null)) return toast.error("Enter an amount above zero on every line")
         if (lines.some((l) => !l.categoryId)) return toast.error("Choose a category for every line")
         if (paid > 0 && total < paid) return toast.error(`The total cannot be less than what has been paid (${symbol}${paid.toFixed(2)})`)
+        const withDeposit = takingDeposit && status === "open"
+        if (withDeposit) {
+            const problem = depositProblem({ total, amount: deposit.amount, date: deposit.date, hasReceipt: !!depositReceipt, dateLocked: depositDateLocked })
+            if (problem) return toast.error(problem)
+        }
         setSaving(true)
         try {
             let chosen = payeeId
@@ -101,7 +115,18 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
             if (removeAttachment) fd.set("removeAttachment", "1")
             const res = await saveInvoice(fd)
             if (!res.success || !res.data) return toast.error(res.success ? "Could not save the invoice" : res.error)
-            toast.success(status === "draft" ? "Draft saved" : inv ? "Invoice updated" : payable ? "Bill saved" : "Invoice saved")
+            // The deposit goes through the same path as Record payment (receipt required). If it fails,
+            // the invoice stays saved and the person is told how to add the deposit.
+            let depositNote: string | null = null
+            if (withDeposit && depositReceipt) {
+                const pd = new FormData()
+                pd.set("payload", JSON.stringify({ invoice_id: res.data.id, amount: deposit.amount, tx_date: deposit.date, account_id: deposit.account || null, reference: deposit.reference, remarks: "Deposit" }))
+                pd.set("file", depositReceipt)
+                const dep = await recordInvoicePayment(pd)
+                if (!dep.success) depositNote = `Invoice saved, but the deposit wasn't recorded: ${dep.error.replace(/\.$/, "")}. Use Record payment to add it.`
+            }
+            if (depositNote) toast.warning(depositNote, { duration: 12000 })
+            else toast.success(status === "draft" ? "Draft saved" : inv ? "Invoice updated" : payable ? "Bill saved" : withDeposit ? "Invoice saved with its deposit" : "Invoice saved")
             onOpenChange(false)
             onSaved?.(res.data.id)
             router.refresh()
@@ -203,6 +228,43 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
                         </span>
                     </label>
 
+                    {canDeposit && (
+                        <div className="space-y-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3" data-testid="deposit-section">
+                            <div className="flex flex-wrap items-center gap-4 text-sm">
+                                <span className="font-medium text-slate-900 dark:text-white">Deposit received?</span>
+                                <label className="flex items-center gap-1.5"><input type="radio" name="inv-deposit" checked={!deposit.on} onChange={() => setDeposit({ ...deposit, on: false })} />No</label>
+                                <label className="flex items-center gap-1.5"><input type="radio" name="inv-deposit" checked={deposit.on} onChange={() => setDeposit({ ...deposit, on: true })} />Yes</label>
+                            </div>
+                            {deposit.on && (
+                                <>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <div className="space-y-1.5"><Label htmlFor="dep-amount">Deposit amount ({symbol})</Label>
+                                            <Input id="dep-amount" inputMode="decimal" placeholder="0.00" value={deposit.amount} onChange={(e) => setDeposit({ ...deposit, amount: e.target.value })} /></div>
+                                        <div className="space-y-1.5"><Label htmlFor="dep-date">Date received</Label>
+                                            <Input id="dep-date" type="date" value={deposit.date} onChange={(e) => setDeposit({ ...deposit, date: e.target.value })} /></div>
+                                        {accountChoices.length > 1 && (
+                                            <div className="space-y-1.5"><Label htmlFor="dep-account">Account</Label>
+                                                <select id="dep-account" className={selectClass} value={deposit.account} onChange={(e) => setDeposit({ ...deposit, account: e.target.value })}>
+                                                    {accountChoices.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                                </select></div>
+                                        )}
+                                        <div className="space-y-1.5"><Label htmlFor="dep-ref">Reference (cheque or bank ref.)</Label>
+                                            <Input id="dep-ref" value={deposit.reference} onChange={(e) => setDeposit({ ...deposit, reference: e.target.value })} maxLength={100} /></div>
+                                        <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="dep-receipt">Receipt (required)</Label>
+                                            <Input id="dep-receipt" type="file" accept={RECEIPT_ACCEPT} onChange={(e) => setDepositReceipt(e.target.files?.[0] ?? null)} />
+                                            <p className="text-xs text-slate-500">The receipt or bank slip for the deposit, as an image (JPG, PNG, WEBP) or a PDF, up to 10 MB.</p></div>
+                                    </div>
+                                    <p className="text-sm font-medium tabular-nums text-slate-900 dark:text-white" data-testid="deposit-remaining">
+                                        Remaining balance: {symbol}{remaining.toFixed(2)}
+                                    </p>
+                                    {remaining < 0 && <p className="text-sm text-red-600">The deposit cannot be more than the invoice total.</p>}
+                                    {depositDateLocked && <LockedNotice text={`The deposit date is in a locked period. ${lock.message}`} />}
+                                    <p className="text-xs text-slate-500">The deposit is recorded when you press Save and number. Drafts cannot take a deposit.</p>
+                                </>
+                            )}
+                        </div>
+                    )}
+
                     <div className="space-y-1.5">
                         <Label htmlFor="inv-file">Attachment (optional)</Label>
                         {inv?.has_attachment && !removeAttachment && !file && (
@@ -218,8 +280,8 @@ export function InvoiceDialog({ open, onOpenChange, direction, options, edit, on
                 {dateLocked && <LockedNotice text={`${formatDay(issueDate)} is in a locked period. ${lock.message}`} />}
                 <div className="flex flex-wrap justify-end gap-2 pt-2">
                     <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-                    {canDraft && <Button type="button" variant="outline" onClick={() => submit("draft")} disabled={saving || dateLocked}>Save as draft</Button>}
-                    <Button type="button" onClick={() => submit("open")} disabled={saving || dateLocked} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                    {canDraft && <Button type="button" variant="outline" onClick={() => submit("draft")} disabled={saving || dateLocked || takingDeposit} title={takingDeposit ? "A draft cannot take a deposit" : undefined}>Save as draft</Button>}
+                    <Button type="button" onClick={() => submit("open")} disabled={saving || dateLocked || depositDateLocked} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                         {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}{inv && inv.status !== "draft" ? "Save" : payable ? "Save bill" : "Save and number"}
                     </Button>
                 </div>
