@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Plus_Jakarta_Sans, Bricolage_Grotesque, DM_Sans } from "next/font/google";
+import { Geist, Geist_Mono, Plus_Jakarta_Sans, Bricolage_Grotesque, DM_Sans, Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SmoothScrollProvider } from "@/components/SmoothScrollProvider";
@@ -33,9 +33,16 @@ const dmSans = DM_Sans({
   display: "swap",
 });
 
+// Body font of the public pages (headings there use Geist).
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Outlayd | Bookkeeping and financial statements",
-  description: "Bookkeeping and financial statements for Malaysian nonprofits and small businesses: AI receipt reading, donations and donor receipts, funds, invoices, and statements ready for your AGM.",
+  description: "Bookkeeping and financial statements for Malaysian small businesses and nonprofits: AI receipt reading, invoices, money in and out, funds, and statements ready to sign.",
 };
 
 import { AuthHashRedirect } from "@/components/AuthHashRedirect";
@@ -71,7 +78,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} ${bricolage.variable} ${dmSans.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} ${bricolage.variable} ${dmSans.variable} ${inter.variable} antialiased`}
       >
         <ThemeProvider defaultTheme="system">
           <SmoothScrollProvider>

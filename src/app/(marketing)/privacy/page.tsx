@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Navbar, Footer } from "@/components/marketing/SiteChrome";
+import { SiteHeader, SiteFooter } from "@/components/marketing/site";
 
 export const metadata: Metadata = {
     title: "Privacy Policy | Outlayd",
@@ -13,26 +13,25 @@ const CONTACT = "ishwardev011@gmail.com";
 function Section({ n, title, children }: { n: number; title: string; children: ReactNode }) {
     return (
         <section className="space-y-4">
-            <h2 className="text-2xl font-bold text-slate-200 mt-10">{n}. {title}</h2>
+            <h2 className="mk-display mt-12 text-[22px] leading-tight text-neutral-900">{n}. {title}</h2>
             {children}
         </section>
     );
 }
-const List = ({ children }: { children: ReactNode }) => <ul className="list-disc pl-6 space-y-2 text-slate-300">{children}</ul>;
+const List = ({ children }: { children: ReactNode }) => <ul className="list-disc pl-6 space-y-2 text-neutral-700">{children}</ul>;
 
 export default function PrivacyPolicyPage() {
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500/30">
-            <Navbar />
-            <main className="pt-24 pb-32 px-4 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950 to-slate-950 -z-10" />
-                <div className="container mx-auto max-w-4xl">
-                    <div className="mb-12 border-b border-white/10 pb-8">
-                        <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mb-4">Privacy Policy</h1>
-                        <p className="text-slate-400 text-lg">Last updated: 25 November 2026</p>
+        <div className="mk min-h-screen">
+            <SiteHeader />
+            <main className="px-6 pb-32 pt-[136px]">
+                <div className="mx-auto max-w-[760px]">
+                    <div className="mb-12 border-b border-black/[0.08] pb-8">
+                        <h1 className="mk-display mb-4 text-[clamp(34px,5vw,48px)] leading-[1.1]">Privacy Policy</h1>
+                        <p className="text-[15px] text-neutral-500">Last updated: 25 November 2026</p>
                     </div>
 
-                    <div className="text-slate-300 space-y-6 text-lg leading-relaxed">
+                    <div className="space-y-6 text-base leading-relaxed text-neutral-700">
                         <Section n={1} title="About this policy">
                             <p>
                                 Outlayd (&quot;we&quot;, &quot;us&quot;) provides bookkeeping and financial statement software for nonprofits and small
@@ -155,14 +154,14 @@ export default function PrivacyPolicyPage() {
 
                         <Section n={12} title="Contact us">
                             <p>
-                                Questions or requests about privacy: <a href={`mailto:${CONTACT}`} className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">{CONTACT}</a>, or
-                                use our <Link href="/contact" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">contact form</Link>.
+                                Questions or requests about privacy: <a href={`mailto:${CONTACT}`} className="text-brand-700 hover:text-brand-800 underline underline-offset-2">{CONTACT}</a>, or
+                                use our <Link href="/contact" className="text-brand-700 hover:text-brand-800 underline underline-offset-2">contact form</Link>.
                             </p>
                         </Section>
                     </div>
                 </div>
             </main>
-            <Footer />
+            <SiteFooter />
         </div>
     );
 }

@@ -43,9 +43,8 @@ export function Navbar() {
                 </Link>
 
                 <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-                    <Link href="/#services" id="nav-link-services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Services</Link>
-                    <Link href="/#how-it-works" id="nav-link-how-it-works" onClick={(e) => handleSmoothScroll(e, '#how-it-works')} className="hover:text-white transition-colors">How it works</Link>
-                    <Link href="/#why-outlayd" id="nav-link-why-outlayd" onClick={(e) => handleSmoothScroll(e, '#why-outlayd')} className="hover:text-white transition-colors">Why Outlayd</Link>
+                    <Link href="/#features" id="nav-link-services" onClick={(e) => handleSmoothScroll(e, '#features')} className="hover:text-white transition-colors">Features</Link>
+                    <Link href="/#statements" id="nav-link-how-it-works" onClick={(e) => handleSmoothScroll(e, '#statements')} className="hover:text-white transition-colors">Statements</Link>
                     <Link href="/#pricing" id="nav-link-pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</Link>
                     <Link href="/#faq" id="nav-link-faq" onClick={(e) => handleSmoothScroll(e, '#faq')} className="hover:text-white transition-colors">FAQ</Link>
                     <Link href="/nonprofits" id="nav-link-nonprofits" className="hover:text-white transition-colors">Nonprofits</Link>
@@ -75,9 +74,8 @@ export function Navbar() {
             {/* Mobile Dropdown Menu */}
             {mobileMenuOpen && (
                 <div className="md:hidden border-t border-white/10 px-6 py-4 flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <Link href="/#services" onClick={(e) => handleMobileNavClick(e, '#services')} className="text-sm font-medium text-slate-300 hover:text-white py-1">Services</Link>
-                    <Link href="/#how-it-works" onClick={(e) => handleMobileNavClick(e, '#how-it-works')} className="text-sm font-medium text-slate-300 hover:text-white py-1">How it works</Link>
-                    <Link href="/#why-outlayd" onClick={(e) => handleMobileNavClick(e, '#why-outlayd')} className="text-sm font-medium text-slate-300 hover:text-white py-1">Why Outlayd</Link>
+                    <Link href="/#features" onClick={(e) => handleMobileNavClick(e, '#features')} className="text-sm font-medium text-slate-300 hover:text-white py-1">Features</Link>
+                    <Link href="/#statements" onClick={(e) => handleMobileNavClick(e, '#statements')} className="text-sm font-medium text-slate-300 hover:text-white py-1">Statements</Link>
                     <Link href="/#pricing" onClick={(e) => handleMobileNavClick(e, '#pricing')} className="text-sm font-medium text-slate-300 hover:text-white py-1">Pricing</Link>
                     <Link href="/#faq" onClick={(e) => handleMobileNavClick(e, '#faq')} className="text-sm font-medium text-slate-300 hover:text-white py-1">FAQ</Link>
                     <Link href="/nonprofits" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-slate-300 hover:text-white py-1">Nonprofits</Link>
@@ -114,7 +112,7 @@ export function Footer() {
                         <div>
                             <h4 className="font-semibold mb-4 text-slate-200">Quick Links</h4>
                             <ul className="space-y-3 text-sm text-slate-400">
-                                <li><Link href="/#services" onClick={(e) => handleSmoothScroll(e, '#services')} className="hover:text-white transition-colors">Features</Link></li>
+                                <li><Link href="/#features" onClick={(e) => handleSmoothScroll(e, '#features')} className="hover:text-white transition-colors">Features</Link></li>
                                 <li><Link href="/#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')} className="hover:text-white transition-colors">Pricing</Link></li>
                                 <li><Link href="/nonprofits" className="hover:text-white transition-colors">For nonprofits</Link></li>
                                 <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>

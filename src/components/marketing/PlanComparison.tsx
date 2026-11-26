@@ -1,79 +1,90 @@
 import Link from "next/link";
-import { CheckCircle2, Minus } from "lucide-react";
+import { Check, Minus } from "lucide-react";
 import { DOWNGRADE_NOTE, PLAN_COMPARISON, PRICES } from "@/utils/plan-comparison";
 
 // The plan cards and the full comparison, from the one list in src/utils/plan-comparison.ts (checked
-// against the app's plan rules by a unit test)
-export function PlanCards({ highlight = "growth" }: { highlight?: "growth" | "nonprofit" }) {
-    const card = (on: boolean) => `rounded-3xl p-8 flex flex-col relative ${on ? "bg-linear-to-b from-indigo-900/50 to-slate-900 border border-indigo-500/50 shadow-[0_0_50px_-12px_rgba(79,70,229,0.3)]" : "bg-slate-900/50 border border-white/10"}`;
-    const item = (t: string, colour = "text-indigo-400") => (
-        <li key={t} className="flex items-start gap-3 text-sm"><CheckCircle2 className={`w-5 h-5 shrink-0 ${colour}`} /><span>{t}</span></li>
-    );
+// against the app's plan rules by a unit test). Light look of the public pages.
+const outline = "mt-auto flex h-11 items-center justify-center rounded-[14px] bg-white text-[15px] font-medium text-neutral-900 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14)] transition-[background-color,transform] hover:bg-neutral-100 active:scale-[0.97]";
+const solid = "mt-auto flex h-11 items-center justify-center rounded-[14px] bg-brand-600 text-[15px] font-medium text-white transition-[background-color,transform] hover:bg-brand-700 active:scale-[0.97]";
+
+function Card({ name, price, blurb, points, featured, badge, cta }: {
+    name: string; price: number; blurb: string; points: string[]; featured: boolean; badge?: string;
+    cta: { label: string; href: string; id: string };
+}) {
     return (
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto text-left">
-            <div className={card(false)}>
-                <h3 className="text-lg font-medium text-slate-300 mb-2">Free</h3>
-                <div className="mb-6"><span className="text-4xl font-bold">RM{PRICES.free}</span><span className="text-slate-400">/month</span></div>
-                <p className="text-sm text-slate-400 mb-8 border-b border-white/10 pb-8">Get your receipts and expenses in order.</p>
-                <ul className="space-y-4 mb-8 flex-1">
-                    {["1 user", "5 AI document readings a month", "Expenses, contacts and categories", "Cash book CSV and change history", "Sample financial statements"].map((t) => item(t))}
-                </ul>
-                <Link href="/signup" id="pricing-starter-btn" className="w-full py-3 px-4 rounded-xl border border-white/20 font-medium text-center hover:bg-white/5 transition-all active:scale-95 cursor-pointer">Start free</Link>
+        <div className={`flex flex-col rounded-3xl bg-white p-7 ${featured ? "shadow-[inset_0_0_0_2px_var(--color-brand-600)]" : "border border-black/[0.08]"}`}>
+            <div className="flex items-center justify-between gap-2">
+                <h3 className="m-0 text-[17px] font-medium">{name}</h3>
+                {badge && <span className="inline-flex h-6 items-center rounded-full bg-brand-50 px-2.5 text-xs font-medium text-brand-700">{badge}</span>}
             </div>
+            <p className="mt-1 text-sm text-neutral-600">{blurb}</p>
+            <div className="mt-6 flex items-baseline gap-1.5">
+                <span className="mk-display text-[40px] leading-none">RM{price}</span>
+                <span className="text-sm text-neutral-500">a month</span>
+            </div>
+            <ul className="m-0 mb-8 mt-6 grid list-none gap-3 p-0 text-sm">
+                {points.map((t) => (
+                    <li key={t} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" strokeWidth={1.75} aria-hidden="true" />{t}</li>
+                ))}
+            </ul>
+            <Link href={cta.href} id={cta.id} className={featured ? solid : outline}>{cta.label}</Link>
+        </div>
+    );
+}
 
-            <div className={card(highlight === "growth")}>
-                {highlight === "growth" && <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-500 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full">Most popular</div>}
-                <h3 className="text-lg font-medium text-indigo-300 mb-2">Growth</h3>
-                <div className="mb-6"><span className="text-4xl font-bold">RM{PRICES.growth}</span><span className="text-slate-400">/month</span></div>
-                <p className="text-sm text-slate-400 mb-8 border-b border-white/10 pb-8">Your full books: money in and out, funds, invoices and financial statements.</p>
-                <ul className="space-y-4 mb-8 flex-1">
-                    {["Up to 5 users", "Unlimited AI document reading", "Money in, donor receipts and invoices", "Funds, accounts, assets and loans", "Financial statements with checks and PDFs", "Reconciliation and period locks"].map((t) => item(t))}
-                </ul>
-                <Link href="/signup" id="pricing-growth-btn" className="w-full py-3 px-4 rounded-xl bg-indigo-600 font-medium text-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/25 active:scale-95 cursor-pointer">Start free, upgrade in the app</Link>
-            </div>
-
-            <div className={highlight === "nonprofit" ? card(true) : "bg-slate-900/50 border border-emerald-500/30 rounded-3xl p-8 flex flex-col relative"}>
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-600 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full">For registered nonprofits</div>
-                <h3 className="text-lg font-medium text-emerald-400 mb-2">Nonprofit</h3>
-                <div className="mb-6"><span className="text-4xl font-bold">RM{PRICES.nonprofit}</span><span className="text-slate-400">/month</span></div>
-                <p className="text-sm text-slate-400 mb-8 border-b border-white/10 pb-8">Everything in Growth, at a lower price for registered societies, charities and NGOs.</p>
-                <ul className="space-y-4 mb-8 flex-1">
-                    {["Everything in Growth", "Donor receipts, tax-exempt when your organisation is approved", "Statements for your AGM and annual return", "Direct onboarding with the founder"].map((t) => item(t, "text-emerald-400"))}
-                </ul>
-                <Link href="/contact?subject=Nonprofit%20Pricing%20Application" id="pricing-nonprofit-btn" className="w-full py-3 px-4 rounded-xl border border-emerald-500/40 text-emerald-300 font-medium text-center hover:bg-emerald-500/10 transition-all active:scale-95 cursor-pointer">Apply for nonprofit pricing</Link>
-            </div>
+export function PlanCards({ highlight = "growth" }: { highlight?: "growth" | "nonprofit" }) {
+    return (
+        <div className="mx-auto grid max-w-xl items-stretch gap-4 text-left lg:max-w-6xl lg:grid-cols-3">
+            <Card
+                name="Free" price={PRICES.free} blurb="Get your receipts and expenses in order" featured={false}
+                points={["1 user", "5 AI document readings a month", "Expenses, contacts and categories", "Cash book CSV and change history", "Sample financial statements"]}
+                cta={{ label: "Start free", href: "/signup", id: "pricing-starter-btn" }}
+            />
+            <Card
+                name="Growth" price={PRICES.growth} blurb="Your full books: money in and out, funds, invoices and financial statements"
+                featured={highlight === "growth"} badge={highlight === "growth" ? "Recommended" : undefined}
+                points={["Up to 5 users", "Unlimited AI document reading", "Money in, donor receipts and invoices", "Funds, accounts, assets and loans", "Financial statements with checks and PDFs", "Reconciliation and period locks"]}
+                cta={{ label: "Start free, upgrade in the app", href: "/signup", id: "pricing-growth-btn" }}
+            />
+            <Card
+                name="Nonprofit" price={PRICES.nonprofit} blurb="Everything in Growth, at a lower price for registered societies, charities and NGOs"
+                featured={highlight === "nonprofit"} badge="For registered nonprofits"
+                points={["Everything in Growth", "Donor receipts, tax-exempt when your organisation is approved", "Signed statements for your committee and annual return", "Direct onboarding with the founder"]}
+                cta={{ label: "Apply for nonprofit pricing", href: "/contact?subject=Nonprofit%20Pricing%20Application", id: "pricing-nonprofit-btn" }}
+            />
         </div>
     );
 }
 
 export function PlanComparisonTable() {
+    const yes = <Check className="h-4 w-4 text-brand-600" strokeWidth={1.75} aria-label="Yes" />;
     return (
-        <div className="max-w-4xl mx-auto mt-16 text-left">
-            <h3 className="text-xl font-bold mb-4 text-center">Compare the plans</h3>
-            <div className="overflow-x-auto rounded-2xl border border-white/10 bg-slate-900/40">
+        <div className="mx-auto mt-16 max-w-4xl text-left">
+            <h3 className="mk-display mb-4 text-center text-[22px]">Compare the plans</h3>
+            <div className="overflow-x-auto rounded-3xl border border-black/[0.08] bg-white">
                 <table className="w-full min-w-[520px] text-sm" data-testid="plan-comparison">
                     <thead>
-                        <tr className="border-b border-white/10 text-slate-300">
+                        <tr className="border-b border-black/[0.08] text-neutral-600">
                             <th className="px-4 py-3 text-left font-medium">Feature</th>
-                            <th className="px-4 py-3 text-left font-medium w-40">Free</th>
-                            <th className="px-4 py-3 text-left font-medium w-48">Growth and Nonprofit</th>
+                            <th className="w-40 px-4 py-3 text-left font-medium">Free</th>
+                            <th className="w-48 px-4 py-3 text-left font-medium">Growth and Nonprofit</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
+                    <tbody className="divide-y divide-black/[0.06]">
                         {PLAN_COMPARISON.map((r) => (
                             <tr key={r.feature}>
                                 <td className="px-4 py-3">
-                                    <div className="text-slate-100">{r.feature}</div>
-                                    {r.detail && <div className="text-xs text-slate-500">{r.detail}</div>}
+                                    <div className="text-neutral-900">{r.feature}</div>
+                                    {r.detail && <div className="text-xs text-neutral-500">{r.detail}</div>}
                                 </td>
-                                <td className="px-4 py-3 text-slate-300">{r.free === "No" ? <Minus className="h-4 w-4 text-slate-600" aria-label="No" /> : r.free === "Yes" ? <CheckCircle2 className="h-4 w-4 text-indigo-400" aria-label="Yes" /> : r.free}</td>
-                                <td className="px-4 py-3 text-slate-300">{r.paid === "Yes" ? <CheckCircle2 className="h-4 w-4 text-indigo-400" aria-label="Yes" /> : r.paid}</td>
+                                <td className="px-4 py-3 text-neutral-700">{r.free === "No" ? <Minus className="h-4 w-4 text-neutral-400" strokeWidth={1.75} aria-label="No" /> : r.free === "Yes" ? yes : r.free}</td>
+                                <td className="px-4 py-3 text-neutral-700">{r.paid === "Yes" ? yes : r.paid}</td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-            <p className="mt-4 text-center text-xs text-slate-500">
+            <p className="mt-4 text-center text-xs text-neutral-500">
                 Month to month, cancel any time. Nonprofit pricing is for registered nonprofits: apply on our contact page and we send you a code for checkout. {DOWNGRADE_NOTE}
             </p>
         </div>
